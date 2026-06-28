@@ -9,9 +9,16 @@ description = "Wallpaper Theme Changer - A production-ready desktop Linux image 
 futures = "0.3"
 iced = { version = "0.14", features = ["image", "tokio", "canvas"] }
 image = { version = "0.25", features = ["png", "jpeg", "gif", "webp", "bmp", "tiff", "tga", "ico", "hdr", "exr", "qoi", "pnm", "avif"] }
+imageproc = "0.27.0"
+kmeans_colors = "0.7.1"
 lutgen = "0.15.0"
 lutgen-palettes = "0.4.2"
+ocrs = "0.12.2"
+ort = "2.0.0-rc.12"
+oxipng = "10.1.1"
+palette = "0.7.6"
 rayon = "1.10"
 rfd = "0.17"
+rten = "0.24.0"
 tokio = { version = "1.0", features = ["full"] }
 wallpaper = "3.2.0"

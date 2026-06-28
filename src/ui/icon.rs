@@ -34,6 +34,9 @@ pub enum Icon {
     InfoCircle,
     Search,
     Grid,
+    FileType,
+    FileZip,
+    ArrowsAngleExpand,
 }
 
 impl Icon {
@@ -67,6 +70,9 @@ impl Icon {
             Icon::InfoCircle => '\u{F431}',
             Icon::Search => '\u{F52A}',
             Icon::Grid => '\u{F3E2}',
+            Icon::FileType => '\u{F398}', // file-text
+            Icon::FileZip => '\u{F3A0}',
+            Icon::ArrowsAngleExpand => '\u{F124}',
         }
     }
 }

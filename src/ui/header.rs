@@ -38,9 +38,35 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
         .on_press(Message::ToggleAppTheme)
         .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary));
 
+    let mut tabs_row = row![].spacing(8);
+    for tab in crate::app::state::AppTab::ALL {
+        let is_active = app.active_tab() == *tab;
+        let variant = if is_active { ButtonVariant::Primary } else { ButtonVariant::Ghost };
+        let tab_icon = match tab {
+            crate::app::state::AppTab::Themer => Icon::Palette,
+            crate::app::state::AppTab::Upscaler => Icon::ArrowsAngleExpand,
+            crate::app::state::AppTab::Ocr => Icon::FileType,
+            crate::app::state::AppTab::Compression => Icon::FileZip,
+        };
+        let c = if is_active { tp } else { tm };
+        let btn = button(
+            row![
+                icon(tab_icon).size(14).color(c),
+                text(tab.to_string()).size(13).color(c),
+            ].spacing(6).align_y(Alignment::Center)
+        )
+        .padding([6, 12])
+        .on_press(Message::AppTabChanged(*tab))
+        .style(move |theme, status| button_style(theme, status, variant));
+        
+        tabs_row = tabs_row.push(btn);
+    }
+
     container(
         row![
             brand,
+            space().width(Length::Fill),
+            tabs_row,
             space().width(Length::Fill),
             theme_toggle,
             space().width(12),

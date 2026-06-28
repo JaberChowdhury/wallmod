@@ -65,6 +65,12 @@ pub enum Message {
     ApplySeamCarving,
     SeamCarvingProgress(u32, u32),
     SeamCarvingCompleted(Result<image::DynamicImage, String>),
+    ToggleDither,
+    ApplyDither,
+    DitherCompleted(Result<image::DynamicImage, String>),
+    AppTabChanged(crate::app::state::AppTab),
+    ExtractDominantColors,
+    DominantColorsExtracted(Result<Vec<String>, String>),
 }
 
 /// Core Elm Architecture Application Struct.
@@ -99,6 +105,9 @@ pub struct WallmodApp {
     preview_handle: Option<iced_image::Handle>,
     blur_sigma: f32,
     seam_carve_target: u32,
+    dither_enabled: bool,
+    active_tab: crate::app::state::AppTab,
+    extracted_colors: Option<Vec<String>>,
 }
 
 impl WallmodApp {
@@ -136,6 +145,9 @@ impl WallmodApp {
                 preview_handle: None,
                 blur_sigma: 0.0,
                 seam_carve_target: 0,
+                dither_enabled: false,
+                active_tab: crate::app::state::AppTab::Themer,
+                extracted_colors: None,
             },
             Task::none(),
         )
@@ -143,6 +155,9 @@ impl WallmodApp {
 
     pub fn blur_sigma(&self) -> f32 { self.blur_sigma }
     pub fn seam_carve_target(&self) -> u32 { self.seam_carve_target }
+    pub fn dither_enabled(&self) -> bool { self.dither_enabled }
+    pub fn active_tab(&self) -> crate::app::state::AppTab { self.active_tab }
+    pub fn extracted_colors(&self) -> Option<&Vec<String>> { self.extracted_colors.as_ref() }
 
     pub fn theme(&self) -> Theme {
         if self.is_dark_mode {
@@ -847,6 +862,36 @@ impl WallmodApp {
                     Task::none()
                 }
             }
+            Message::ExtractDominantColors => {
+                if let Some(dyn_img) = &self.base_image_dyn {
+                    let img_clone = dyn_img.clone();
+                    self.state = AppState::Loading(0.5, format!("[ * ] Extracting dominant Oklab colors..."));
+                    Task::perform(
+                        async move {
+                            tokio::task::spawn_blocking(move || {
+                                crate::modules::extractor::extract_dominant_colors(&img_clone, 8)
+                            })
+                            .await
+                            .unwrap_or(Err("Task panicked".to_string()))
+                        },
+                        Message::DominantColorsExtracted,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::DominantColorsExtracted(result) => {
+                match result {
+                    Ok(colors) => {
+                        self.extracted_colors = Some(colors);
+                        self.state = AppState::Idle;
+                    }
+                    Err(e) => {
+                        self.state = AppState::Error(e);
+                    }
+                }
+                Task::none()
+            }
             Message::AlbumImagesScanned(res) => {
                 if let Ok((path, imgs)) = res {
                     if self.selected_album.as_ref() == Some(&path) {
@@ -927,8 +972,50 @@ impl WallmodApp {
                 }
                 Task::none()
             }
+            Message::ToggleDither => {
+                self.dither_enabled = !self.dither_enabled;
+                Task::none()
+            }
+            Message::ApplyDither => {
+                let Some(dyn_img) = self.processed_dyn.as_ref().or(self.base_image_dyn.as_ref()) else {
+                    return Task::none();
+                };
+                let img_clone = dyn_img.clone();
+                let palette_colors = self.current_theme().get_shades();
+                self.state = AppState::Loading(0.5, format!("[ * ] Applying Floyd-Steinberg Dithering..."));
+                Task::perform(
+                    async move {
+                        tokio::task::spawn_blocking(move || {
+                            crate::backend::dither::apply_floyd_steinberg(&img_clone, &palette_colors)
+                        })
+                        .await
+                        .map_err(|e| format!("Dither panicked: {}", e))
+                    },
+                    Message::DitherCompleted
+                )
+            }
+            Message::DitherCompleted(res) => {
+                match res {
+                    Ok(dyn_img) => {
+                        let rgba = dyn_img.to_rgba8();
+                        let (w, h) = rgba.dimensions();
+                        let handle = iced_image::Handle::from_rgba(w, h, rgba.into_raw());
+                        self.processed_dyn = Some(dyn_img);
+                        self.preview_handle = Some(handle.clone());
+                        self.state = AppState::PreviewReady(handle);
+                    }
+                    Err(e) => {
+                        self.state = AppState::Error(e);
+                    }
+                }
+                Task::none()
+            }
             Message::SwwwTransitionChanged(trans) => {
                 self.swww_transition = trans;
+                Task::none()
+            }
+            Message::AppTabChanged(tab) => {
+                self.active_tab = tab;
                 Task::none()
             }
             Message::TargetDisplayChanged(disp) => {

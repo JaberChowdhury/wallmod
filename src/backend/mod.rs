@@ -1,6 +1,7 @@
 //! Backend service layer orchestrating caching, processing, wallpaper setting, and config export.
 
 pub mod cache;
+pub mod dither;
 pub mod error;
 pub mod exporter;
 pub mod seam_carve;

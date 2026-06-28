@@ -5,13 +5,25 @@ use crate::app::{AppState, Message, RemapAlgorithm, SidebarTab, WallpaperBackend
 use crate::ui::icon::{icon, Icon};
 use crate::ui::swatches;
 use crate::ui::theme::{button_style, card_container_style, txt_muted, txt_primary, ButtonVariant};
-use iced::widget::{button, checkbox, column, container, pick_list, row, scrollable, slider, space, text, text_input};
+use iced::widget::{button, checkbox, column, container, pick_list, row, scrollable, slider, space, text, text_input, toggler};
 use iced::{Alignment, Element, Length};
 
 /// Renders the complete left control panel assembling all unified feature categories.
 pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     let TEXT_PRIMARY = txt_primary(app.is_dark_mode());
     let TEXT_MUTED = txt_muted(app.is_dark_mode());
+
+    let parse_hex = |hex: &str| -> iced::Color {
+        let hex = hex.trim_start_matches('#');
+        if hex.len() == 6 {
+            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            iced::Color::from_rgb8(r, g, b)
+        } else {
+            iced::Color::BLACK
+        }
+    };
     let state = app.state();
     let has_image = app.has_image();
     let current_tab = app.sidebar_tab();
@@ -109,22 +121,47 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     .spacing(8)
     .align_y(Alignment::Center);
 
-    let extract_palette_btn = if has_image {
-        button(
-            row![icon(Icon::Magic).size(13).color(TEXT_PRIMARY), text("Extract Palette from Image").size(12).color(TEXT_PRIMARY)].spacing(6).align_y(Alignment::Center)
-        )
+    let mut extract_palette_content = column![].spacing(8);
+
+    if has_image {
+        extract_palette_content = extract_palette_content.push(
+            button(
+                row![icon(Icon::Magic).size(13).color(TEXT_PRIMARY), text("Extract Dominant Oklab Colors").size(12).color(TEXT_PRIMARY)].spacing(6).align_y(Alignment::Center)
+            )
             .padding([8, 14])
             .width(Length::Fill)
-            .on_press(Message::ExtractPaletteFromImage)
+            .on_press(Message::ExtractDominantColors)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary))
+        );
     } else {
-        button(
-            row![icon(Icon::Magic).size(13).color(TEXT_MUTED), text("Extract Palette (No Image)").size(12).color(TEXT_MUTED)].spacing(6).align_y(Alignment::Center)
-        )
+        extract_palette_content = extract_palette_content.push(
+            button(
+                row![icon(Icon::Magic).size(13).color(TEXT_MUTED), text("Extract Palette (No Image)").size(12).color(TEXT_MUTED)].spacing(6).align_y(Alignment::Center)
+            )
             .padding([8, 14])
             .width(Length::Fill)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Disabled))
-    };
+        );
+    }
+
+    if let Some(colors) = app.extracted_colors() {
+        let mut swatches_row = row![].spacing(4).width(Length::Fill);
+        for hex in colors.iter().take(8) {
+            let color = parse_hex(hex);
+            let swatch = container(space())
+                .width(Length::FillPortion(1))
+                .height(24)
+                .style(move |_theme: &iced::Theme| iced::widget::container::Style {
+                    background: Some(iced::Background::Color(color)),
+                    border: iced::Border { radius: crate::ui::theme::RADIUS_SM.into(), ..Default::default() },
+                    ..Default::default()
+                });
+            swatches_row = swatches_row.push(swatch);
+        }
+        extract_palette_content = extract_palette_content.push(swatches_row);
+    }
+
+    let extract_palette_btn = extract_palette_content;
 
     let swatches_block = swatches::view(app.current_theme(), app.is_dark_mode());
 
@@ -194,6 +231,26 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     .padding(12)
     .style(card_container_style);
 
+    let dither_section = container(
+        column![
+            text("ALGORITHMIC DITHERING").size(11).color(TEXT_MUTED),
+            toggler(app.dither_enabled())
+                .label("Enable Floyd-Steinberg Diffusion")
+                .on_toggle(|_| Message::ToggleDither)
+                .size(16),
+            button(
+                row![icon(Icon::Magic).size(13).color(TEXT_PRIMARY), text("Apply Dithering").size(12).color(TEXT_PRIMARY)].spacing(6).align_y(Alignment::Center)
+            )
+                .padding([8, 14])
+                .width(Length::Fill)
+                .on_press_maybe(if has_image && app.dither_enabled() { Some(Message::ApplyDither) } else { None })
+                .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary)),
+        ]
+        .spacing(8)
+    )
+    .padding(12)
+    .style(card_container_style);
+
     let cat_b_section = column![
         text("CATEGORY B: GRADING ENGINE").size(11).color(TEXT_MUTED),
         preset_picker,
@@ -203,6 +260,7 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
         extract_palette_btn,
         blur_section,
         seam_carve_section,
+        dither_section,
         swatches_block,
         custom_palette_section,
     ]

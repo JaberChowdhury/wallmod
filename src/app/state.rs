@@ -44,6 +44,29 @@ impl std::fmt::Display for RemapAlgorithm {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppTab {
+    Themer,
+    Upscaler,
+    Ocr,
+    Compression,
+}
+
+impl AppTab {
+    pub const ALL: &[AppTab] = &[AppTab::Themer, AppTab::Upscaler, AppTab::Ocr, AppTab::Compression];
+}
+
+impl std::fmt::Display for AppTab {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AppTab::Themer => write!(f, "Themer"),
+            AppTab::Upscaler => write!(f, "Upscaler"),
+            AppTab::Ocr => write!(f, "OCR"),
+            AppTab::Compression => write!(f, "Compression"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkspaceView {
     Standard,
     SplitDiff,
