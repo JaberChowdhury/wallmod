@@ -10,7 +10,7 @@ This checklist tracks the status of all unified features collected across our so
 - [x] **Custom LUT Importer**: Loading Look-Up Tables (`.cube`, `.png` HaldCLUT identity matrices).
 
 ## Category B: Color Grading & Palette Engine (`lutgen-rs`)
-- [x] **Preset Palette Catalog**: Instant selection from curated palettes (Catppuccin, Nord, Gruvbox, Tokyo Night, etc.).
+- [x] **Preset Palette Catalog**: Instant selection from curated palettes (Catppuccin, Nord, Gruvbox, Tokyo Night, Synthwave, Cyberpunk, Vintage Sepia, Retro 4-Color, etc.).
 - [x] **Custom Hex Palette Builder**: Real-time hex string input (`#89b4fa, #f38ba8`) converted to RGB triplets. Note: Core iced library does not provide a native visual color picker, but the text box enables precise theme syncing.
 - [x] **Multi-Algorithm Color Interpolation**: Switchable Gaussian, Shepard RBF, and Nearest Neighbor remapping algorithms.
 - [x] **Luminance / Luma Preservation**: Boolean toggle preventing crushed shadows or blown highlights during color shift.
