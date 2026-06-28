@@ -1,0 +1,17 @@
+[package]
+name = "wallmod"
+version = "0.1.0"
+edition = "2021"
+authors = ["Antigravity <antigravity@deepmind.google>"]
+description = "Wallpaper Theme Changer - A production-ready desktop Linux image customization application built with Iced."
+
+[dependencies]
+futures = "0.3"
+iced = { version = "0.14", features = ["image", "tokio", "canvas"] }
+image = { version = "0.25", features = ["png", "jpeg", "gif", "webp", "bmp", "tiff", "tga", "ico", "hdr", "exr", "qoi", "pnm", "avif"] }
+lutgen = "0.15.0"
+lutgen-palettes = "0.4.2"
+rayon = "1.10"
+rfd = "0.17"
+tokio = { version = "1.0", features = ["full"] }
+wallpaper = "3.2.0"
