@@ -14,6 +14,10 @@ pub const PRESET_NAMES: &[&str] = &[
     "Solarized Dark",
     "One Dark",
     "Kanagawa",
+    "Synthwave",
+    "Cyberpunk",
+    "Vintage Sepia",
+    "Retro 4-Color",
 ];
 
 /// Available Wayland transition animation types (`swww`).

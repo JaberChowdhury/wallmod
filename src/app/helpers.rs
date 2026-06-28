@@ -14,6 +14,10 @@ pub fn get_preset_shades(name: &str) -> Vec<[u8; 3]> {
         "Solarized Dark" => lutgen_palettes::Palette::SolarizedDark.get().to_vec(),
         "One Dark" => lutgen_palettes::Palette::Onedark.get().to_vec(),
         "Kanagawa" => lutgen_palettes::Palette::Kanagawa.get().to_vec(),
+        "Synthwave" => vec![[11, 12, 16], [31, 40, 51], [255, 0, 127], [0, 255, 255]],
+        "Cyberpunk" => vec![[13, 14, 21], [57, 255, 20], [255, 0, 255], [252, 226, 5]],
+        "Vintage Sepia" => vec![[43, 29, 20], [112, 66, 20], [230, 194, 143]],
+        "Retro 4-Color" => vec![[15, 56, 15], [48, 98, 48], [139, 172, 15], [155, 188, 15]],
         _ => vec![[137, 180, 250], [243, 139, 168], [166, 227, 161], [249, 226, 175]],
     }
 }
