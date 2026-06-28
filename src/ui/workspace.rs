@@ -332,53 +332,6 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
             .align_y(Alignment::Center)
             .into()
         } else if let Some(selected_path) = app.selected_album() {
-            let mut grid_col = column![].spacing(12);
-            let mut current_row = row![].spacing(12);
-            let mut count = 0;
-            for (img_path, handle) in app.album_images() {
-                let name = img_path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                let img_thumb = iced_image(handle.clone())
-                    .content_fit(ContentFit::Cover)
-                    .width(Length::Fill)
-                    .height(Length::Fixed(130.0));
-
-                let name_badge = container(text(name).size(11).color(Color::WHITE))
-                    .padding([4, 8])
-                    .width(Length::Fill)
-                    .style(|_theme| container::Style {
-                        background: Some(Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.65))),
-                        ..Default::default()
-                    });
-                
-                let img_box = stack![
-                    container(img_thumb)
-                        .width(Length::Fill)
-                        .height(Length::Fixed(140.0))
-                        .style(|theme| card_container_style(theme)),
-                    container(name_badge)
-                        .width(Length::Fill)
-                        .height(Length::Fixed(140.0))
-                        .align_y(Alignment::End)
-                ];
-
-                let img_btn = button(img_box)
-                .padding(0)
-                .width(Length::Fixed(190.0))
-                .on_press(Message::SelectGalleryImage(img_path.clone()))
-                .style(|theme, status| button_style(theme, status, ButtonVariant::Ghost));
-                
-                current_row = current_row.push(img_btn);
-                count += 1;
-                if count >= 3 {
-                    grid_col = grid_col.push(current_row);
-                    current_row = row![].spacing(12);
-                    count = 0;
-                }
-            }
-            if count > 0 {
-                grid_col = grid_col.push(current_row);
-            }
-
             let folder_name = selected_path.file_name().unwrap_or_default().to_string_lossy().to_string();
             let header = row![
                 button(row![icon(Icon::ArrowLeftCircle).size(14).color(TEXT_PRIMARY), text("Back to Albums").size(12).color(TEXT_PRIMARY)].spacing(6))
@@ -390,17 +343,91 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
             ]
             .align_y(Alignment::Center);
 
-            container(
-                column![
-                    header,
-                    space().height(16),
-                    scrollable(grid_col).height(Length::Fill),
-                ]
-                .padding(20)
-            )
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+            if let AppState::Loading(_, ref msg) = app.state() {
+                container(
+                    column![
+                        header,
+                        space().height(32),
+                        container(
+                            column![
+                                icon(Icon::ArrowRepeat).size(32).color(TEXT_MUTED),
+                                space().height(12),
+                                text(msg).size(14).color(TEXT_PRIMARY),
+                                space().height(8),
+                                text("Reading directory and decoding thumbnails...").size(12).color(TEXT_MUTED)
+                            ]
+                            .align_x(Alignment::Center)
+                        )
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                        .align_x(Alignment::Center)
+                        .align_y(Alignment::Center)
+                    ]
+                    .padding(20)
+                )
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into()
+            } else {
+                let mut grid_col = column![].spacing(12);
+                let mut current_row = row![].spacing(12);
+                let mut count = 0;
+                for (img_path, handle) in app.album_images() {
+                    let name = img_path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                    let img_thumb = iced_image(handle.clone())
+                        .content_fit(ContentFit::Cover)
+                        .width(Length::Fill)
+                        .height(Length::Fixed(130.0));
+
+                    let name_badge = container(text(name).size(11).color(Color::WHITE))
+                        .padding([4, 8])
+                        .width(Length::Fill)
+                        .style(|_theme| container::Style {
+                            background: Some(Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.65))),
+                            ..Default::default()
+                        });
+                    
+                    let img_box = stack![
+                        container(img_thumb)
+                            .width(Length::Fill)
+                            .height(Length::Fixed(140.0))
+                            .style(|theme| card_container_style(theme)),
+                        container(name_badge)
+                            .width(Length::Fill)
+                            .height(Length::Fixed(140.0))
+                            .align_y(Alignment::End)
+                    ];
+
+                    let img_btn = button(img_box)
+                    .padding(0)
+                    .width(Length::Fixed(190.0))
+                    .on_press(Message::SelectGalleryImage(img_path.clone()))
+                    .style(|theme, status| button_style(theme, status, ButtonVariant::Ghost));
+                    
+                    current_row = current_row.push(img_btn);
+                    count += 1;
+                    if count >= 3 {
+                        grid_col = grid_col.push(current_row);
+                        current_row = row![].spacing(12);
+                        count = 0;
+                    }
+                }
+                if count > 0 {
+                    grid_col = grid_col.push(current_row);
+                }
+
+                container(
+                    column![
+                        header,
+                        space().height(16),
+                        scrollable(grid_col).height(Length::Fill),
+                    ]
+                    .padding(20)
+                )
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into()
+            }
         } else {
             let mut grid_col = column![].spacing(14);
             let mut current_row = row![].spacing(14);
