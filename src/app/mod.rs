@@ -71,6 +71,8 @@ pub enum Message {
     AppTabChanged(crate::app::state::AppTab),
     ExtractDominantColors,
     DominantColorsExtracted(Result<Vec<String>, String>),
+    ComputeHistograms,
+    HistogramsComputed(Result<crate::modules::histogram::HistogramData, String>),
 }
 
 /// Core Elm Architecture Application Struct.
@@ -108,6 +110,7 @@ pub struct WallmodApp {
     dither_enabled: bool,
     active_tab: crate::app::state::AppTab,
     extracted_colors: Option<Vec<String>>,
+    histogram_data: Option<crate::modules::histogram::HistogramData>,
 }
 
 impl WallmodApp {
@@ -148,6 +151,7 @@ impl WallmodApp {
                 dither_enabled: false,
                 active_tab: crate::app::state::AppTab::Themer,
                 extracted_colors: None,
+                histogram_data: None,
             },
             Task::none(),
         )
@@ -158,6 +162,7 @@ impl WallmodApp {
     pub fn dither_enabled(&self) -> bool { self.dither_enabled }
     pub fn active_tab(&self) -> crate::app::state::AppTab { self.active_tab }
     pub fn extracted_colors(&self) -> Option<&Vec<String>> { self.extracted_colors.as_ref() }
+    pub fn histogram_data(&self) -> Option<&crate::modules::histogram::HistogramData> { self.histogram_data.as_ref() }
 
     pub fn theme(&self) -> Theme {
         if self.is_dark_mode {
@@ -492,15 +497,32 @@ impl WallmodApp {
             Message::ImageProcessed(result) => {
                 match result {
                     Ok((buf, w, h, processed_dyn, contrast)) => {
-                        self.processed_dyn = Some(processed_dyn);
+                        self.processed_dyn = Some(processed_dyn.clone());
                         self.wcag_contrast = contrast;
                         let handle = iced_image::Handle::from_rgba(w, h, buf);
                         self.preview_handle = Some(handle.clone());
                         self.state = AppState::PreviewReady(handle);
+                        return Task::perform(
+                            async move {
+                                tokio::task::spawn_blocking(move || {
+                                    crate::modules::histogram::compute_histogram(&processed_dyn)
+                                })
+                                .await
+                                .unwrap_or(Err("Histogram task panicked".to_string()))
+                            },
+                            Message::HistogramsComputed,
+                        );
                     }
                     Err(err) => {
                         self.state = AppState::Error(err);
                     }
+                }
+                Task::none()
+            }
+            Message::ComputeHistograms => Task::none(),
+            Message::HistogramsComputed(result) => {
+                if let Ok(data) = result {
+                    self.histogram_data = Some(data);
                 }
                 Task::none()
             }

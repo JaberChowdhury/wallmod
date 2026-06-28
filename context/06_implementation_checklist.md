@@ -24,7 +24,7 @@ This checklist tracks the status of all unified features collected across our so
 - [x] **Deep Image Metadata Inspector**: Readouts of dimensions, aspect ratio, filename, and processing status.
 - [x] **WCAG Accessibility Contrast Auditing**: Live computation of legibility contrast ratios against white/black labels.
 - [x] **Live Processing Preview**: Continuous preview rendering while asynchronous theme calculation runs in background.
-- [ ] **Channel Histograms (RGB + Luma)**: Graphical density waveform charts (Planned).
+- [x] **Channel Histograms (RGB + Luma)**: Graphical density waveform charts displayed in the telemetry dashboard.
 
 ## Category D: Desktop Environment & Wallpaper Engine (`wallrust`)
 - [x] **Universal Backend Dispatcher & Tool Selector**: Explicit choice between backend engines (`swww`, `swaybg`, `feh`, `gsettings`, `qdbus`, or `Auto`) with informative tool descriptions.

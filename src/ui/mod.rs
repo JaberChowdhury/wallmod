@@ -5,6 +5,7 @@ pub mod sidebar;
 pub mod swatches;
 pub mod theme;
 pub mod workspace;
+pub mod histogram;
 pub mod icon;
 
 use crate::app::{Message, WallmodApp};

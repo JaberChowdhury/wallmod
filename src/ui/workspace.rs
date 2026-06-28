@@ -209,17 +209,31 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
                         .spacing(8)
                     )
                     .padding(24)
-                    .style(card_container_style);
+                    .style(card_container_style)
+                    .width(Length::Fill);
 
-                    container(
-                        column![
-                            info_pill,
-                            space().height(20),
-                            telemetry_card,
-                        ]
-                        .align_x(Alignment::Center)
-                        .max_width(640)
-                    )
+                    let mut telemetry_col = column![
+                        info_pill,
+                        space().height(20),
+                        telemetry_card,
+                    ].align_x(Alignment::Center).max_width(640);
+
+                    if let Some(hist_data) = app.histogram_data() {
+                        let hist_card = container(
+                            column![
+                                row![icon(Icon::Display).size(16).color(TEXT_PRIMARY), text("CHANNEL HISTOGRAMS (RGB + Luma)").size(14).color(TEXT_PRIMARY)].spacing(8),
+                                space().height(12),
+                                crate::ui::histogram::HistogramChart::new(hist_data).view()
+                            ]
+                        )
+                        .padding(24)
+                        .style(card_container_style)
+                        .width(Length::Fill);
+
+                        telemetry_col = telemetry_col.push(space().height(20)).push(hist_card);
+                    }
+
+                    container(telemetry_col)
                     .width(Length::Fill)
                     .height(Length::Fill)
                     .padding(20)
