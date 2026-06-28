@@ -1240,7 +1240,7 @@ impl WallmodApp {
                 let expected_theme = if is_day { &self.day_theme } else { &self.night_theme };
                 
                 if self.current_theme.display_name() != *expected_theme && self.base_image_path.is_some() {
-                    self.current_theme = crate::app::helpers::ThemeSource::Preset(expected_theme.to_string());
+                    self.current_theme = crate::app::state::ThemeSource::Preset(expected_theme.to_string());
                     
                     // Directly fire SetWallpaper which handles processing and applying via the universal backend
                     return Task::perform(async { () }, |_| Message::SetWallpaper);

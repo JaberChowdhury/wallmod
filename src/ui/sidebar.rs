@@ -315,13 +315,11 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     ]
     .spacing(4);
 
-    let daemon_toggler = iced::widget::toggler(
-        "Enable Time-of-Day Daemon".to_string(),
-        app.daemon_enabled(),
-        Message::ToggleDaemon,
-    )
-    .width(Length::Fill)
-    .text_size(13);
+    let daemon_toggler = iced::widget::toggler(app.daemon_enabled())
+        .label("Enable Time-of-Day Daemon")
+        .on_toggle(Message::ToggleDaemon)
+        .width(Length::Fill)
+        .text_size(13);
 
     let daemon_settings = if app.daemon_enabled() {
         column![
