@@ -16,7 +16,7 @@ This checklist tracks the status of all unified features collected across our so
 - [x] **Luminance / Luma Preservation**: Boolean toggle preventing crushed shadows or blown highlights during color shift.
 - [x] **HaldCLUT Level Resolution Control**: UI slider switching between Level 8 ($512\times512$) and Level 16 ($4096\times4096$) matrix resolutions.
 - [x] **High-Quality Background Gaussian Blur**: Asynchronous `tokio::task::spawn_blocking` blur processing ($O(n \cdot r^2)$) using `imageops::blur` with adjustable slider intensity ($\sigma \in [0.0, 25.0]$) without UI freezing.
-- [ ] **Dominant Color Extraction ($k$-means)**: Reverse ricing extraction of top colors from an image (Planned).
+- [x] **Dominant Color Extraction ($k$-means)**: Reverse ricing extraction of top colors from an image using Oklab.
 
 ## Category C: Telemetry, Inspection & Analytics (`imagineer`)
 - [x] **Top Bar Tab Navigation**: Relocated view switching from sidebar dropdown into top-level tabs above workspace preview.
