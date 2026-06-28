@@ -9,6 +9,7 @@ use iced::widget::{button, checkbox, column, container, pick_list, row, scrollab
 use iced::{Alignment, Element, Length};
 
 /// Renders the complete left control panel assembling all unified feature categories.
+#[allow(non_snake_case)]
 pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     let TEXT_PRIMARY = txt_primary(app.is_dark_mode());
     let TEXT_MUTED = txt_muted(app.is_dark_mode());

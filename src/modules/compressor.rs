@@ -1,5 +1,4 @@
 use oxipng::{optimize_from_memory, Options};
-use std::path::Path;
 
 /// Compresses a PNG image losslessly in memory using oxipng.
 /// Returns (Optimized Bytes, Original Size, Optimized Size).

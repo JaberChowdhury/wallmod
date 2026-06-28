@@ -7,6 +7,7 @@ use iced::widget::{button, column, container, image as iced_image, progress_bar,
 use iced::{Alignment, Background, Color, ContentFit, Element, Length};
 
 /// Renders the right preview panel with full Category C telemetry, diffing, and WCAG contrast auditing.
+#[allow(non_snake_case)]
 pub fn view(app: &WallmodApp) -> Element<'_, Message> {
     let TEXT_PRIMARY = txt_primary(app.is_dark_mode());
     let TEXT_MUTED = txt_muted(app.is_dark_mode());

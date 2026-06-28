@@ -1,5 +1,4 @@
-use image::{RgbaImage, Rgba, GenericImageView};
-use std::cmp::Ordering;
+use image::RgbaImage;
 
 /// Computes the energy of a pixel using a simple gradient method.
 /// Uses the R, G, B channels to calculate differences.

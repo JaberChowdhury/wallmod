@@ -1,4 +1,4 @@
-use image::{RgbaImage, Rgba, GenericImageView};
+use image::Rgba;
 
 /// Applies Floyd-Steinberg Dithering to an image using a limited color palette.
 /// For each pixel, it finds the closest color in the provided palette, sets the pixel,
