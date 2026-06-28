@@ -50,7 +50,7 @@ pub enum Message {
     ScanSystemGallery,
     GalleryScanned(Result<Vec<Album>, String>),
     SelectAlbum(Option<PathBuf>),
-    AlbumImagesScanned(Result<(PathBuf, Vec<PathBuf>), String>),
+    AlbumImagesScanned(Result<(PathBuf, Vec<(PathBuf, iced::widget::image::Handle)>), String>),
     SelectGalleryImage(PathBuf),
     SidebarTabChanged(SidebarTab),
     WallpaperBackendChanged(WallpaperBackend),
@@ -61,6 +61,10 @@ pub enum Message {
     WindowClose,
     WindowMinimize,
     WindowMaximize,
+    SeamCarveTargetChanged(u32),
+    ApplySeamCarving,
+    SeamCarvingProgress(u32, u32),
+    SeamCarvingCompleted(Result<image::DynamicImage, String>),
 }
 
 /// Core Elm Architecture Application Struct.
@@ -87,13 +91,14 @@ pub struct WallmodApp {
     sync_kitty: bool,
     albums: Vec<Album>,
     selected_album: Option<PathBuf>,
-    album_images: Vec<PathBuf>,
+    album_images: Vec<(PathBuf, iced::widget::image::Handle)>,
     scanning_gallery: bool,
     sidebar_tab: SidebarTab,
     wallpaper_backend: WallpaperBackend,
     is_dark_mode: bool,
     preview_handle: Option<iced_image::Handle>,
     blur_sigma: f32,
+    seam_carve_target: u32,
 }
 
 impl WallmodApp {
@@ -130,14 +135,14 @@ impl WallmodApp {
                 is_dark_mode: true,
                 preview_handle: None,
                 blur_sigma: 0.0,
+                seam_carve_target: 0,
             },
             Task::none(),
         )
     }
 
-    pub fn blur_sigma(&self) -> f32 {
-        self.blur_sigma
-    }
+    pub fn blur_sigma(&self) -> f32 { self.blur_sigma }
+    pub fn seam_carve_target(&self) -> u32 { self.seam_carve_target }
 
     pub fn theme(&self) -> Theme {
         if self.is_dark_mode {
@@ -243,7 +248,7 @@ impl WallmodApp {
         self.selected_album.as_ref()
     }
 
-    pub fn album_images(&self) -> &[PathBuf] {
+    pub fn album_images(&self) -> &[(PathBuf, iced_image::Handle)] {
         &self.album_images
     }
 
@@ -398,6 +403,17 @@ impl WallmodApp {
                         self.base_image_handle = Some(handle.clone());
                         self.preview_handle = Some(handle.clone());
                         self.processed_dyn = Some(dyn_img);
+                        self.seam_carve_target = self.image_width;
+                        
+                        // Reset image grading state
+                        self.blur_sigma = 0.0;
+                        self.algorithm = RemapAlgorithm::Gaussian;
+                        self.preserve_luma = false;
+                        self.hald_level = 8;
+                        let default_preset = "Catppuccin Mocha".to_string();
+                        self.selected_preset = Some(default_preset.clone());
+                        self.current_theme = ThemeSource::Preset(default_preset);
+
                         self.state = AppState::PreviewReady(handle);
                         self.workspace_view = WorkspaceView::Standard;
                         return self.trigger_processing();
@@ -406,7 +422,11 @@ impl WallmodApp {
                         if err != "File selection canceled." {
                             self.state = AppState::Error(err);
                         } else {
-                            self.state = AppState::Idle;
+                            if let Some(ref h) = self.preview_handle {
+                                self.state = AppState::PreviewReady(h.clone());
+                            } else {
+                                self.state = AppState::Idle;
+                            }
                         }
                     }
                 }
@@ -782,9 +802,11 @@ impl WallmodApp {
             Message::SelectAlbum(opt_path) => {
                 self.selected_album = opt_path.clone();
                 if let Some(path) = opt_path {
+                    self.state = AppState::Loading(0.3, format!("[ # ] Generating bento thumbnails for album..."));
                     Task::perform(
                         async move {
                             tokio::task::spawn_blocking(move || {
+                                use rayon::prelude::*;
                                 let exts = ["png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif"];
                                 let mut imgs = Vec::new();
                                 if let Ok(entries) = std::fs::read_dir(&path) {
@@ -800,7 +822,20 @@ impl WallmodApp {
                                     }
                                 }
                                 imgs.sort();
-                                Ok((path, imgs))
+                                
+                                let thumbs: Vec<(PathBuf, iced::widget::image::Handle)> = imgs.into_par_iter().take(48).filter_map(|p| {
+                                    if let Ok(dyn_img) = image::open(&p) {
+                                        let thumb = dyn_img.thumbnail(300, 300);
+                                        let rgba = thumb.to_rgba8();
+                                        let (w, h) = rgba.dimensions();
+                                        let handle = iced::widget::image::Handle::from_rgba(w, h, rgba.into_raw());
+                                        Some((p, handle))
+                                    } else {
+                                        None
+                                    }
+                                }).collect();
+                                
+                                Ok((path, thumbs))
                             })
                             .await
                             .map_err(|e| format!("Failed to read album: {}", e))?
@@ -816,6 +851,11 @@ impl WallmodApp {
                 if let Ok((path, imgs)) = res {
                     if self.selected_album.as_ref() == Some(&path) {
                         self.album_images = imgs;
+                        if let Some(ref handle) = self.preview_handle {
+                            self.state = AppState::PreviewReady(handle.clone());
+                        } else {
+                            self.state = AppState::Idle;
+                        }
                     }
                 }
                 Task::none()
@@ -838,6 +878,55 @@ impl WallmodApp {
                 )
             }
             Message::SplitOffsetChanged(_) => Task::none(),
+            Message::SeamCarveTargetChanged(target) => {
+                self.seam_carve_target = target;
+                Task::none()
+            }
+            Message::ApplySeamCarving => {
+                let Some(dyn_img) = self.processed_dyn.as_ref().or(self.base_image_dyn.as_ref()) else {
+                    return Task::none();
+                };
+                let img_clone = dyn_img.clone();
+                let target_w = self.seam_carve_target;
+                
+                self.state = AppState::Loading(0.0, format!("[ # ] Initializing Seam Carving Algorithm..."));
+                
+                // Since iced 0.14 doesn't support streaming progress easily in Task::perform, 
+                // we'll run it and emit just the completion event for now. Progress would need a stream.
+                Task::perform(
+                    async move {
+                        tokio::task::spawn_blocking(move || {
+                            crate::backend::seam_carve::carve_width(&img_clone, target_w, |_,_| {})
+                        })
+                        .await
+                        .map_err(|e| format!("Seam carving panicked: {}", e))
+                    },
+                    Message::SeamCarvingCompleted
+                )
+            }
+            Message::SeamCarvingProgress(current, total) => {
+                self.state = AppState::Loading(current as f32 / total as f32, format!("[ # ] Carving seam {}/{}", current, total));
+                Task::none()
+            }
+            Message::SeamCarvingCompleted(res) => {
+                match res {
+                    Ok(dyn_img) => {
+                        let rgba = dyn_img.to_rgba8();
+                        let (w, h) = rgba.dimensions();
+                        let handle = iced_image::Handle::from_rgba(w, h, rgba.into_raw());
+                        
+                        self.image_width = w;
+                        self.image_height = h;
+                        self.processed_dyn = Some(dyn_img);
+                        self.preview_handle = Some(handle.clone());
+                        self.state = AppState::PreviewReady(handle);
+                    }
+                    Err(e) => {
+                        self.state = AppState::Error(e);
+                    }
+                }
+                Task::none()
+            }
             Message::SwwwTransitionChanged(trans) => {
                 self.swww_transition = trans;
                 Task::none()

@@ -2,6 +2,7 @@
 //! Organized into clean tabs (Theme & LUT, Desktop Engine, Export & Sync).
 
 use crate::app::{AppState, Message, RemapAlgorithm, SidebarTab, WallpaperBackend, PRESET_NAMES, SWWW_TRANSITIONS, TARGET_DISPLAYS};
+use crate::ui::icon::{icon, Icon};
 use crate::ui::swatches;
 use crate::ui::theme::{button_style, card_container_style, txt_muted, txt_primary, ButtonVariant};
 use iced::widget::{button, checkbox, column, container, pick_list, row, scrollable, slider, space, text, text_input};
@@ -36,25 +37,33 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     .spacing(4);
 
     // CATEGORY A: Image Input & Source Management
-    let cat_a_section = column![
-        text("CATEGORY A: SOURCE & INPUT").size(11).color(TEXT_MUTED),
-        button(text("[ + ] Open Base Image").size(13).color(TEXT_PRIMARY))
-            .padding([10, 16])
+    let cat_a_section = container(
+        column![
+            text("CATEGORY A (SOURCE & THEME)").size(11).color(TEXT_MUTED),
+            button(
+                row![icon(Icon::Image).size(14).color(TEXT_PRIMARY), text("Open Base Image").size(13).color(TEXT_PRIMARY)].spacing(8).align_y(Alignment::Center)
+            )
             .width(Length::Fill)
+            .padding([10, 16])
             .on_press(Message::SelectImage)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Primary)),
-        button(text("[ ⟳ ] Batch Process Directory").size(13).color(TEXT_PRIMARY))
-            .padding([10, 16])
+            button(
+                row![icon(Icon::ArrowRepeat).size(14).color(TEXT_PRIMARY), text("Batch Process Directory").size(13).color(TEXT_PRIMARY)].spacing(8).align_y(Alignment::Center)
+            )
             .width(Length::Fill)
+            .padding([10, 16])
             .on_press(Message::SelectBatchFolder)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary)),
-        button(text("[ ↗ ] Import Custom LUT (.cube/.png)").size(13).color(TEXT_PRIMARY))
-            .padding([10, 16])
+            button(
+                row![icon(Icon::Download).size(14).color(TEXT_PRIMARY), text("Import Custom LUT (.cube/.png)").size(13).color(TEXT_PRIMARY)].spacing(8).align_y(Alignment::Center)
+            )
             .width(Length::Fill)
+            .padding([10, 16])
             .on_press(Message::SelectCustomTheme)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary)),
-    ]
-    .spacing(6);
+        ]
+        .spacing(6)
+    );
 
     // CATEGORY B: Color Grading & Palette Engine (`lutgen-rs`)
     let preset_picker = column![
@@ -100,14 +109,18 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     .spacing(8)
     .align_y(Alignment::Center);
 
-    let reverse_rice_btn = if has_image {
-        button(text("[ * ] Extract Palette from Image").size(12).color(TEXT_PRIMARY))
+    let extract_palette_btn = if has_image {
+        button(
+            row![icon(Icon::Magic).size(13).color(TEXT_PRIMARY), text("Extract Palette from Image").size(12).color(TEXT_PRIMARY)].spacing(6).align_y(Alignment::Center)
+        )
             .padding([8, 14])
             .width(Length::Fill)
             .on_press(Message::ExtractPaletteFromImage)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary))
     } else {
-        button(text("[ * ] Extract Palette (No Image)").size(12).color(TEXT_MUTED))
+        button(
+            row![icon(Icon::Magic).size(13).color(TEXT_MUTED), text("Extract Palette (No Image)").size(12).color(TEXT_MUTED)].spacing(6).align_y(Alignment::Center)
+        )
             .padding([8, 14])
             .width(Length::Fill)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Disabled))
@@ -122,7 +135,9 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
                 .on_input(Message::CustomPaletteInputChanged)
                 .padding([8, 12])
                 .size(12),
-            button(text("[ / ] Compile & Apply Palette").size(12).color(TEXT_PRIMARY))
+            button(
+                row![icon(Icon::Check).size(13).color(TEXT_PRIMARY), text("Compile & Apply Palette").size(12).color(TEXT_PRIMARY)].spacing(6).align_y(Alignment::Center)
+            )
                 .padding([8, 14])
                 .width(Length::Fill)
                 .on_press(Message::ApplyCustomPalette)
@@ -141,10 +156,37 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
                 text(format!("Sigma: {:.1}", app.blur_sigma())).size(11).color(TEXT_PRIMARY),
             ],
             slider(0.0..=25.0, app.blur_sigma(), Message::BlurSigmaChanged).step(0.5),
-            button(text("[ * ] Apply Background Blur").size(12).color(TEXT_PRIMARY))
+            button(
+                row![icon(Icon::Images).size(13).color(TEXT_PRIMARY), text("Apply Background Blur").size(12).color(TEXT_PRIMARY)].spacing(6).align_y(Alignment::Center)
+            )
                 .padding([8, 14])
                 .width(Length::Fill)
                 .on_press_maybe(if has_image && app.blur_sigma() > 0.0 { Some(Message::ApplyBlur) } else { None })
+                .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary)),
+        ]
+        .spacing(8)
+    )
+    .padding(12)
+    .style(card_container_style);
+
+    let max_w = app.image_width().max(1);
+    let min_w = (max_w as f32 * 0.1) as u32; // 10% min width
+    let current_target = if app.seam_carve_target() == 0 { max_w } else { app.seam_carve_target() };
+    
+    let seam_carve_section = container(
+        column![
+            row![
+                text("CONTENT-AWARE SCALING").size(11).color(TEXT_MUTED),
+                space().width(Length::Fill),
+                text(format!("Width: {}px", current_target)).size(11).color(TEXT_PRIMARY),
+            ],
+            slider(min_w..=max_w, current_target, Message::SeamCarveTargetChanged).step(1u32),
+            button(
+                row![icon(Icon::Magic).size(13).color(TEXT_PRIMARY), text("Apply Seam Carving").size(12).color(TEXT_PRIMARY)].spacing(6).align_y(Alignment::Center)
+            )
+                .padding([8, 14])
+                .width(Length::Fill)
+                .on_press_maybe(if has_image && current_target < max_w { Some(Message::ApplySeamCarving) } else { None })
                 .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary)),
         ]
         .spacing(8)
@@ -158,8 +200,9 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
         algo_picker,
         hald_level_picker,
         luma_toggle,
-        reverse_rice_btn,
+        extract_palette_btn,
         blur_section,
+        seam_carve_section,
         swatches_block,
         custom_palette_section,
     ]
@@ -223,22 +266,28 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     .spacing(10);
 
     // CATEGORY E: Export & Save Integration
-    let save_folder_btn = if has_image {
-        button(text("[ + ] Save Processed Image to Folder").size(13).color(TEXT_PRIMARY))
-            .padding([10, 16])
+    let save_image_btn = if has_image {
+        button(
+            row![icon(Icon::Folder).size(14).color(TEXT_PRIMARY), text("Save Processed Image to Folder").size(13).color(TEXT_PRIMARY)].spacing(8).align_y(Alignment::Center)
+        )
             .width(Length::Fill)
+            .padding([10, 16])
             .on_press(Message::SaveImageToFolder)
-            .style(|theme, status| button_style(theme, status, ButtonVariant::Primary))
+            .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary))
     } else {
-        button(text("[ + ] Save Processed Image (Disabled)").size(13).color(TEXT_MUTED))
-            .padding([10, 16])
+        button(
+            row![icon(Icon::Folder).size(14).color(TEXT_MUTED), text("Save Processed Image (Disabled)").size(13).color(TEXT_MUTED)].spacing(8).align_y(Alignment::Center)
+        )
             .width(Length::Fill)
+            .padding([10, 16])
             .style(|theme, status| button_style(theme, status, ButtonVariant::Disabled))
     };
 
-    let export_scheme_btn = button(text("[ > ] Export Terminal Scheme").size(13).color(TEXT_PRIMARY))
-        .padding([10, 16])
+    let export_scheme_btn = button(
+        row![icon(Icon::Terminal).size(14).color(TEXT_PRIMARY), text("Export Terminal Scheme").size(13).color(TEXT_PRIMARY)].spacing(8).align_y(Alignment::Center)
+    )
         .width(Length::Fill)
+        .padding([10, 16])
         .on_press(Message::ExportTerminalScheme)
         .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary));
 
@@ -258,7 +307,7 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
 
     let cat_e_section = column![
         text("CATEGORY E: EXPORT & SAVE").size(11).color(TEXT_MUTED),
-        save_folder_btn,
+        save_image_btn,
         export_scheme_btn,
         space().height(4),
         sync_alacritty_cb,
@@ -275,30 +324,38 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
 
     // Action Buttons
     let is_loading = matches!(state, AppState::Loading(_, _));
-    let apply_btn = if has_image && !is_loading {
-        button(text("[ > ] Apply Theme").size(13).color(TEXT_PRIMARY))
-            .padding([10, 16])
+    let apply_theme_btn = if has_image && !is_loading {
+        button(
+            row![icon(Icon::Check).size(14).color(TEXT_PRIMARY), text("Apply Theme").size(13).color(TEXT_PRIMARY)].spacing(8).align_y(Alignment::Center)
+        )
             .width(Length::Fill)
+            .padding([10, 16])
             .on_press(Message::ApplyTheme)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Primary))
     } else {
-        button(text("[ > ] Apply Theme (Disabled)").size(13).color(TEXT_MUTED))
-            .padding([10, 16])
+        button(
+            row![icon(Icon::Check).size(14).color(TEXT_MUTED), text("Apply Theme (Disabled)").size(13).color(TEXT_MUTED)].spacing(8).align_y(Alignment::Center)
+        )
             .width(Length::Fill)
+            .padding([10, 16])
             .style(|theme, status| button_style(theme, status, ButtonVariant::Disabled))
     };
 
     let is_ready = matches!(state, AppState::PreviewReady(_));
-    let wallpaper_btn = if is_ready {
-        button(text("[ > ] Set as Desktop Wallpaper").size(13).color(iced::Color::from_rgb(0.05, 0.05, 0.05)))
-            .padding([10, 16])
+    let apply_wallpaper_btn = if is_ready {
+        button(
+            row![icon(Icon::Display).size(14).color(iced::Color::from_rgb(0.05, 0.05, 0.05)), text("Set as Desktop Wallpaper").size(13).color(iced::Color::from_rgb(0.05, 0.05, 0.05))].spacing(8).align_y(Alignment::Center)
+        )
             .width(Length::Fill)
+            .padding([10, 16])
             .on_press(Message::SetWallpaper)
             .style(|theme, status| button_style(theme, status, ButtonVariant::Accent))
     } else {
-        button(text("[ > ] Set as Wallpaper (Disabled)").size(13).color(TEXT_MUTED))
-            .padding([10, 16])
+        button(
+            row![icon(Icon::Display).size(14).color(TEXT_MUTED), text("Set as Wallpaper (Disabled)").size(13).color(TEXT_MUTED)].spacing(8).align_y(Alignment::Center)
+        )
             .width(Length::Fill)
+            .padding([10, 16])
             .style(|theme, status| button_style(theme, status, ButtonVariant::Disabled))
     };
 
@@ -307,9 +364,9 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
         space().height(10),
         scrollable(active_content.width(Length::Fill)).height(Length::Fill),
         space().height(10),
-        apply_btn,
+        apply_theme_btn,
         space().height(6),
-        wallpaper_btn,
+        apply_wallpaper_btn,
     ]
     .spacing(6)
     .padding(15)

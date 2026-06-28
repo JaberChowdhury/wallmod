@@ -1,8 +1,8 @@
-use iced::{widget::text, Font, Element};
+use iced::{widget::text, Font};
 
 // Load the downloaded font into the binary
 pub const ICON_FONT: Font = Font::with_name("bootstrap-icons");
-pub const ICON_BYTES: &[u8] = include_bytes!("../../../fonts/bootstrap-icons.ttf");
+pub const ICON_BYTES: &[u8] = include_bytes!("../../fonts/bootstrap-icons.ttf");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Icon {
@@ -72,7 +72,7 @@ impl Icon {
 }
 
 /// The global helper function to render an icon in the Iced UI
-pub fn icon<'a, Message>(icon: Icon) -> iced::widget::Text<'a> {
+pub fn icon<'a>(icon: Icon) -> iced::widget::Text<'a> {
     text(icon.to_char().to_string())
         .font(ICON_FONT)
 }

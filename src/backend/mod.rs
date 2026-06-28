@@ -3,6 +3,7 @@
 pub mod cache;
 pub mod error;
 pub mod exporter;
+pub mod seam_carve;
 
 use crate::app::state::RemapAlgorithm;
 use cache::CacheManager;

@@ -19,5 +19,6 @@ pub fn main() -> iced::Result {
             decorations: false,
             ..Default::default()
         })
+        .font(crate::ui::icon::ICON_BYTES)
         .run()
 }

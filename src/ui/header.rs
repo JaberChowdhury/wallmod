@@ -1,6 +1,7 @@
 //! Top navigation and Client-Side Decoration (CSD) header bar component.
 
 use crate::app::{Message, WallmodApp};
+use crate::ui::icon::{icon, Icon};
 use crate::ui::theme::{button_style, panel_container_style, txt_muted, txt_primary, ButtonVariant};
 use iced::widget::{button, container, row, space, text};
 use iced::{Alignment, Element, Length};
@@ -12,7 +13,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
     let tm = txt_muted(is_dark);
 
     let brand = row![
-        text("[ W ]").size(16).color(tp),
+        icon(Icon::Layers).size(16).color(tp),
         text("wallmod studio").size(15).color(tp),
         text("ricer edition").size(11).color(tm),
     ]
@@ -27,8 +28,12 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
             .into()
     };
 
-    let theme_label = if is_dark { "[ * ] Dark Mode" } else { "[ * ] Light Mode" };
-    let theme_toggle = button(text(theme_label).size(12).color(tp))
+    let theme_toggle = button(
+        row![
+            icon(if is_dark { Icon::Moon } else { Icon::Sun }).size(14).color(tp),
+            text(if is_dark { "Dark Mode" } else { "Light Mode" }).size(12).color(tp)
+        ].spacing(6).align_y(Alignment::Center)
+    )
         .padding([6, 12])
         .on_press(Message::ToggleAppTheme)
         .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary));

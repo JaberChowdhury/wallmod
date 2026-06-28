@@ -5,6 +5,7 @@ pub mod sidebar;
 pub mod swatches;
 pub mod theme;
 pub mod workspace;
+pub mod icon;
 
 use crate::app::{Message, WallmodApp};
 use iced::widget::{column, row};

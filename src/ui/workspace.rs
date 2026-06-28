@@ -1,9 +1,10 @@
 //! Right preview pane (70% width) rendering Idle, Loading, Notice, Error, or Category C Views.
 
 use crate::app::{AppState, Message, WallmodApp, WorkspaceView};
+use crate::ui::icon::{icon, Icon};
 use crate::ui::theme::{button_style, canvas_container_style, card_container_style, txt_muted, txt_primary, ButtonVariant, BORDER_COLOR, ERROR_COLOR};
 use iced::widget::{button, column, container, image as iced_image, progress_bar, row, scrollable, space, stack, text};
-use iced::{Alignment, Color, ContentFit, Element, Length};
+use iced::{Alignment, Background, Color, ContentFit, Element, Length};
 
 /// Renders the right preview panel with full Category C telemetry, diffing, and WCAG contrast auditing.
 pub fn view(app: &WallmodApp) -> Element<'_, Message> {
@@ -13,7 +14,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
     let content: Element<'_, Message> = match state {
         AppState::Idle => container(
             column![
-                text("[ + ]").size(32).color(BORDER_COLOR),
+                icon(Icon::PlusSquare).size(32).color(BORDER_COLOR),
                 space().height(12),
                 text("No wallpaper loaded").size(16).color(TEXT_PRIMARY),
                 text("Select a base image from Category A controls on the left to begin ricing.")
@@ -34,7 +35,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
             let loading_card = container(
                 column![
                     row![
-                        text("[ * ] PROCESSING ENGINE").size(11).color(TEXT_MUTED),
+                    row![icon(Icon::Layers).size(14).color(TEXT_MUTED), text("PROCESSING ENGINE").size(11).color(TEXT_MUTED)].spacing(6),
                         space().width(Length::Fill),
                         text(format!("{}%", percent)).size(13).color(Color::from_rgb(0.54, 0.71, 0.98)),
                     ]
@@ -86,11 +87,11 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
 
         AppState::Notice(msg) => container(
             column![
-                text("[ * ] Notification / Success").size(14).color(Color::from_rgb(0.3, 0.85, 0.5)),
-                space().height(8),
+                row![icon(Icon::Check).size(16).color(Color::from_rgb(0.3, 0.85, 0.5)), text("Notification / Success").size(14).color(Color::from_rgb(0.3, 0.85, 0.5))].spacing(8),
+                space().height(12),
                 text(msg).size(14).color(TEXT_PRIMARY),
                 space().height(16),
-                button(text("[ < ] Return to Workspace").size(12).color(TEXT_PRIMARY))
+                button(row![icon(Icon::ArrowLeftCircle).size(14).color(TEXT_PRIMARY), text("Return to Workspace").size(12).color(TEXT_PRIMARY)].spacing(6))
                     .padding([8, 14])
                     .on_press(Message::DismissNotice)
                     .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary)),
@@ -127,7 +128,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
                     text("•").size(12).color(TEXT_MUTED),
                     text(format!("{} × {} px", app.image_width(), app.image_height())).size(12).color(TEXT_MUTED),
                     text("•").size(12).color(TEXT_MUTED),
-                    text(format!("[ i ] WCAG Contrast: {:.1}:1 ({})", wcag, wcag_status)).size(12).color(wcag_color),
+                    row![icon(Icon::InfoCircle).size(14).color(wcag_color), text(format!("WCAG Contrast: {:.1}:1 ({})", wcag, wcag_status)).size(12).color(wcag_color)].spacing(6),
                 ]
                 .spacing(8)
                 .align_y(Alignment::Center)
@@ -193,7 +194,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
                 WorkspaceView::Telemetry => {
                     let telemetry_card = container(
                         column![
-                            text("[ i ] DEEP IMAGE TELEMETRY & ANALYTICS (`imagineer`)").size(14).color(TEXT_PRIMARY),
+                            row![icon(Icon::InfoCircle).size(16).color(TEXT_PRIMARY), text("DEEP IMAGE TELEMETRY & ANALYTICS (`imagineer`)").size(14).color(TEXT_PRIMARY)].spacing(8),
                             space().height(12),
                             row![text("File Name:").size(13).color(TEXT_MUTED).width(160), text(app.image_filename()).size(13).color(TEXT_PRIMARY)],
                             row![text("Resolution Dimensions:").size(13).color(TEXT_MUTED).width(160), text(format!("{} × {} pixels", app.image_width(), app.image_height())).size(13).color(TEXT_PRIMARY)],
@@ -234,7 +235,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
             let diag_card = container(
                 column![
                     row![
-                        text("[ ! ] DIAGNOSTIC NOTICE / ENGINE ERROR").size(14).color(ERROR_COLOR),
+                        row![icon(Icon::ExclamationTriangle).size(16).color(ERROR_COLOR), text("DIAGNOSTIC NOTICE / ENGINE ERROR").size(14).color(ERROR_COLOR)].spacing(8),
                     ].align_y(Alignment::Center),
                     space().height(12),
                     text("An issue occurred while executing the pipeline command:").size(12).color(TEXT_MUTED),
@@ -252,7 +253,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
                     text("• If setting wallpaper, ensure a daemon (swww, swaybg, feh) is running.").size(12).color(TEXT_PRIMARY),
                     text("• Check file read/write permissions on the target directory.").size(12).color(TEXT_PRIMARY),
                     space().height(20),
-                    button(text("[ < ] Dismiss & Return to Workspace").size(12).color(TEXT_PRIMARY))
+                    button(row![icon(Icon::ArrowLeftCircle).size(14).color(TEXT_PRIMARY), text("Dismiss & Return to Workspace").size(12).color(TEXT_PRIMARY)].spacing(6))
                         .padding([10, 16])
                         .on_press(Message::DismissNotice)
                         .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary)),
@@ -274,22 +275,22 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
     let view_mode = app.workspace_view();
     let tab_bar = container(
         row![
-            button(text("[ * ] Output Visual").size(12).color(if view_mode == WorkspaceView::Standard { TEXT_PRIMARY } else { TEXT_MUTED }))
+            button(row![icon(Icon::Image).size(14).color(if view_mode == WorkspaceView::Standard { TEXT_PRIMARY } else { TEXT_MUTED }), text("Output Visual").size(12).color(if view_mode == WorkspaceView::Standard { TEXT_PRIMARY } else { TEXT_MUTED })].spacing(6).align_y(Alignment::Center))
                 .padding([6, 14])
                 .on_press(Message::WorkspaceViewChanged(WorkspaceView::Standard))
                 .style(move |theme, status| button_style(theme, status, if view_mode == WorkspaceView::Standard { ButtonVariant::Primary } else { ButtonVariant::Ghost })),
             
-            button(text("[ / ] Split Diff").size(12).color(if view_mode == WorkspaceView::SplitDiff { TEXT_PRIMARY } else { TEXT_MUTED }))
+            button(row![icon(Icon::Grid).size(14).color(if view_mode == WorkspaceView::SplitDiff { TEXT_PRIMARY } else { TEXT_MUTED }), text("Split Diff").size(12).color(if view_mode == WorkspaceView::SplitDiff { TEXT_PRIMARY } else { TEXT_MUTED })].spacing(6).align_y(Alignment::Center))
                 .padding([6, 14])
                 .on_press(Message::WorkspaceViewChanged(WorkspaceView::SplitDiff))
                 .style(move |theme, status| button_style(theme, status, if view_mode == WorkspaceView::SplitDiff { ButtonVariant::Primary } else { ButtonVariant::Ghost })),
 
-            button(text("[ i ] Dashboard Info").size(12).color(if view_mode == WorkspaceView::Telemetry { TEXT_PRIMARY } else { TEXT_MUTED }))
+            button(row![icon(Icon::InfoCircle).size(14).color(if view_mode == WorkspaceView::Telemetry { TEXT_PRIMARY } else { TEXT_MUTED }), text("Dashboard Info").size(12).color(if view_mode == WorkspaceView::Telemetry { TEXT_PRIMARY } else { TEXT_MUTED })].spacing(6).align_y(Alignment::Center))
                 .padding([6, 14])
                 .on_press(Message::WorkspaceViewChanged(WorkspaceView::Telemetry))
                 .style(move |theme, status| button_style(theme, status, if view_mode == WorkspaceView::Telemetry { ButtonVariant::Primary } else { ButtonVariant::Ghost })),
 
-            button(text("[ + ] Album Gallery").size(12).color(if view_mode == WorkspaceView::Gallery { TEXT_PRIMARY } else { TEXT_MUTED }))
+            button(row![icon(Icon::Images).size(14).color(if view_mode == WorkspaceView::Gallery { TEXT_PRIMARY } else { TEXT_MUTED }), text("Album Gallery").size(12).color(if view_mode == WorkspaceView::Gallery { TEXT_PRIMARY } else { TEXT_MUTED })].spacing(6).align_y(Alignment::Center))
                 .padding([6, 14])
                 .on_press(Message::WorkspaceViewChanged(WorkspaceView::Gallery))
                 .style(move |theme, status| button_style(theme, status, if view_mode == WorkspaceView::Gallery { ButtonVariant::Primary } else { ButtonVariant::Ghost })),
@@ -305,7 +306,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
         if app.scanning_gallery() {
             container(
                 column![
-                    text("[ # ] Multi-Thread Scanning System Images...").size(16).color(TEXT_PRIMARY),
+                    row![icon(Icon::ArrowRepeat).size(18).color(TEXT_PRIMARY), text("Multi-Thread Scanning System Images...").size(16).color(TEXT_PRIMARY)].spacing(8),
                     space().height(8),
                     text("Searching Pictures, Downloads, Wallpapers & /usr/share/backgrounds").size(13).color(TEXT_MUTED),
                 ]
@@ -320,28 +321,37 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
             let mut grid_col = column![].spacing(12);
             let mut current_row = row![].spacing(12);
             let mut count = 0;
-            for img_path in app.album_images() {
+            for (img_path, handle) in app.album_images() {
                 let name = img_path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                let img_thumb = iced_image(iced_image::Handle::from_path(img_path.clone()))
+                let img_thumb = iced_image(handle.clone())
                     .content_fit(ContentFit::Cover)
                     .width(Length::Fill)
                     .height(Length::Fixed(130.0));
 
-                let img_btn = button(
-                    column![
-                        container(img_thumb)
-                            .width(Length::Fill)
-                            .height(Length::Fixed(130.0))
-                            .style(|theme| card_container_style(theme)),
-                        space().height(6),
-                        text(name).size(11).color(TEXT_PRIMARY),
-                    ]
-                    .align_x(Alignment::Center)
-                )
-                .padding(8)
+                let name_badge = container(text(name).size(11).color(Color::WHITE))
+                    .padding([4, 8])
+                    .width(Length::Fill)
+                    .style(|_theme| container::Style {
+                        background: Some(Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.65))),
+                        ..Default::default()
+                    });
+                
+                let img_box = stack![
+                    container(img_thumb)
+                        .width(Length::Fill)
+                        .height(Length::Fixed(140.0))
+                        .style(|theme| card_container_style(theme)),
+                    container(name_badge)
+                        .width(Length::Fill)
+                        .height(Length::Fixed(140.0))
+                        .align_y(Alignment::End)
+                ];
+
+                let img_btn = button(img_box)
+                .padding(0)
                 .width(Length::Fixed(190.0))
                 .on_press(Message::SelectGalleryImage(img_path.clone()))
-                .style(|theme, status| button_style(theme, status, ButtonVariant::Secondary));
+                .style(|theme, status| button_style(theme, status, ButtonVariant::Ghost));
                 
                 current_row = current_row.push(img_btn);
                 count += 1;
@@ -357,7 +367,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
 
             let folder_name = selected_path.file_name().unwrap_or_default().to_string_lossy().to_string();
             let header = row![
-                button(text("[ < ] Back to Albums").size(12).color(TEXT_PRIMARY))
+                button(row![icon(Icon::ArrowLeftCircle).size(14).color(TEXT_PRIMARY), text("Back to Albums").size(12).color(TEXT_PRIMARY)].spacing(6))
                     .padding([6, 12])
                     .on_press(Message::SelectAlbum(None))
                     .style(|theme, status| button_style(theme, status, ButtonVariant::Ghost)),
@@ -429,7 +439,7 @@ pub fn view(app: &WallmodApp) -> Element<'_, Message> {
             let header = row![
                 text(format!("System Image Albums (Found {} folders)", app.albums().len())).size(15).color(TEXT_PRIMARY),
                 space().width(Length::Fill),
-                button(text("[ # ] Rescan Albums").size(12).color(TEXT_PRIMARY))
+                button(row![icon(Icon::ArrowRepeat).size(14).color(TEXT_PRIMARY), text("Rescan Albums").size(12).color(TEXT_PRIMARY)].spacing(6))
                     .padding([6, 12])
                     .on_press(Message::ScanSystemGallery)
                     .style(|theme, status| button_style(theme, status, ButtonVariant::Ghost)),
