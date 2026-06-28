@@ -73,6 +73,12 @@ pub enum Message {
     DominantColorsExtracted(Result<Vec<String>, String>),
     ComputeHistograms,
     HistogramsComputed(Result<crate::modules::histogram::HistogramData, String>),
+    ToggleDaemon(bool),
+    SetDayHour(u32),
+    SetNightHour(u32),
+    SetDayTheme(String),
+    SetNightTheme(String),
+    DaemonTick,
 }
 
 /// Core Elm Architecture Application Struct.
@@ -111,6 +117,11 @@ pub struct WallmodApp {
     active_tab: crate::app::state::AppTab,
     extracted_colors: Option<Vec<String>>,
     histogram_data: Option<crate::modules::histogram::HistogramData>,
+    daemon_enabled: bool,
+    day_time_hour: u32,
+    night_time_hour: u32,
+    day_theme: String,
+    night_theme: String,
 }
 
 impl WallmodApp {
@@ -152,6 +163,11 @@ impl WallmodApp {
                 active_tab: crate::app::state::AppTab::Themer,
                 extracted_colors: None,
                 histogram_data: None,
+                daemon_enabled: false,
+                day_time_hour: 6,
+                night_time_hour: 18,
+                day_theme: "Catppuccin Mocha".to_string(),
+                night_theme: "Tokyo Night".to_string(),
             },
             Task::none(),
         )
@@ -163,6 +179,11 @@ impl WallmodApp {
     pub fn active_tab(&self) -> crate::app::state::AppTab { self.active_tab }
     pub fn extracted_colors(&self) -> Option<&Vec<String>> { self.extracted_colors.as_ref() }
     pub fn histogram_data(&self) -> Option<&crate::modules::histogram::HistogramData> { self.histogram_data.as_ref() }
+    pub fn daemon_enabled(&self) -> bool { self.daemon_enabled }
+    pub fn day_time_hour(&self) -> u32 { self.day_time_hour }
+    pub fn night_time_hour(&self) -> u32 { self.night_time_hour }
+    pub fn day_theme(&self) -> &str { &self.day_theme }
+    pub fn night_theme(&self) -> &str { &self.night_theme }
 
     pub fn theme(&self) -> Theme {
         if self.is_dark_mode {
@@ -1184,6 +1205,47 @@ impl WallmodApp {
             }
             Message::ToggleSyncKitty(val) => {
                 self.sync_kitty = val;
+                Task::none()
+            }
+            Message::ToggleDaemon(enabled) => {
+                self.daemon_enabled = enabled;
+                if enabled {
+                    // Instantly trigger a tick check when enabled
+                    return Task::perform(async { () }, |_| Message::DaemonTick);
+                }
+                Task::none()
+            }
+            Message::SetDayHour(hour) => {
+                self.day_time_hour = hour;
+                Task::none()
+            }
+            Message::SetNightHour(hour) => {
+                self.night_time_hour = hour;
+                Task::none()
+            }
+            Message::SetDayTheme(theme) => {
+                self.day_theme = theme;
+                Task::none()
+            }
+            Message::SetNightTheme(theme) => {
+                self.night_theme = theme;
+                Task::none()
+            }
+            Message::DaemonTick => {
+                use chrono::Timelike;
+                let now = chrono::Local::now();
+                let hour = now.time().hour();
+                
+                let is_day = hour >= self.day_time_hour && hour < self.night_time_hour;
+                let expected_theme = if is_day { &self.day_theme } else { &self.night_theme };
+                
+                if self.current_theme.display_name() != *expected_theme && self.base_image_path.is_some() {
+                    self.current_theme = crate::app::helpers::ThemeSource::Preset(expected_theme.to_string());
+                    
+                    // Directly fire SetWallpaper which handles processing and applying via the universal backend
+                    return Task::perform(async { () }, |_| Message::SetWallpaper);
+                }
+                
                 Task::none()
             }
             Message::PipelineFinished(result) => {

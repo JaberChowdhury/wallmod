@@ -315,12 +315,47 @@ pub fn view(app: &crate::app::WallmodApp) -> Element<'_, Message> {
     ]
     .spacing(4);
 
+    let daemon_toggler = iced::widget::toggler(
+        "Enable Time-of-Day Daemon".to_string(),
+        app.daemon_enabled(),
+        Message::ToggleDaemon,
+    )
+    .width(Length::Fill)
+    .text_size(13);
+
+    let daemon_settings = if app.daemon_enabled() {
+        column![
+            text("DAYTIME THEME (06:00 - 18:00)").size(11).color(TEXT_MUTED),
+            pick_list(
+                crate::app::state::PRESET_NAMES,
+                Some(app.day_theme()),
+                |s| Message::SetDayTheme(s.to_string())
+            )
+            .padding([8, 12])
+            .width(Length::Fill),
+            space().height(4),
+            text("NIGHTTIME THEME (18:00 - 06:00)").size(11).color(TEXT_MUTED),
+            pick_list(
+                crate::app::state::PRESET_NAMES,
+                Some(app.night_theme()),
+                |s| Message::SetNightTheme(s.to_string())
+            )
+            .padding([8, 12])
+            .width(Length::Fill),
+        ].spacing(4)
+    } else {
+        column![]
+    };
+
     let cat_d_section = column![
         text("CATEGORY D: DESKTOP ENGINE").size(11).color(TEXT_MUTED),
         backend_picker,
         backend_desc_card,
         swww_picker,
         display_picker,
+        space().height(6),
+        daemon_toggler,
+        daemon_settings,
     ]
     .spacing(10);
 

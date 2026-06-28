@@ -30,7 +30,7 @@ This checklist tracks the status of all unified features collected across our so
 - [x] **Universal Backend Dispatcher & Tool Selector**: Explicit choice between backend engines (`swww`, `swaybg`, `feh`, `gsettings`, `qdbus`, or `Auto`) with informative tool descriptions.
 - [x] **Hardware-Accelerated Wayland Transitions (`swww`)**: Wipe, Wave, Grow, and Outer animation controls.
 - [x] **Multi-Monitor Display Targeting**: Selection of target displays (`All Displays`, `DP-1`, `HDMI-A-1`).
-- [ ] **Time-of-Day Automated Scheduler**: Solar-based background theme shifting daemon (Planned).
+- [x] **Time-of-Day Automated Scheduler**: Fixed-time background theme shifting daemon with chrono integration.
 
 ## Category E: Export & System Integration
 - [x] **Terminal Scheme Exporter**: Automated config syncing for Alacritty (`~/.config/alacritty`) and Kitty (`~/.config/kitty`).
