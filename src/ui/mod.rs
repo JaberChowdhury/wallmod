@@ -386,10 +386,10 @@ fn render_floating_stats(
         .flex_col()
         .min_w(px(130.0))
         .rounded_xl()
-        .bg(cx.theme().secondary.opacity(0.95))
+        .bg(cx.theme().secondary.opacity(0.60))
         .border_1()
-        .border_color(cx.theme().border)
-        .shadow_lg()
+        .border_color(cx.theme().border.opacity(0.4))
+        .shadow_2xl()
         .child(
             h_flex()
                 .justify_between()
