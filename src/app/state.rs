@@ -84,10 +84,10 @@ impl WorkspaceView {
 impl std::fmt::Display for WorkspaceView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WorkspaceView::Standard => write!(f, "[ * ] Output Visual"),
-            WorkspaceView::SplitDiff => write!(f, "[ / ] Split Diff"),
-            WorkspaceView::Telemetry => write!(f, "[ i ] Dashboard Info"),
-            WorkspaceView::Gallery => write!(f, "[ + ] Album Gallery"),
+            WorkspaceView::Standard => write!(f, "Output Visual"),
+            WorkspaceView::SplitDiff => write!(f, "Split Diff"),
+            WorkspaceView::Telemetry => write!(f, "Dashboard Info"),
+            WorkspaceView::Gallery => write!(f, "Album Gallery"),
         }
     }
 }
@@ -158,11 +158,11 @@ impl SidebarTab {
 impl std::fmt::Display for SidebarTab {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SidebarTab::ColorGrading => write!(f, "[*] Color Grading"),
-            SidebarTab::PhotoshopEffects => write!(f, "[/] Adjust & Effects"),
-            SidebarTab::DesktopEngine => write!(f, "[>] Wallpaper Engine"),
-            SidebarTab::ExportSync => write!(f, "[+] Export & Sync"),
-            SidebarTab::ToolsExt => write!(f, "[i] AI & Tools"),
+            SidebarTab::ColorGrading => write!(f, "Color Grading"),
+            SidebarTab::PhotoshopEffects => write!(f, "Adjust & Effects"),
+            SidebarTab::DesktopEngine => write!(f, "Wallpaper Engine"),
+            SidebarTab::ExportSync => write!(f, "Export & Sync"),
+            SidebarTab::ToolsExt => write!(f, "AI & Tools"),
         }
     }
 }

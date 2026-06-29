@@ -13,10 +13,15 @@ use gpui::*;
 use gpui_component::Root;
 use ui::WallmodView;
 
+use std::borrow::Cow;
+
 /// Main bootloader launching GPUI desktop application.
 fn main() {
     gpui_platform::application().run(move |cx| {
         gpui_component::init(cx);
+
+        let font_bytes = include_bytes!("../fonts/bootstrap-icons.ttf");
+        let _ = cx.text_system().add_fonts(vec![Cow::Borrowed(font_bytes)]);
 
         let window_options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1200.), px(800.)), cx)),
