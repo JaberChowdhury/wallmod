@@ -54,6 +54,7 @@ pub struct WallmodApp {
     pub day_theme: String,
     pub night_theme: String,
     pub photoshop_params: crate::modules::photoshop::PhotoshopParams,
+    pub option_group_tab: usize,
 }
 
 impl Default for WallmodApp {
@@ -104,6 +105,7 @@ impl WallmodApp {
             day_theme: "Catppuccin Mocha".to_string(),
             night_theme: "Tokyo Night".to_string(),
             photoshop_params: crate::modules::photoshop::PhotoshopParams::default(),
+            option_group_tab: 0,
         }
     }
 

@@ -25,10 +25,8 @@ fn main() {
 
         let window_options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1200.), px(800.)), cx)),
-            titlebar: Some(TitlebarOptions {
-                title: Some(SharedString::from("wallmod — ricer edition")),
-                ..Default::default()
-            }),
+            titlebar: None,
+            window_decorations: Some(WindowDecorations::Client),
             ..Default::default()
         };
 
