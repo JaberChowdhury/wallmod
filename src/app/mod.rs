@@ -75,6 +75,9 @@ pub struct WallmodApp {
     pub option_group_tab: usize,
     pub split_diff_ratio: f32,
     pub export_dir: Option<PathBuf>,
+    pub theme_chain: Vec<crate::app::state::ThemeChainNode>,
+    pub chaining_mode: bool,
+    pub global_bit_depth: crate::app::state::BitDepthStyle,
 }
 
 impl Default for WallmodApp {
@@ -85,6 +88,7 @@ impl Default for WallmodApp {
 
 impl WallmodApp {
     pub fn new() -> Self {
+        let initial_theme = ThemeSource::Preset("Catppuccin Mocha".to_string());
         Self {
             base_image_path: None,
             base_image_dyn: None,
@@ -93,7 +97,7 @@ impl WallmodApp {
             image_width: 0,
             image_height: 0,
             image_filename: String::new(),
-            current_theme: ThemeSource::Preset("Catppuccin Mocha".to_string()),
+            current_theme: initial_theme.clone(),
             state: AppState::Idle,
             custom_palette_input: String::new(),
             selected_preset: Some("Catppuccin Mocha".to_string()),
@@ -132,6 +136,34 @@ impl WallmodApp {
             option_group_tab: 0,
             split_diff_ratio: 0.5,
             export_dir: None,
+            theme_chain: vec![crate::app::state::ThemeChainNode {
+                id: 1,
+                theme: initial_theme,
+                enabled: true,
+                bit_depth: crate::app::state::BitDepthStyle::Bit32,
+            }],
+            chaining_mode: false,
+            global_bit_depth: crate::app::state::BitDepthStyle::Bit32,
+        }
+    }
+
+    pub fn apply_theme(&mut self, theme: ThemeSource) {
+        self.current_theme = theme.clone();
+        if self.chaining_mode {
+            let next_id = self.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+            self.theme_chain.push(crate::app::state::ThemeChainNode {
+                id: next_id,
+                theme,
+                enabled: true,
+                bit_depth: self.global_bit_depth,
+            });
+        } else {
+            self.theme_chain = vec![crate::app::state::ThemeChainNode {
+                id: 1,
+                theme,
+                enabled: true,
+                bit_depth: self.global_bit_depth,
+            }];
         }
     }
 
@@ -176,6 +208,9 @@ impl WallmodApp {
         dither_enabled: bool,
         seam_carve_target: u32,
         pixel_sort_enabled: bool,
+        theme_chain: Vec<crate::app::state::ThemeChainNode>,
+        chaining_mode: bool,
+        global_bit_depth: crate::app::state::BitDepthStyle,
         algorithm: RemapAlgorithm,
         preserve_luma: bool,
         hald_level: u8,
@@ -225,6 +260,12 @@ impl WallmodApp {
                                             );
                                     }
                                 }
+                                let mut rgba_bit = processed_dyn.to_rgba8();
+                                crate::backend::bit_depth::apply_bit_depth(
+                                    &mut rgba_bit,
+                                    global_bit_depth,
+                                );
+                                processed_dyn = image::DynamicImage::ImageRgba8(rgba_bit);
                                 if seam_carve_target > 0
                                     && seam_carve_target < processed_dyn.width()
                                 {
@@ -268,7 +309,37 @@ impl WallmodApp {
             _ => {},
         }
 
-        if !shades.is_empty() {
+        if chaining_mode && !theme_chain.is_empty() {
+            for node in &theme_chain {
+                if !node.enabled {
+                    continue;
+                }
+                let node_shades = node.theme.get_shades();
+                if !node_shades.is_empty() {
+                    match algorithm {
+                        RemapAlgorithm::Gaussian => {
+                            let remapper =
+                                GaussianRemapper::new(&node_shades, 96.0, 0, 1.0, preserve_luma);
+                            let hald_clut = remapper.par_generate_lut(hald_level);
+                            par_correct_image(&mut rgba, &hald_clut);
+                        },
+                        RemapAlgorithm::Shepard => {
+                            let remapper =
+                                ShepardRemapper::new(&node_shades, 16.0, 0, 1.0, preserve_luma);
+                            let hald_clut = remapper.par_generate_lut(hald_level);
+                            par_correct_image(&mut rgba, &hald_clut);
+                        },
+                        RemapAlgorithm::NearestNeighbor => {
+                            let remapper =
+                                NearestNeighborRemapper::new(&node_shades, 1.0, preserve_luma);
+                            let hald_clut = remapper.par_generate_lut(hald_level);
+                            par_correct_image(&mut rgba, &hald_clut);
+                        },
+                    }
+                }
+                crate::backend::bit_depth::apply_bit_depth(&mut rgba, node.bit_depth);
+            }
+        } else if !shades.is_empty() {
             match algorithm {
                 RemapAlgorithm::Gaussian => {
                     let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
@@ -287,6 +358,7 @@ impl WallmodApp {
                 },
             }
         }
+        crate::backend::bit_depth::apply_bit_depth(&mut rgba, global_bit_depth);
 
         let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
         if !photoshop_params.is_neutral() {
@@ -334,6 +406,9 @@ impl WallmodApp {
             self.dither_enabled,
             self.seam_carve_target,
             self.pixel_sort_enabled,
+            self.theme_chain.clone(),
+            self.chaining_mode,
+            self.global_bit_depth,
             self.algorithm,
             self.preserve_luma,
             self.hald_level,
@@ -404,7 +479,8 @@ impl WallmodApp {
         if colors.is_empty() {
             return Err("No valid hex colors provided.".to_string());
         }
-        self.current_theme = ThemeSource::CustomPalette("Custom Palette".to_string(), colors);
+        let new_theme = ThemeSource::CustomPalette("Custom Palette".to_string(), colors);
+        self.apply_theme(new_theme);
         self.selected_preset = None;
         self.run_processing()
     }
@@ -558,7 +634,8 @@ impl WallmodApp {
         };
 
         if self.current_theme.display_name() != *expected_theme && self.base_image_path.is_some() {
-            self.current_theme = ThemeSource::Preset(expected_theme.to_string());
+            let new_theme = ThemeSource::Preset(expected_theme.to_string());
+            self.apply_theme(new_theme);
             let _ = self.run_processing();
             return true;
         }

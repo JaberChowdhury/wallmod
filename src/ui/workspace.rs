@@ -189,7 +189,8 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                             None
                                                                         }
                                                                     }).collect();
-                                                                    this.app.current_theme = crate::app::state::ThemeSource::CustomPalette("Extracted".to_string(), colors);
+                                                                    let new_theme = crate::app::state::ThemeSource::CustomPalette("Extracted".to_string(), colors);
+                                                                    this.app.apply_theme(new_theme);
                                                                     this.app.selected_preset = None;
                                                                     this.app.workspace_view = crate::app::state::WorkspaceView::PaletteEditor;
                                                                     this.app.selected_color_idx = None;
@@ -533,6 +534,100 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                             )
                                             .into_any_element()
                                     }
+                                )
+                                .into_any_element()
+                        }
+                        WorkspaceView::NodePipeline => {
+                            let chain = view.app.theme_chain.clone();
+                            let chaining_mode = view.app.chaining_mode;
+                            let global_bd = view.app.global_bit_depth;
+
+                            v_flex().size_full().gap_6().p_6().overflow_y_scrollbar()
+                                .child(
+                                    h_flex().justify_between().items_center().w_full().p_4().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
+                                        .child(
+                                            v_flex().gap_1()
+                                                .child(div().text_lg().font_bold().child("Node-Based Theme Visualization"))
+                                                .child(div().text_sm().text_color(cx.theme().muted_foreground).child(
+                                                    if chaining_mode { "Chaining Mode Active: Themes are applied sequentially from left to right." }
+                                                    else { "Explore Mode Active: Single theme exploration on original image." }
+                                                ))
+                                        )
+                                        .child(
+                                            h_flex().gap_2()
+                                                .child(Button::new("btn_pipe_mode").disabled(is_loading).child(gpui::svg().path("replace.svg").size_4().text_color(cx.theme().primary)).label(if chaining_mode { "Switch to Explore Mode" } else { "Switch to Chaining Mode" }).small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    this.app.chaining_mode = !this.app.chaining_mode;
+                                                    cx.notify();
+                                                })))
+                                                .child(Button::new("btn_pipe_clear").disabled(is_loading).child(gpui::svg().path("close.svg").size_4().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Reset Chain").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let init = crate::app::state::ThemeSource::Preset("Catppuccin Mocha".to_string());
+                                                    this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
+                                                    this.app.current_theme = init;
+                                                    this.trigger_async_processing(cx, "Resetting chain...");
+                                                })))
+                                        )
+                                )
+                                .child(
+                                    h_flex().gap_4().items_center().w_full().overflow_x_scrollbar().pb_6()
+                                        // Node 0: Original Image Source
+                                        .child(
+                                            v_flex().w(px(220.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().background).gap_3()
+                                                .child(h_flex().gap_2().items_center().child(gpui::svg().path("folder.svg").size_5().text_color(cx.theme().primary)).child(div().font_bold().child("Input Source")))
+                                                .child(div().text_xs().text_color(cx.theme().muted_foreground).child("Original un-graded wallpaper image data"))
+                                                .child(div().text_xs().font_bold().p_2().bg(cx.theme().secondary).rounded_md().child(if let Some(p) = &preview_path { p.file_name().unwrap_or_default().to_string_lossy().to_string() } else { "No file".to_string() }))
+                                        )
+                                        .child(div().text_xl().font_bold().text_color(cx.theme().primary).child("➔"))
+                                        // Chain nodes
+                                        .children(chain.iter().map(|node| {
+                                            let nid = node.id;
+                                            let nname = node.theme.display_name();
+                                            let nenabled = node.enabled;
+                                            let nbd = node.bit_depth;
+                                            let node_el = v_flex().w(px(260.0)).p_4().border_1().border_color(if nenabled { cx.theme().primary } else { cx.theme().border }).rounded_xl().bg(cx.theme().background).gap_3().opacity(if nenabled { 1.0 } else { 0.5 })
+                                                .child(
+                                                    h_flex().justify_between().items_center()
+                                                        .child(h_flex().gap_2().items_center().child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child(div().font_bold().child(format!("Node #{}: {}", nid, nname))))
+                                                        .child(Button::new(format!("toggle_n_{}", nid)).disabled(is_loading).child(gpui::svg().path(if nenabled { "check.svg" } else { "close.svg" }).size_4().text_color(if nenabled { cx.theme().primary } else { cx.theme().muted_foreground })).small().outline().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                n.enabled = !n.enabled;
+                                                            }
+                                                            this.trigger_async_processing(cx, "Toggling node...");
+                                                        })))
+                                                )
+                                                .child(div().text_xs().text_color(cx.theme().muted_foreground).child(format!("Color Style: {}", nbd.display_name())))
+                                                .child(
+                                                    h_flex().gap_1().w_full().pt_1()
+                                                        .child(Button::new(format!("bd32_{}", nid)).disabled(is_loading).child("32b").small().flex_1().selected(nbd == crate::app::state::BitDepthStyle::Bit32).cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) { n.bit_depth = crate::app::state::BitDepthStyle::Bit32; }
+                                                            this.trigger_async_processing(cx, "Updating node bit depth...");
+                                                        })))
+                                                        .child(Button::new(format!("bd16_{}", nid)).disabled(is_loading).child("16b").small().flex_1().selected(nbd == crate::app::state::BitDepthStyle::Bit16).cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) { n.bit_depth = crate::app::state::BitDepthStyle::Bit16; }
+                                                            this.trigger_async_processing(cx, "Updating node bit depth...");
+                                                        })))
+                                                        .child(Button::new(format!("bd8_{}", nid)).disabled(is_loading).child("8b").small().flex_1().selected(nbd == crate::app::state::BitDepthStyle::Bit8).cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) { n.bit_depth = crate::app::state::BitDepthStyle::Bit8; }
+                                                            this.trigger_async_processing(cx, "Updating node bit depth...");
+                                                        })))
+                                                )
+                                                .child(
+                                                    Button::new(format!("del_n_{}", nid)).disabled(is_loading).label("Remove Node").child(gpui::svg().path("close.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).small().outline().w_full().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                        this.app.theme_chain.retain(|x| x.id != nid);
+                                                        this.trigger_async_processing(cx, "Removing node from chain...");
+                                                    }))
+                                                );
+                                            h_flex().gap_4().items_center().child(node_el).child(div().text_xl().font_bold().text_color(cx.theme().primary).child("➔")).into_any_element()
+                                        }))
+                                        // Final Output Node
+                                        .child(
+                                            v_flex().w(px(220.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().secondary).gap_3()
+                                                .child(h_flex().gap_2().items_center().child(gpui::svg().path("check.svg").size_5().text_color(cx.theme().primary)).child(div().font_bold().child("Final Output")))
+                                                .child(div().text_xs().text_color(cx.theme().muted_foreground).child(format!("Global Output Bit-Depth: {}", global_bd.display_name())))
+                                                .child(Button::new("btn_view_out").disabled(is_loading).label("View Output Visual").child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).small().primary().w_full().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                                                    cx.notify();
+                                                })))
+                                        )
                                 )
                                 .into_any_element()
                         }

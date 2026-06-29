@@ -81,6 +81,7 @@ impl std::fmt::Display for AppTab {
 pub enum WorkspaceView {
     Standard,
     SplitDiff,
+    NodePipeline,
     Telemetry,
     ExtractColor,
     PaletteEditor,
@@ -91,6 +92,7 @@ impl WorkspaceView {
     pub const ALL: &[WorkspaceView] = &[
         WorkspaceView::Standard,
         WorkspaceView::SplitDiff,
+        WorkspaceView::NodePipeline,
         WorkspaceView::Telemetry,
         WorkspaceView::ExtractColor,
         WorkspaceView::PaletteEditor,
@@ -103,6 +105,7 @@ impl std::fmt::Display for WorkspaceView {
         match self {
             WorkspaceView::Standard => write!(f, "Output Visual"),
             WorkspaceView::SplitDiff => write!(f, "Split Diff"),
+            WorkspaceView::NodePipeline => write!(f, "Node Pipeline"),
             WorkspaceView::Telemetry => write!(f, "Dashboard Info"),
             WorkspaceView::ExtractColor => write!(f, "Extract Color"),
             WorkspaceView::PaletteEditor => write!(f, "Edit Palette"),
@@ -165,6 +168,33 @@ impl ThemeSource {
         }
         shades
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BitDepthStyle {
+    Bit32,
+    Bit16,
+    Bit8,
+}
+
+impl BitDepthStyle {
+    pub const ALL: &[BitDepthStyle] =
+        &[BitDepthStyle::Bit32, BitDepthStyle::Bit16, BitDepthStyle::Bit8];
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            BitDepthStyle::Bit32 => "32-bit (True Color)",
+            BitDepthStyle::Bit16 => "16-bit (High Color)",
+            BitDepthStyle::Bit8 => "8-bit (VGA Posterized)",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ThemeChainNode {
+    pub id: usize,
+    pub theme: ThemeSource,
+    pub enabled: bool,
+    pub bit_depth: BitDepthStyle,
 }
 
 /// Application State Model.

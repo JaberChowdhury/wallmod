@@ -203,6 +203,9 @@ impl WallmodView {
         let dither_enabled = self.app.dither_enabled;
         let seam_carve_target = self.app.seam_carve_target;
         let pixel_sort_enabled = self.app.pixel_sort_enabled;
+        let theme_chain = self.app.theme_chain.clone();
+        let chaining_mode = self.app.chaining_mode;
+        let global_bit_depth = self.app.global_bit_depth;
         let algorithm = self.app.algorithm.clone();
         let preserve_luma = self.app.preserve_luma;
         let hald_level = self.app.hald_level;
@@ -221,6 +224,9 @@ impl WallmodView {
                         dither_enabled,
                         seam_carve_target,
                         pixel_sort_enabled,
+                        theme_chain,
+                        chaining_mode,
+                        global_bit_depth,
                         algorithm,
                         preserve_luma,
                         hald_level,

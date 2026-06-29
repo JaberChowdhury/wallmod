@@ -61,10 +61,11 @@ pub fn render_swatches(
                     } else {
                         // Convert to custom palette
                         let shades = view.app.current_theme.get_shades();
-                        view.app.current_theme = ThemeSource::CustomPalette(
+                        let new_theme = ThemeSource::CustomPalette(
                             format!("Custom {}", view.app.current_theme.display_name()),
                             shades,
                         );
+                        view.app.apply_theme(new_theme);
                         view.app.selected_preset = None;
                     }
                     view.app.workspace_view = crate::app::WorkspaceView::PaletteEditor;

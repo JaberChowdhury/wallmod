@@ -1,5 +1,6 @@
 //! Backend service layer orchestrating caching, processing, wallpaper setting, and config export.
 
+pub mod bit_depth;
 pub mod cache;
 pub mod dither;
 pub mod error;

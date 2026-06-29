@@ -42,6 +42,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
     let night_t = view.app.night_theme.clone();
 
     let current_theme = view.app.current_theme.clone();
+    let chaining_mode = view.app.chaining_mode;
+    let bit_depth = view.app.global_bit_depth;
 
     let view_entity = cx.entity().clone();
 
@@ -122,7 +124,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                             if let Some(file) = rfd::AsyncFileDialog::new().add_filter("LUT", &["cube", "png"]).pick_file().await {
                                                                 let path = file.path().to_path_buf();
                                                                 let _ = this.update(cx, |view, cx| {
-                                                                    view.app.current_theme = crate::app::ThemeSource::Custom(path);
+                                                                    let new_theme = crate::app::ThemeSource::Custom(path);
+                                                                    view.app.apply_theme(new_theme);
                                                                     view.trigger_async_processing(cx, "Applying LUT color grading...");
                                                                 });
                                                             }
@@ -147,7 +150,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                         menu = menu.item(
                                                             PopupMenuItem::new(name).on_click(window.listener_for(&ve, move |this, _, _, cx| {
                                                                 this.app.selected_preset = Some(n.clone());
-                                                                this.app.current_theme = crate::app::ThemeSource::Preset(n.clone());
+                                                                let new_theme = crate::app::ThemeSource::Preset(n.clone());
+                                                                this.app.apply_theme(new_theme);
                                                                 this.trigger_async_processing(cx, "Applying theme preset...");
                                                             }))
                                                         );
@@ -161,6 +165,42 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                             .child(div().text_xs().font_bold().child(format!("Quick Gaussian Blur: {:.1}px", blur_sigma)))
                                                             .child(
                                                                 Slider::new(&view.blur_slider).disabled(is_loading)
+                                                            )
+                                                    )
+                                                    .child(
+                                                        v_flex().gap_2().pt_2().border_t_1().border_color(cx.theme().border)
+                                                            .child(div().text_sm().font_bold().child("Retro Bit-Depth & Style"))
+                                                            .child(
+                                                                h_flex().gap_1().w_full()
+                                                                    .child(Button::new("bd_32").disabled(is_loading).child(gpui::svg().path("monitor.svg").size_4().text_color(cx.theme().primary)).child("32-bit").small().flex_1().selected(bit_depth == crate::app::state::BitDepthStyle::Bit32).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                                        this.app.global_bit_depth = crate::app::state::BitDepthStyle::Bit32; this.trigger_async_processing(cx, "Setting 32-bit color...");
+                                                                    })))
+                                                                    .child(Button::new("bd_16").disabled(is_loading).child(gpui::svg().path("cpu.svg").size_4().text_color(cx.theme().primary)).child("16-bit").small().flex_1().selected(bit_depth == crate::app::state::BitDepthStyle::Bit16).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                                        this.app.global_bit_depth = crate::app::state::BitDepthStyle::Bit16; this.trigger_async_processing(cx, "Applying 16-bit High Color...");
+                                                                    })))
+                                                                    .child(Button::new("bd_8").disabled(is_loading).child(gpui::svg().path("layers.svg").size_4().text_color(cx.theme().primary)).child("8-bit").small().flex_1().selected(bit_depth == crate::app::state::BitDepthStyle::Bit8).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                                        this.app.global_bit_depth = crate::app::state::BitDepthStyle::Bit8; this.trigger_async_processing(cx, "Applying 8-bit VGA style...");
+                                                                    })))
+                                                            )
+                                                            .child(
+                                                                h_flex().justify_between().items_center().pt_1()
+                                                                    .child(div().text_xs().font_bold().child(if chaining_mode { "Chaining Mode: ON (Append)" } else { "Explore Mode: Single Theme" }))
+                                                                    .child(Button::new("btn_toggle_chaining").disabled(is_loading).child(gpui::svg().path("git-branch.svg").size_4().text_color(cx.theme().primary)).label(if chaining_mode { "Chain ON" } else { "Explore" }).small().selected(chaining_mode).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                                        this.app.chaining_mode = !this.app.chaining_mode;
+                                                                        cx.notify();
+                                                                    })))
+                                                            )
+                                                            .child(
+                                                                Button::new("btn_view_node_pipeline").disabled(is_loading)
+                                                                    .label("Open Node Graph Pipeline")
+                                                                    .child(gpui::svg().path("git-commit.svg").size_4().text_color(cx.theme().primary))
+                                                                    .w_full()
+                                                                    .small()
+                                                                    .outline()
+                                                                    .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                                        this.app.workspace_view = crate::app::state::WorkspaceView::NodePipeline;
+                                                                        cx.notify();
+                                                                    }))
                                                             )
                                                     )
                                                     .child(
@@ -560,6 +600,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     let alg = this.app.algorithm;
                                     let luma = this.app.preserve_luma;
                                     let hald = this.app.hald_level;
+                                    let chain = this.app.theme_chain.clone();
+                                    let cmode = this.app.chaining_mode;
+                                    let bitdepth = this.app.global_bit_depth;
                                     let out_dir = this.app.export_dir.clone();
 
                                     cx.spawn(async move |this, cx| {
@@ -580,7 +623,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                         if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
                                                             if ["png", "jpg", "jpeg", "webp"].contains(&ext.as_str()) {
                                                                 if let Ok(img) = crate::app::helpers::open_image(&path) {
-                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params.clone(), blur, dither, seam, psort, alg, luma, hald) {
+                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params.clone(), blur, dither, seam, psort, chain.clone(), cmode, bitdepth, alg, luma, hald) {
                                                                         if let Some(name) = path.file_name() {
                                                                             let _ = processed.save(target_dir.join(name));
                                                                         }
