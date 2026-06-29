@@ -11,7 +11,7 @@ pub fn compress_png(raw_bytes: &[u8]) -> Result<(Vec<u8>, usize, usize), String>
         Ok(optimized_bytes) => {
             let opt_size = optimized_bytes.len();
             Ok((optimized_bytes, original_size, opt_size))
-        }
+        },
         Err(e) => Err(format!("Compression failed: {}", e)),
     }
 }

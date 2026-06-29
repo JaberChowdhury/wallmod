@@ -9,11 +9,7 @@ pub fn extract_dominant_colors(img: &DynamicImage, k: usize) -> Result<Vec<Strin
     let pixels: Vec<Lab> = rgba
         .pixels()
         .map(|p| {
-            let srgb = Srgb::new(
-                p[0] as f32 / 255.0,
-                p[1] as f32 / 255.0,
-                p[2] as f32 / 255.0,
-            );
+            let srgb = Srgb::new(p[0] as f32 / 255.0, p[1] as f32 / 255.0, p[2] as f32 / 255.0);
             let oklab: Oklab = srgb.into_linear().into_color();
             Lab::new(oklab.l, oklab.a, oklab.b)
         })

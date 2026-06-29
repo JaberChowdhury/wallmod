@@ -1,4 +1,16 @@
-max_width = 100
 edition = "2021"
+max_width = 100
+
+# "Off" forces rustfmt to stop trying to squeeze code onto one line.
+# It drastically lowers the threshold for vertical splitting.
+use_small_heuristics = "Off"
+
+# Standard stable readability improvements
 reorder_imports = true
 reorder_modules = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+# Forces trailing commas in lists, which helps keep diffs clean and
+# encourages vertical lists in match arms/structs.
+match_block_trailing_comma = true

@@ -7,11 +7,13 @@ use crate::ui::WallmodView;
 use gpui::*;
 use gpui_component::{
     button::*, h_flex, scroll::ScrollableElement, v_flex, ActiveTheme, Icon, IconName, Selectable,
-    Sizable, StyledExt,
+    Sizable, StyledExt, Disableable,
 };
 
 /// Renders the central workspace preview, split diff overlay, dashboard info, or album gallery.
 pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> impl IntoElement {
+    let is_loading = view.app.state.is_loading();
+    let loading_msg = if let crate::app::AppState::Loading(_, ref s) = view.app.state { s.clone() } else { "Processing...".to_string() };
     let workspace_view = view.app.workspace_view;
     let preview_path = view.app.preview_path.clone();
     let base_path = view.app.base_image_path.clone();
@@ -27,6 +29,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
     let album_images = view.app.album_images.clone();
 
     v_flex()
+        .relative()
         .flex_1()
         .h_full()
         .overflow_hidden()
@@ -43,22 +46,22 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                 .child(
                     Button::new("wv_std").label("Output Visual").icon(IconName::Eye).small()
                         .selected(workspace_view == WorkspaceView::Standard)
-                        .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Standard; cx.notify(); }))
+                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Standard; cx.notify(); }))
                 )
                 .child(
                     Button::new("wv_diff").label("Split Diff").icon(IconName::Frame).small()
                         .selected(workspace_view == WorkspaceView::SplitDiff)
-                        .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::SplitDiff; cx.notify(); }))
+                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::SplitDiff; cx.notify(); }))
                 )
                 .child(
                     Button::new("wv_tel").label("Dashboard Info").icon(IconName::LayoutDashboard).small()
                         .selected(workspace_view == WorkspaceView::Telemetry)
-                        .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Telemetry; cx.notify(); }))
+                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Telemetry; cx.notify(); }))
                 )
                 .child(
                     Button::new("wv_gal").label("Album Gallery").icon(IconName::Folder).small()
                         .selected(workspace_view == WorkspaceView::Gallery)
-                        .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Gallery; cx.notify(); }))
+                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Gallery; cx.notify(); }))
                 )
         )
         .child(
@@ -69,6 +72,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                             if let Some(path) = preview_path {
                                 div()
                                     .size_full()
+                                    .relative()
                                     .border_1()
                                     .border_color(cx.theme().border)
                                     .rounded_lg()
@@ -87,12 +91,12 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                             v_flex().size_full().gap_3()
                                 .child(
                                     h_flex().gap_2().items_center().justify_center().w_full()
-                                        .child(div().text_xs().font_bold().child("Split Comparison:"))
-                                        .child(Button::new("split_10").label("10% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.1).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
-                                        .child(Button::new("split_30").label("30% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.3).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
-                                        .child(Button::new("split_50").label("50% / 50%").icon(IconName::Eye).small().selected((split_ratio - 0.5).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
-                                        .child(Button::new("split_70").label("70% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.7).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
-                                        .child(Button::new("split_90").label("90% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.9).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
+                                        .child(h_flex().gap_2().items_center().child(Icon::new(IconName::PanelLeft).text_color(cx.theme().primary).size_4()).child(div().text_xs().font_bold().child("Split Comparison:")))
+                                        .child(Button::new("split_10").disabled(is_loading).label("10% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.1).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
+                                        .child(Button::new("split_30").disabled(is_loading).label("30% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.3).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
+                                        .child(Button::new("split_50").disabled(is_loading).label("50% / 50%").icon(IconName::Eye).small().selected((split_ratio - 0.5).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
+                                        .child(Button::new("split_70").disabled(is_loading).label("70% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.7).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
+                                        .child(Button::new("split_90").disabled(is_loading).label("90% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.9).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
                                 )
                                 .child(
                                     h_flex().flex_1().w_full().gap_3().overflow_hidden()
@@ -124,7 +128,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                         }
                         WorkspaceView::Telemetry => {
                             v_flex().gap_4().w_full().max_w(px(650.0)).p_6().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
-                                .child(div().text_lg().font_bold().child("Telemetry & Inspection Dashboard"))
+                                .child(h_flex().gap_2().items_center().child(Icon::new(IconName::LayoutDashboard).text_color(cx.theme().primary).size_5()).child(div().text_lg().font_bold().child("Telemetry & Inspection Dashboard")))
                                 .child(render_swatches(&current_theme, cx))
                                 .child(render_histogram(hist_data.as_ref(), cx))
                                 .child(
@@ -152,17 +156,17 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                         .child(
                                             if let Some(ref sel) = selected_album {
                                                 h_flex().gap_2().items_center()
-                                                    .child(Button::new("btn_back_alb").label("Back to Albums").icon(IconName::ArrowLeft).small().on_click(cx.listener(|this, _, _, cx| {
+                                                    .child(Button::new("btn_back_alb").disabled(is_loading).label("Back to Albums").icon(IconName::ArrowLeft).small().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                         this.app.selected_album = None;
                                                         this.app.album_images.clear();
                                                         cx.notify();
                                                     })))
-                                                    .child(div().text_lg().font_bold().child(format!("Album: {}", sel.file_name().and_then(|n| n.to_str()).unwrap_or("Folder"))))
+                                                    .child(h_flex().gap_2().items_center().child(Icon::new(IconName::FolderOpen).text_color(cx.theme().primary).size_5()).child(div().text_lg().font_bold().child(format!("Album: {}", sel.file_name().and_then(|n| n.to_str()).unwrap_or("Folder")))))
                                             } else {
-                                                h_flex().child(div().text_lg().font_bold().child("System Wallpaper Albums"))
+                                                h_flex().gap_2().items_center().child(Icon::new(IconName::Folder).text_color(cx.theme().primary).size_5()).child(div().text_lg().font_bold().child("System Wallpaper Albums"))
                                             }
                                         )
-                                        .child(Button::new("btn_scan_gal").label("Scan System Gallery").icon(IconName::Search).primary().on_click(cx.listener(|this, _, _, cx| {
+                                        .child(Button::new("btn_scan_gal").disabled(is_loading).label("Scan System Gallery").icon(IconName::Search).primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                             this.app.albums = WallmodApp::scan_system_gallery();
                                             this.app.selected_album = None;
                                             cx.notify();
@@ -183,14 +187,21 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                             .w(px(180.0)).h(px(160.0))
                                                             .p_2().border_1().border_color(cx.theme().border).rounded_lg().bg(cx.theme().secondary)
                                                             .flex().flex_col().justify_between().items_center().cursor_pointer()
-                                                            .on_click(cx.listener(move |_, _, _, cx| {
+                                                            .cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                                 let p = p_clone.clone();
+                                                                this.app.state = crate::app::AppState::Loading(0.2, "Reading image from album...".to_string());
+                                                                this.app.workspace_view = WorkspaceView::Standard;
+                                                                cx.notify();
                                                                 cx.spawn(async move |this, cx| {
                                                                     if let Ok(Ok(dyn_img)) = crate::backend::runtime::spawn_blocking({ let p = p.clone(); move || image::open(&p) }).await {
                                                                         let _ = this.update(cx, |view, cx| {
                                                                             view.app.on_image_selected(p, dyn_img);
-                                                                            view.app.workspace_view = WorkspaceView::Standard;
+                                                                            view.app.state = crate::app::AppState::Idle;
                                                                             cx.notify();
+                                                                        });
+                                                                        cx.background_executor().timer(std::time::Duration::from_millis(1500)).await;
+                                                                        let _ = this.update(cx, |view, cx| {
+                                                                            view.trigger_async_processing(cx, "Processing album image...");
                                                                         });
                                                                     }
                                                                 }).detach();
@@ -216,7 +227,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         .w(px(220.0)).h(px(180.0))
                                                         .p_3().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
                                                         .flex().flex_col().justify_between().cursor_pointer()
-                                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                                        .cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                             let imgs = WallmodApp::scan_album_images(&folder_path);
                                                             this.app.selected_album = Some(folder_path.clone());
                                                             this.app.album_images = imgs;
@@ -244,4 +255,71 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                     }
                 )
         )
+        .children(if is_loading {
+            Some(
+                v_flex()
+                    .absolute()
+                    .inset_0()
+                    .bg(gpui::Rgba { r: 0.04, g: 0.04, b: 0.06, a: 0.35 })
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        v_flex()
+                            .px_8()
+                            .py_6()
+                            .rounded_2xl()
+                            .bg(cx.theme().background.opacity(0.96))
+                            .border_1()
+                            .border_color(cx.theme().primary.opacity(0.4))
+                            .shadow_2xl()
+                            .items_center()
+                            .gap_4()
+                            .child(
+                                h_flex()
+                                    .gap_4()
+                                    .items_center()
+                                    .child(div().rounded_full().bg(gpui::Rgba { r: 0.2, g: 0.8, b: 1.0, a: 0.9 })
+                                        .with_animation(
+                                            "dot1",
+                                            Animation::new(std::time::Duration::from_secs_f32(1.2)).repeat(),
+                                            |this, delta| {
+                                                let scale = 1.0 + (delta * std::f32::consts::PI * 2.0).sin() * 0.5;
+                                                this.w(px(14.0 * scale)).h(px(14.0 * scale))
+                                            }
+                                        )
+                                    )
+                                    .child(div().rounded_full().bg(gpui::Rgba { r: 0.6, g: 0.4, b: 1.0, a: 0.9 })
+                                        .with_animation(
+                                            "dot2",
+                                            Animation::new(std::time::Duration::from_secs_f32(1.2)).repeat(),
+                                            |this, delta| {
+                                                let scale = 1.0 + ((delta + 0.33) * std::f32::consts::PI * 2.0).sin() * 0.5;
+                                                this.w(px(14.0 * scale)).h(px(14.0 * scale))
+                                            }
+                                        )
+                                    )
+                                    .child(div().rounded_full().bg(gpui::Rgba { r: 1.0, g: 0.3, b: 0.6, a: 0.9 })
+                                        .with_animation(
+                                            "dot3",
+                                            Animation::new(std::time::Duration::from_secs_f32(1.2)).repeat(),
+                                            |this, delta| {
+                                                let scale = 1.0 + ((delta + 0.66) * std::f32::consts::PI * 2.0).sin() * 0.5;
+                                                this.w(px(14.0 * scale)).h(px(14.0 * scale))
+                                            }
+                                        )
+                                    )
+                            )
+                            .child(
+                                div()
+                                    .text_sm()
+                                    .font_bold()
+                                    .text_color(cx.theme().foreground)
+                                    .child(loading_msg)
+                            )
+                    )
+                    .into_any_element()
+            )
+        } else {
+            None
+        })
 }

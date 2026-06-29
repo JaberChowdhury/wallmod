@@ -111,31 +111,23 @@ impl WallmodApp {
         }
     }
 
-    pub fn update_preview(&mut self, dyn_img: image::DynamicImage) {
-        static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
-            std::sync::atomic::AtomicUsize::new(1);
-        let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.png", count));
-        let _ = dyn_img.save(&temp_path);
+    pub fn update_preview(&mut self, dyn_img: image::DynamicImage, temp_path: PathBuf, histogram: Option<crate::modules::histogram::HistogramData>, wcag_contrast: f32) {
         self.image_width = dyn_img.width();
         self.image_height = dyn_img.height();
-        self.wcag_contrast = helpers::compute_wcag_contrast(&dyn_img);
-        self.processed_dyn = Some(dyn_img.clone());
+        self.wcag_contrast = wcag_contrast;
+        self.processed_dyn = Some(dyn_img);
         self.preview_path = Some(temp_path.clone());
         self.state = AppState::PreviewReady(temp_path);
-        self.compute_histograms();
+        self.histogram_data = histogram;
     }
 
     pub fn on_image_selected(&mut self, path: PathBuf, dyn_img: image::DynamicImage) {
-        self.image_filename = path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
+        self.image_filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
         self.image_width = dyn_img.width();
         self.image_height = dyn_img.height();
         self.base_image_path = Some(path.clone());
-        self.base_image_dyn = Some(dyn_img.clone());
+        self.preview_path = Some(path.clone());
+        self.base_image_dyn = Some(dyn_img);
         self.seam_carve_target = self.image_width;
         self.blur_sigma = 0.0;
         self.photoshop_params = crate::modules::photoshop::PhotoshopParams::default();
@@ -143,101 +135,134 @@ impl WallmodApp {
         self.extracted_colors = None;
         self.selected_album = None;
         self.album_images.clear();
-        self.state = AppState::Loading(0.5, "Processing new image...".to_string());
-        let _ = self.run_processing();
+        // Do not synchronously update preview here; trigger_async_processing will handle it!
     }
 
-    pub fn run_processing(&mut self) -> Result<(), String> {
-        let Some(ref dyn_img) = self.base_image_dyn else {
-            return Ok(());
-        };
-        let mut rgba = dyn_img.to_rgba8();
-        let shades = self.current_theme.get_shades();
+pub fn process_image_sync(
+    base_image_dyn: Option<image::DynamicImage>,
+    current_theme: ThemeSource,
+    photoshop_params: crate::modules::photoshop::PhotoshopParams,
+    blur_sigma: f32,
+    dither_enabled: bool,
+    algorithm: RemapAlgorithm,
+    preserve_luma: bool,
+    hald_level: u8,
+) -> Result<Option<(image::DynamicImage, PathBuf, Option<crate::modules::histogram::HistogramData>, f32)>, String> {
+    let Some(dyn_img) = base_image_dyn else {
+        return Ok(None);
+    };
+    let mut rgba = dyn_img.to_rgba8();
+    let shades = current_theme.get_shades();
 
-        match &self.current_theme {
-            ThemeSource::Custom(path) => {
-                if let Some(ext) = path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .map(|e| e.to_lowercase())
-                {
-                    if ext == "png" {
-                        if let Ok(lut_img) = image::open(path) {
-                            let (lw, lh) = (lut_img.width(), lut_img.height());
-                            if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
-                                let rgb_lut = lut_img.to_rgb8();
-                                correct_image(&mut rgba, &rgb_lut);
-                                let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
-                                if !self.photoshop_params.is_neutral() {
-                                    processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
-                                        processed_dyn,
-                                        self.photoshop_params,
-                                    );
+    match &current_theme {
+        ThemeSource::Custom(path) => {
+            if let Some(ext) =
+                path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
+            {
+                if ext == "png" {
+                    if let Ok(lut_img) = image::open(path) {
+                        let (lw, lh) = (lut_img.width(), lut_img.height());
+                        if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
+                            let rgb_lut = lut_img.to_rgb8();
+                            correct_image(&mut rgba, &rgb_lut);
+                            let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+                            if !photoshop_params.is_neutral() {
+                                processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
+                                    processed_dyn,
+                                    photoshop_params,
+                                );
+                            }
+                            if blur_sigma > 0.0 {
+                                processed_dyn = processed_dyn.blur(blur_sigma);
+                            }
+                            if dither_enabled {
+                                let palette_colors = current_theme.get_shades();
+                                if !palette_colors.is_empty() {
+                                    processed_dyn =
+                                        crate::backend::dither::apply_floyd_steinberg(
+                                            &processed_dyn,
+                                            &palette_colors,
+                                        );
                                 }
-                                if self.blur_sigma > 0.0 {
-                                    processed_dyn = processed_dyn.blur(self.blur_sigma);
-                                }
-                                if self.dither_enabled {
-                                    let palette_colors = self.current_theme.get_shades();
-                                    if !palette_colors.is_empty() {
-                                        processed_dyn =
-                                            crate::backend::dither::apply_floyd_steinberg(
-                                                &processed_dyn,
-                                                &palette_colors,
-                                            );
-                                    }
-                                }
-                                self.update_preview(processed_dyn);
-                                return Ok(());
+                            }
+                                let histogram = crate::modules::histogram::compute_histogram(&processed_dyn).ok();
+                                let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&processed_dyn);
+                                static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+                                let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
+                                let _ = processed_dyn.save(&temp_path);
+                                return Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast)));
                             }
                         }
                     }
                 }
-                if shades.is_empty() {
-                    return Err(format!("Could not extract colors from LUT file {:?}", path));
-                }
+            if shades.is_empty() {
+                return Err(format!("Could not extract colors from LUT file {:?}", path));
             }
-            _ => {}
-        }
+        },
+        _ => {},
+    }
 
-        if !shades.is_empty() {
-            match self.algorithm {
-                RemapAlgorithm::Gaussian => {
-                    let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, self.preserve_luma);
-                    let hald_clut = remapper.par_generate_lut(self.hald_level);
-                    correct_image(&mut rgba, &hald_clut);
-                }
-                RemapAlgorithm::Shepard => {
-                    let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, self.preserve_luma);
-                    let hald_clut = remapper.par_generate_lut(self.hald_level);
-                    correct_image(&mut rgba, &hald_clut);
-                }
-                RemapAlgorithm::NearestNeighbor => {
-                    let remapper = NearestNeighborRemapper::new(&shades, 1.0, self.preserve_luma);
-                    let hald_clut = remapper.par_generate_lut(self.hald_level);
-                    correct_image(&mut rgba, &hald_clut);
-                }
-            }
+    if !shades.is_empty() {
+        match algorithm {
+            RemapAlgorithm::Gaussian => {
+                let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
+                let hald_clut = remapper.par_generate_lut(hald_level);
+                correct_image(&mut rgba, &hald_clut);
+            },
+            RemapAlgorithm::Shepard => {
+                let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, preserve_luma);
+                let hald_clut = remapper.par_generate_lut(hald_level);
+                correct_image(&mut rgba, &hald_clut);
+            },
+            RemapAlgorithm::NearestNeighbor => {
+                let remapper = NearestNeighborRemapper::new(&shades, 1.0, preserve_luma);
+                let hald_clut = remapper.par_generate_lut(hald_level);
+                correct_image(&mut rgba, &hald_clut);
+            },
         }
+    }
 
-        let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
-        if !self.photoshop_params.is_neutral() {
-            processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
-                processed_dyn,
-                self.photoshop_params,
-            );
+    let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+    if !photoshop_params.is_neutral() {
+        processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
+            processed_dyn,
+            photoshop_params,
+        );
+    }
+    if blur_sigma > 0.0 {
+        processed_dyn = processed_dyn.blur(blur_sigma);
+    }
+    if dither_enabled {
+        let palette_colors = current_theme.get_shades();
+        if !palette_colors.is_empty() {
+            processed_dyn =
+                crate::backend::dither::apply_floyd_steinberg(&processed_dyn, &palette_colors);
         }
-        if self.blur_sigma > 0.0 {
-            processed_dyn = processed_dyn.blur(self.blur_sigma);
+    }
+    let histogram = crate::modules::histogram::compute_histogram(&processed_dyn).ok();
+    let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&processed_dyn);
+    static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+    let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
+    let _ = processed_dyn.save(&temp_path);
+    Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast)))
+}
+
+    pub fn run_processing(&mut self) -> Result<(), String> {
+        let result = Self::process_image_sync(
+            self.base_image_dyn.clone(),
+            self.current_theme.clone(),
+            self.photoshop_params,
+            self.blur_sigma,
+            self.dither_enabled,
+            self.algorithm,
+            self.preserve_luma,
+            self.hald_level,
+        )?;
+        if let Some((processed_dyn, temp_path, histogram, wcag_contrast)) = result {
+            self.update_preview(processed_dyn, temp_path, histogram, wcag_contrast);
         }
-        if self.dither_enabled {
-            let palette_colors = self.current_theme.get_shades();
-            if !palette_colors.is_empty() {
-                processed_dyn =
-                    crate::backend::dither::apply_floyd_steinberg(&processed_dyn, &palette_colors);
-            }
-        }
-        self.update_preview(processed_dyn);
         Ok(())
     }
 
@@ -250,7 +275,13 @@ impl WallmodApp {
             return Ok(());
         };
         let carved = crate::backend::seam_carve::carve_width(dyn_img, target_width, |_, _| {});
-        self.update_preview(carved);
+        let histogram = crate::modules::histogram::compute_histogram(&carved).ok();
+        let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&carved);
+        static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+        let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
+        let _ = carved.save(&temp_path);
+        self.update_preview(carved, temp_path, histogram, wcag_contrast);
         Ok(())
     }
 
@@ -303,12 +334,7 @@ impl WallmodApp {
         let mut search_paths = Vec::new();
         if let Ok(home) = std::env::var("HOME") {
             let home_path = PathBuf::from(&home);
-            for sub in [
-                "Pictures",
-                "Downloads",
-                "Wallpapers",
-                ".local/share/backgrounds",
-            ] {
+            for sub in ["Pictures", "Downloads", "Wallpapers", ".local/share/backgrounds"] {
                 let p = home_path.join(sub);
                 if p.exists() {
                     search_paths.push(p);
@@ -320,9 +346,7 @@ impl WallmodApp {
             search_paths.push(usr_bg);
         }
 
-        let exts = [
-            "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif",
-        ];
+        let exts = ["png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif"];
         let mut dirs_to_scan = Vec::new();
 
         fn collect_dirs(dir: &Path, dirs: &mut Vec<PathBuf>, depth: u32) {
@@ -360,10 +384,8 @@ impl WallmodApp {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_file() {
-                        if let Some(ext) = path
-                            .extension()
-                            .and_then(|e| e.to_str())
-                            .map(|e| e.to_lowercase())
+                        if let Some(ext) =
+                            path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
                         {
                             if exts.contains(&ext.as_str()) {
                                 img_files.push(path);
@@ -375,11 +397,8 @@ impl WallmodApp {
                     None
                 } else {
                     img_files.sort();
-                    let folder_name = dir
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .to_string();
+                    let folder_name =
+                        dir.file_name().unwrap_or_default().to_string_lossy().to_string();
                     Some(Album {
                         folder_name: if folder_name.is_empty() {
                             dir.to_string_lossy().to_string()
@@ -396,18 +415,14 @@ impl WallmodApp {
     }
 
     pub fn scan_album_images(album_path: &Path) -> Vec<PathBuf> {
-        let exts = [
-            "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif",
-        ];
+        let exts = ["png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif"];
         let mut imgs = Vec::new();
         if let Ok(entries) = std::fs::read_dir(album_path) {
             for entry in entries.flatten() {
                 let p = entry.path();
                 if p.is_file() {
-                    if let Some(ext) = p
-                        .extension()
-                        .and_then(|e| e.to_str())
-                        .map(|e| e.to_lowercase())
+                    if let Some(ext) =
+                        p.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
                     {
                         if exts.contains(&ext.as_str()) {
                             imgs.push(p);
@@ -423,15 +438,11 @@ impl WallmodApp {
     pub fn export_terminal_scheme(&self, dir: &Path) -> Result<(), String> {
         let shades = self.current_theme.get_shades();
         let mut alacritty = String::from("[colors.primary]\nbackground = \"#09090b\"\nforeground = \"#fafafa\"\n\n[colors.normal]\n");
-        let names = [
-            "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
-        ];
+        let names = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
         for (i, name) in names.iter().enumerate() {
             let rgb = shades.get(i % shades.len()).unwrap_or(&[128, 128, 128]);
-            alacritty.push_str(&format!(
-                "{} = \"#{:02x}{:02x}{:02x}\"\n",
-                name, rgb[0], rgb[1], rgb[2]
-            ));
+            alacritty
+                .push_str(&format!("{} = \"#{:02x}{:02x}{:02x}\"\n", name, rgb[0], rgb[1], rgb[2]));
         }
         std::fs::write(dir.join("alacritty_theme.toml"), alacritty)
             .map_err(|e| format!("Write error: {}", e))?;
@@ -439,10 +450,7 @@ impl WallmodApp {
         let mut kitty = String::from("background #09090b\nforeground #fafafa\n");
         for (i, _name) in names.iter().enumerate() {
             let rgb = shades.get(i % shades.len()).unwrap_or(&[128, 128, 128]);
-            kitty.push_str(&format!(
-                "color{} #{:02x}{:02x}{:02x}\n",
-                i, rgb[0], rgb[1], rgb[2]
-            ));
+            kitty.push_str(&format!("color{} #{:02x}{:02x}{:02x}\n", i, rgb[0], rgb[1], rgb[2]));
         }
         std::fs::write(dir.join("kitty_theme.conf"), kitty)
             .map_err(|e| format!("Write error: {}", e))?;

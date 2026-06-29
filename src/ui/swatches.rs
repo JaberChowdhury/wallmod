@@ -38,22 +38,16 @@ pub fn render_swatches(
                         .child(current_theme.display_name()),
                 ),
         )
-        .child(
-            h_flex()
-                .w_full()
-                .h_6()
-                .gap_1()
-                .children(shades.iter().take(8).map(|&rgb| {
-                    let color = rgb_to_hsla(rgb[0], rgb[1], rgb[2]);
-                    div()
-                        .flex_1()
-                        .h_full()
-                        .rounded_sm()
-                        .bg(color)
-                        .border_1()
-                        .border_color(cx.theme().border.opacity(0.3))
-                })),
-        )
+        .child(h_flex().w_full().h_6().gap_1().children(shades.iter().take(8).map(|&rgb| {
+            let color = rgb_to_hsla(rgb[0], rgb[1], rgb[2]);
+            div()
+                .flex_1()
+                .h_full()
+                .rounded_sm()
+                .bg(color)
+                .border_1()
+                .border_color(cx.theme().border.opacity(0.3))
+        })))
 }
 
 /// Helper to convert 8-bit RGB to GPUI Hsla color.
@@ -88,5 +82,10 @@ fn rgb_to_hsla(r: u8, g: u8, b: u8) -> Hsla {
         h += 1.0;
     }
 
-    Hsla { h, s, l, a: 1.0 }
+    Hsla {
+        h,
+        s,
+        l,
+        a: 1.0,
+    }
 }

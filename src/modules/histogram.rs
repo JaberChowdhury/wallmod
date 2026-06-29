@@ -38,11 +38,7 @@ pub fn compute_histogram(img: &DynamicImage) -> Result<HistogramData, String> {
         b_bins[b] += 1;
         l_bins[luma] += 1;
 
-        max_c = max_c
-            .max(r_bins[r])
-            .max(g_bins[g])
-            .max(b_bins[b])
-            .max(l_bins[luma]);
+        max_c = max_c.max(r_bins[r]).max(g_bins[g]).max(b_bins[b]).max(l_bins[luma]);
     }
 
     Ok(HistogramData {

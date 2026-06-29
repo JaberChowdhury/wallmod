@@ -39,11 +39,8 @@ pub enum RemapAlgorithm {
 }
 
 impl RemapAlgorithm {
-    pub const ALL: &[RemapAlgorithm] = &[
-        RemapAlgorithm::Gaussian,
-        RemapAlgorithm::Shepard,
-        RemapAlgorithm::NearestNeighbor,
-    ];
+    pub const ALL: &[RemapAlgorithm] =
+        &[RemapAlgorithm::Gaussian, RemapAlgorithm::Shepard, RemapAlgorithm::NearestNeighbor];
 }
 
 impl std::fmt::Display for RemapAlgorithm {
@@ -65,12 +62,8 @@ pub enum AppTab {
 }
 
 impl AppTab {
-    pub const ALL: &[AppTab] = &[
-        AppTab::Themer,
-        AppTab::Upscaler,
-        AppTab::Ocr,
-        AppTab::Compression,
-    ];
+    pub const ALL: &[AppTab] =
+        &[AppTab::Themer, AppTab::Upscaler, AppTab::Ocr, AppTab::Compression];
 }
 
 impl std::fmt::Display for AppTab {
@@ -132,21 +125,28 @@ impl ThemeSource {
     pub fn display_name(&self) -> String {
         match self {
             ThemeSource::Preset(name) => name.clone(),
-            ThemeSource::Custom(path) => path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
+            ThemeSource::Custom(path) => {
+                path.file_name().unwrap_or_default().to_string_lossy().to_string()
+            },
             ThemeSource::CustomPalette(name, _) => format!("Custom: {}", name),
         }
     }
 
     pub fn get_shades(&self) -> Vec<[u8; 3]> {
-        match self {
+        let mut shades = match self {
             ThemeSource::Preset(name) => crate::app::helpers::get_preset_shades(name),
             ThemeSource::Custom(path) => crate::app::helpers::extract_lut_shades(path),
             ThemeSource::CustomPalette(_, colors) => colors.clone(),
+        };
+        shades.sort_unstable();
+        shades.dedup();
+        if shades.is_empty() {
+            shades = vec![[0, 0, 0], [128, 128, 128], [255, 255, 255]];
+        } else if shades.len() == 1 {
+            let c = shades[0];
+            shades.push([c[0].saturating_add(64), c[1].saturating_add(64), c[2].saturating_add(64)]);
         }
+        shades
     }
 }
 
@@ -158,6 +158,12 @@ pub enum AppState {
     PreviewReady(PathBuf),
     Notice(String),
     Error(String),
+}
+
+impl AppState {
+    pub fn is_loading(&self) -> bool {
+        matches!(self, AppState::Loading(_, _))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

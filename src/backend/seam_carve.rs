@@ -3,10 +3,26 @@ use image::RgbaImage;
 /// Computes the energy of a pixel using a simple gradient method.
 /// Uses the R, G, B channels to calculate differences.
 fn energy(img: &RgbaImage, x: u32, y: u32, width: u32, height: u32) -> u32 {
-    let left = if x == 0 { width - 1 } else { x - 1 };
-    let right = if x + 1 == width { 0 } else { x + 1 };
-    let up = if y == 0 { height - 1 } else { y - 1 };
-    let down = if y + 1 == height { 0 } else { y + 1 };
+    let left = if x == 0 {
+        width - 1
+    } else {
+        x - 1
+    };
+    let right = if x + 1 == width {
+        0
+    } else {
+        x + 1
+    };
+    let up = if y == 0 {
+        height - 1
+    } else {
+        y - 1
+    };
+    let down = if y + 1 == height {
+        0
+    } else {
+        y + 1
+    };
 
     let pl = img.get_pixel(left, y);
     let pr = img.get_pixel(right, y);

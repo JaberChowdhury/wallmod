@@ -74,17 +74,17 @@ impl CacheManager {
                         let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
                         let hald_clut = remapper.par_generate_lut(level);
                         correct_image(&mut rgba, &hald_clut);
-                    }
+                    },
                     RemapAlgorithm::Shepard => {
                         let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, preserve_luma);
                         let hald_clut = remapper.par_generate_lut(level);
                         correct_image(&mut rgba, &hald_clut);
-                    }
+                    },
                     RemapAlgorithm::NearestNeighbor => {
                         let remapper = NearestNeighborRemapper::new(&shades, 1.0, preserve_luma);
                         let hald_clut = remapper.par_generate_lut(level);
                         correct_image(&mut rgba, &hald_clut);
-                    }
+                    },
                 }
             }
 
