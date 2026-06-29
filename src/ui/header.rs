@@ -195,11 +195,10 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .child(
                     Button::new("cat_cg")
-                        .disabled(is_loading)
-                        .label("Color Grading")
                         .child(
                             gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary),
                         )
+                        .child("Color Grading")
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::ColorGrading)
@@ -212,14 +211,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 )
                 .child(
                     Button::new("cat_ps")
-                        .disabled(is_loading)
-                        .label("Adjust & Effects")
                         .child(
                             gpui::svg()
                                 .path("settings.svg")
                                 .size_4()
                                 .text_color(cx.theme().primary),
                         )
+                        .child("Adjust & Effects")
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::PhotoshopEffects)
@@ -232,14 +230,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 )
                 .child(
                     Button::new("cat_eng")
-                        .disabled(is_loading)
-                        .label("Wallpaper Engine")
                         .child(
                             gpui::svg()
                                 .path("panel-left.svg")
                                 .size_4()
                                 .text_color(cx.theme().primary),
                         )
+                        .child("Wallpaper Engine")
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::DesktopEngine)
@@ -252,11 +249,10 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 )
                 .child(
                     Button::new("cat_exp")
-                        .disabled(is_loading)
-                        .label("Export & Sync")
                         .child(
                             gpui::svg().path("replace.svg").size_4().text_color(cx.theme().primary),
                         )
+                        .child("Export & Sync")
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::ExportSync)
@@ -269,11 +265,10 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 )
                 .child(
                     Button::new("cat_ai")
-                        .disabled(is_loading)
-                        .label("AI & Tools")
                         .child(
                             gpui::svg().path("search.svg").size_4().text_color(cx.theme().primary),
                         )
+                        .child("AI & Tools")
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::ToolsExt)
@@ -286,14 +281,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 )
                 .child(
                     Button::new("cat_settings")
-                        .disabled(is_loading)
-                        .label("Settings")
                         .child(
                             gpui::svg()
                                 .path("settings.svg")
                                 .size_4()
                                 .text_color(cx.theme().primary),
                         )
+                        .child("Settings")
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::Settings)

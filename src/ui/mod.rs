@@ -166,6 +166,18 @@ impl WallmodView {
             }
         }));
 
+        cx.spawn(async move |this, cx| loop {
+            cx.background_executor().timer(std::time::Duration::from_secs(60)).await;
+            let _ = this.update(cx, |view, cx| {
+                if view.app.daemon_enabled {
+                    if view.app.check_daemon_tick() {
+                        view.trigger_async_processing(cx, "Automated time-of-day theme shift...");
+                    }
+                }
+            });
+        })
+        .detach();
+
         Self {
             app: WallmodApp::new(),
             blur_slider,
@@ -189,6 +201,8 @@ impl WallmodView {
         let photoshop_params = self.app.photoshop_params.clone();
         let blur_sigma = self.app.blur_sigma;
         let dither_enabled = self.app.dither_enabled;
+        let seam_carve_target = self.app.seam_carve_target;
+        let pixel_sort_enabled = self.app.pixel_sort_enabled;
         let algorithm = self.app.algorithm.clone();
         let preserve_luma = self.app.preserve_luma;
         let hald_level = self.app.hald_level;
@@ -205,6 +219,8 @@ impl WallmodView {
                         photoshop_params,
                         blur_sigma,
                         dither_enabled,
+                        seam_carve_target,
+                        pixel_sort_enabled,
                         algorithm,
                         preserve_luma,
                         hald_level,

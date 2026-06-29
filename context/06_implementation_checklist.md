@@ -24,46 +24,47 @@ This checklist tracks the status of all unified features collected across our so
 ## Category C: Telemetry, Inspection & Analytics (`imagineer`)
 
 - [x] **Top Bar Tab Navigation**: Relocated view switching from sidebar dropdown into top-level tabs above workspace preview.
-- [] **Interactive Split-Screen Diff Slider**: Mouse-controlled before/after visual inspection overlay with interactive percentage buttons (`10%`, `30%`, `50%`, `70%`, `90%`) with resizable panel that can be resize by cursor.
-- [] **Animated Loading Dot Overlay(loading animation)**: additionally with existing animation Stylized top-bar pulsating spinner indicator active during asynchronous image decoding and heavy color grading pipelines.
-- [] **Deep Image Metadata Inspector**: Readouts of dimensions, aspect ratio, filename, and processing status.
-- [] **WCAG Accessibility Contrast Auditing**: Live computation of legibility contrast ratios against white/black labels.
-- [] **Live Processing Preview**: Continuous preview rendering while asynchronous theme calculation runs in background.
-- [] **Channel Histograms (RGB + Luma)**: Graphical density waveform charts displayed in the telemetry dashboard.
+- [x] **Interactive Split-Screen Diff Slider**: Mouse-controlled before/after visual inspection overlay with interactive percentage buttons (`10%`, `30%`, `50%`, `70%`, `90%`) with resizable panel that can be resize by cursor.
+- [x] **Animated Loading Dot Overlay(loading animation)**: additionally with existing animation Stylized top-bar pulsating spinner indicator active during asynchronous image decoding and heavy color grading pipelines.
+- [x] **Deep Image Metadata Inspector**: Readouts of dimensions, aspect ratio, filename, and processing status.
+- [x] **WCAG Accessibility Contrast Auditing**: Live computation of legibility contrast ratios against white/black labels.
+- [x] **Live Processing Preview**: Continuous preview rendering while asynchronous theme calculation runs in background.
+- [x] **Channel Histograms (RGB + Luma)**: Graphical density waveform charts displayed in the telemetry dashboard.
 
 ## Category D: Desktop Environment & Wallpaper Engine (`wallrust`)
 
-- [] **Universal Backend Dispatcher & Tool Selector**: Explicit choice between backend engines (`swww`, `swaybg`, `feh`, `gsettings`, `qdbus`, or `Auto`) with informative tool descriptions.
-- [] **Hardware-Accelerated Wayland Transitions (`swww`)**: Wipe, Wave, Grow, and Outer animation controls.
-- [] **Multi-Monitor Display Targeting**: Selection of target displays (`All Displays`, `DP-1`, `HDMI-A-1`).
-- [] **Time-of-Day Automated Scheduler**: Fixed-time background theme shifting daemon with chrono integration.
+- [x] **Universal Backend Dispatcher & Tool Selector**: Explicit choice between backend engines (`swww`, `swaybg`, `feh`, `gsettings`, `qdbus`, or `Auto`) with informative tool descriptions.
+- [x] **Hardware-Accelerated Wayland Transitions (`swww`)**: Wipe, Wave, Grow, and Outer animation controls.
+- [x] **Multi-Monitor Display Targeting**: Selection of target displays (`All Displays`, `DP-1`, `HDMI-A-1`).
+- [x] **Time-of-Day Automated Scheduler**: Fixed-time background theme shifting daemon with chrono integration.
 
 ## Category E: Export & System Integration
 
-- [] **Terminal Scheme Exporter**: Automated config syncing for Alacritty (`~/.config/alacritty`) and Kitty (`~/.config/kitty`).
-- [] **Save Processed Image**: Direct saving of color-graded images to target directories.
-- [] **Memoized Caching Layer**: Pre-computation checking via hash-based caching (`CacheManager`).
+- [x] **Terminal Scheme Exporter**: Automated config syncing for Alacritty (`~/.config/alacritty`) and Kitty (`~/.config/kitty`).
+- [x] **Save Processed Image**: Direct saving of color-graded images to target directories.
+- [x] **Memoized Caching Layer**: Pre-computation checking via hash-based caching (`CacheManager`).
 
 ## Category F: Gallery & Visual Organization
 
-- [] **Multi-Threaded System Gallery Scanner**: Rayon-powered background folder discovery across system directories.
-- [] **Bento Grid Thumbnails**: Visual image thumbnail cards displayed inside responsive grid layouts, generated in parallel via Rayon.
+- [x] **Multi-Threaded System Gallery Scanner**: Rayon-powered background folder discovery across system directories.
+- [x] **Bento Grid Thumbnails**: Visual image thumbnail cards displayed inside responsive grid layouts, generated in parallel via Rayon.
 - [x] **Left Panel Category Tabs**: Clean tabbed interface separating Theme & LUT, Desktop Engine, and Export controls.
-- [] **App Theme Toggle**: Live switching between clean Light and Dark CSD application themes.
-- [] **Visual Error Handling Card**: Interactive diagnostic view displaying detailed errors and troubleshooting steps.
+- [x] **App Theme Toggle**: Live switching between clean Light and Dark CSD application themes.
+- [x] **Visual Error Handling Card**: Interactive diagnostic view displaying detailed errors and troubleshooting steps.
 - [x] **Bootstrap UI Icon System**: Complete eradication of text-brackets and emojis for a vector icon system, attaching proper Lucide/Zed vector icons (`IconName`) to 100% of buttons, subtabs, adjustment sliders, and dropdown options across all workspace categories.
 
 ## Category G: Next Generation Advanced Algorithmic Engine (Upcoming Goals)
 
-- [] **Content-Aware Scaling (Seam Carving)**: Sobel gradient energy calculation & Dynamic Programming path removal to shrink wallpapers while preserving subjects without stretching.
-- [] **Algorithmic Dithering**: Floyd-Steinberg and Bayer quantization error diffusion for retro aesthetics and banding reduction.
-- [] **Perceptual Color Space Mapping (Oklab/Oklch)**: Shifting color grading math from RGB/LAB to Oklab for mathematically uniform hue shifts without luminance artifacts.
-- [] **Photoshop Color Adjustments**: Saturation, Brightness, Contrast, and Hue Rotation sliders/buttons integrated into real-time grading pipeline.
-- [] **Pixel Sorting Effects**: Edge-detection based pixel segment sorting for glitch art and cyberpunk wallpaper transformations.
+- [x] **Content-Aware Scaling (Seam Carving)**: Sobel gradient energy calculation & Dynamic Programming path removal to shrink wallpapers while preserving subjects without stretching.
+- [x] **Algorithmic Dithering**: Floyd-Steinberg and Bayer quantization error diffusion for retro aesthetics and banding reduction.
+- [x] **Perceptual Color Space Mapping (Oklab/Oklch)**: Shifting color grading math from RGB/LAB to Oklab for mathematically uniform hue shifts without luminance artifacts.
+- [x] **Photoshop Color Adjustments**: Saturation, Brightness, Contrast, and Hue Rotation sliders/buttons integrated into real-time grading pipeline.
+- [x] **Pixel Sorting Effects**: Edge-detection based pixel segment sorting for glitch art and cyberpunk wallpaper transformations.
 
 ## Category H: Future Roadmap & Next-Gen Capabilities
 
 - [] **AI Image Upscaling**: Real-time neural upscaling (Real-ESRGAN/ONNX runtime integration) for low-res wallpapers. (not now)
 - [] **Video & Live Wallpaper Engine**: Support for animated webm/mp4 wallpapers via mpvpaper or swww video integration.(not now)
 - [] **OCR Wallpaper Text Extraction**: Extract quote or code snippets from desktop wallpapers using Tesseract OCR.(not now)
-- [] **Custom Shader Pipeline**: Support user-provided WebGPU / GLSL fragment shaders for live background post-processing.
+- [] **Custom Shader Pipeline**: Support user-provided WebGPU / GLSL fragment shaders for live background post-processing.( with 10+ preset )
+- [] **8bit ,16bit, 32bit etc**: Support all of these style

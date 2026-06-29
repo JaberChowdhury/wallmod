@@ -58,6 +58,8 @@ pub struct WallmodApp {
     pub blur_sigma: f32,
     pub seam_carve_target: u32,
     pub dither_enabled: bool,
+    pub pixel_sort_enabled: bool,
+    pub oklab_mapping: bool,
     pub active_tab: crate::app::state::AppTab,
     pub extracted_colors: Option<Vec<(String, f32)>>,
 
@@ -115,6 +117,8 @@ impl WallmodApp {
             blur_sigma: 0.0,
             seam_carve_target: 0,
             dither_enabled: false,
+            pixel_sort_enabled: false,
+            oklab_mapping: true,
             active_tab: crate::app::state::AppTab::Themer,
             extracted_colors: None,
             selected_color_idx: None,
@@ -170,6 +174,8 @@ impl WallmodApp {
         photoshop_params: crate::modules::photoshop::PhotoshopParams,
         blur_sigma: f32,
         dither_enabled: bool,
+        seam_carve_target: u32,
+        pixel_sort_enabled: bool,
         algorithm: RemapAlgorithm,
         preserve_luma: bool,
         hald_level: u8,
@@ -218,6 +224,20 @@ impl WallmodApp {
                                                 &palette_colors,
                                             );
                                     }
+                                }
+                                if seam_carve_target > 0
+                                    && seam_carve_target < processed_dyn.width()
+                                {
+                                    processed_dyn = crate::backend::seam_carve::carve_width(
+                                        &processed_dyn,
+                                        seam_carve_target,
+                                        |_, _| {},
+                                    );
+                                }
+                                if pixel_sort_enabled {
+                                    processed_dyn = crate::backend::pixel_sort::apply_pixel_sort(
+                                        &processed_dyn,
+                                    );
                                 }
                                 let histogram =
                                     crate::modules::histogram::compute_histogram(&processed_dyn)
@@ -285,6 +305,16 @@ impl WallmodApp {
                     crate::backend::dither::apply_floyd_steinberg(&processed_dyn, &palette_colors);
             }
         }
+        if seam_carve_target > 0 && seam_carve_target < processed_dyn.width() {
+            processed_dyn = crate::backend::seam_carve::carve_width(
+                &processed_dyn,
+                seam_carve_target,
+                |_, _| {},
+            );
+        }
+        if pixel_sort_enabled {
+            processed_dyn = crate::backend::pixel_sort::apply_pixel_sort(&processed_dyn);
+        }
         let histogram = crate::modules::histogram::compute_histogram(&processed_dyn).ok();
         let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&processed_dyn);
         static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
@@ -302,6 +332,8 @@ impl WallmodApp {
             self.photoshop_params,
             self.blur_sigma,
             self.dither_enabled,
+            self.seam_carve_target,
+            self.pixel_sort_enabled,
             self.algorithm,
             self.preserve_luma,
             self.hald_level,
@@ -491,16 +523,26 @@ impl WallmodApp {
             alacritty
                 .push_str(&format!("{} = \"#{:02x}{:02x}{:02x}\"\n", name, rgb[0], rgb[1], rgb[2]));
         }
-        std::fs::write(dir.join("alacritty_theme.toml"), alacritty)
+        std::fs::write(dir.join("alacritty_theme.toml"), &alacritty)
             .map_err(|e| format!("Write error: {}", e))?;
+        if self.sync_alacritty {
+            let alac_dir = dir.join(".config").join("alacritty");
+            let _ = std::fs::create_dir_all(&alac_dir);
+            let _ = std::fs::write(alac_dir.join("alacritty.toml"), &alacritty);
+        }
 
         let mut kitty = String::from("background #09090b\nforeground #fafafa\n");
         for (i, _name) in names.iter().enumerate() {
             let rgb = shades.get(i % shades.len()).unwrap_or(&[128, 128, 128]);
             kitty.push_str(&format!("color{} #{:02x}{:02x}{:02x}\n", i, rgb[0], rgb[1], rgb[2]));
         }
-        std::fs::write(dir.join("kitty_theme.conf"), kitty)
+        std::fs::write(dir.join("kitty_theme.conf"), &kitty)
             .map_err(|e| format!("Write error: {}", e))?;
+        if self.sync_kitty {
+            let kitty_dir = dir.join(".config").join("kitty");
+            let _ = std::fs::create_dir_all(&kitty_dir);
+            let _ = std::fs::write(kitty_dir.join("kitty.conf"), &kitty);
+        }
         Ok(())
     }
 

@@ -4,6 +4,7 @@ pub mod cache;
 pub mod dither;
 pub mod error;
 pub mod exporter;
+pub mod pixel_sort;
 pub mod runtime;
 pub mod seam_carve;
 

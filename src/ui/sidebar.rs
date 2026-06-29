@@ -33,6 +33,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
     let display = view.app.target_display.clone();
     let blur_sigma = view.app.blur_sigma;
     let dither = view.app.dither_enabled;
+    let psort = view.app.pixel_sort_enabled;
+    let seam_target = view.app.seam_carve_target;
+    let img_w = view.app.image_width;
     let ps = view.app.photoshop_params;
     let daemon = view.app.daemon_enabled;
     let day_t = view.app.day_theme.clone();
@@ -59,8 +62,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_cg_0").child(gpui::svg().path("folder-open.svg").size_4().text_color(cx.theme().primary)).label("Sources & Presets").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_cg_1").child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).label("Remap Engine").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_cg_0").child(gpui::svg().path("folder-open.svg").size_4().text_color(cx.theme().primary)).child("Sources & Presets").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_cg_1").child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).child("Remap Engine").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
@@ -176,13 +179,13 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     .child(div().text_sm().font_bold().child("Remap Algorithm"))
                                     .child(
                                         h_flex().gap_1().w_full()
-                                             .child(Button::new("alg_g").disabled(is_loading).child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).label("Gauss").small().flex_1().selected(algo == RemapAlgorithm::Gaussian).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                             .child(Button::new("alg_g").disabled(is_loading).child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).child("Gauss").small().flex_1().selected(algo == RemapAlgorithm::Gaussian).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                 this.app.algorithm = RemapAlgorithm::Gaussian; this.trigger_async_processing(cx, "Remapping colors (Gaussian)...");
                                             })))
-                                            .child(Button::new("alg_s").disabled(is_loading).child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).label("Shepard").small().flex_1().selected(algo == RemapAlgorithm::Shepard).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                            .child(Button::new("alg_s").disabled(is_loading).child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).child("Shepard").small().flex_1().selected(algo == RemapAlgorithm::Shepard).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                 this.app.algorithm = RemapAlgorithm::Shepard; this.trigger_async_processing(cx, "Remapping colors (Shepard)...");
                                             })))
-                                            .child(Button::new("alg_n").disabled(is_loading).child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).label("Nearest").small().flex_1().selected(algo == RemapAlgorithm::NearestNeighbor).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                            .child(Button::new("alg_n").disabled(is_loading).child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).child("Nearest").small().flex_1().selected(algo == RemapAlgorithm::NearestNeighbor).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                 this.app.algorithm = RemapAlgorithm::NearestNeighbor; this.trigger_async_processing(cx, "Remapping colors (Nearest)...");
                                             })))
                                     )
@@ -191,10 +194,10 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child("HaldCLUT Resolution"))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("hald_8").disabled(is_loading).child(gpui::svg().path("layout-dashboard.svg").size_4().text_color(cx.theme().primary)).label("Lvl 8").small().selected(hald_lvl == 8).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    .child(Button::new("hald_8").disabled(is_loading).child(gpui::svg().path("layout-dashboard.svg").size_4().text_color(cx.theme().primary)).child("Lvl 8").small().selected(hald_lvl == 8).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                         this.app.hald_level = 8; this.trigger_async_processing(cx, "Generating HaldCLUT 8...");
                                                     })))
-                                                    .child(Button::new("hald_16").disabled(is_loading).child(gpui::svg().path("layout-dashboard.svg").size_4().text_color(cx.theme().primary)).label("Lvl 16").small().selected(hald_lvl == 16).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    .child(Button::new("hald_16").disabled(is_loading).child(gpui::svg().path("layout-dashboard.svg").size_4().text_color(cx.theme().primary)).child("Lvl 16").small().selected(hald_lvl == 16).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                         this.app.hald_level = 16; this.trigger_async_processing(cx, "Generating HaldCLUT 16...");
                                                     })))
                                             )
@@ -214,8 +217,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_ps_0").child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).label("Basic Adjust").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_ps_1").child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).label("Color & Blur").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_ps_0").child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).child("Basic Adjust").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_ps_1").child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child("Color & Blur").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
@@ -226,9 +229,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Brightness: {}", ps.brightness)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_b_m20").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).label("-20").small().selected(ps.brightness == -20).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = -20; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
-                                                    .child(Button::new("ps_b_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).label("0").small().selected(ps.brightness == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 0; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
-                                                    .child(Button::new("ps_b_p20").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).label("+20").small().selected(ps.brightness == 20).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 20; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
+                                                    .child(Button::new("ps_b_m20").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).child("-20").small().selected(ps.brightness == -20).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = -20; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
+                                                    .child(Button::new("ps_b_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("0").small().selected(ps.brightness == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 0; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
+                                                    .child(Button::new("ps_b_p20").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("+20").small().selected(ps.brightness == 20).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 20; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
                                             )
                                     )
                                     .child(
@@ -236,9 +239,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Contrast: {:.0}", ps.contrast)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_c_m20").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).label("-20").small().selected(ps.contrast == -20.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = -20.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
-                                                    .child(Button::new("ps_c_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).label("0").small().selected(ps.contrast == 0.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 0.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
-                                                    .child(Button::new("ps_c_p20").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).label("+20").small().selected(ps.contrast == 20.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 20.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
+                                                    .child(Button::new("ps_c_m20").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).child("-20").small().selected(ps.contrast == -20.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = -20.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
+                                                    .child(Button::new("ps_c_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("0").small().selected(ps.contrast == 0.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 0.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
+                                                    .child(Button::new("ps_c_p20").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("+20").small().selected(ps.contrast == 20.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 20.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
                                             )
                                     )
                             } else {
@@ -249,9 +252,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Saturation: {:.1}", ps.saturation)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_s_m1").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).label("Desat").small().selected(ps.saturation == -1.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = -1.0; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
-                                                    .child(Button::new("ps_s_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).label("Norm").small().selected(ps.saturation == 0.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.0; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
-                                                    .child(Button::new("ps_s_p05").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).label("Vivid").small().selected(ps.saturation == 0.5).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.5; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
+                                                    .child(Button::new("ps_s_m1").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).child("Desat").small().selected(ps.saturation == -1.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = -1.0; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
+                                                    .child(Button::new("ps_s_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("Norm").small().selected(ps.saturation == 0.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.0; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
+                                                    .child(Button::new("ps_s_p05").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("Vivid").small().selected(ps.saturation == 0.5).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.5; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
                                             )
                                     )
                                     .child(
@@ -259,9 +262,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Hue Shift: {}°", ps.hue)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_h_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).label("0°").small().selected(ps.hue == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 0; this.trigger_async_processing(cx, "Shifting hue..."); })))
-                                                    .child(Button::new("ps_h_90").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).label("90°").small().selected(ps.hue == 90).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 90; this.trigger_async_processing(cx, "Shifting hue..."); })))
-                                                    .child(Button::new("ps_h_180").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).label("180°").small().selected(ps.hue == 180).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 180; this.trigger_async_processing(cx, "Shifting hue..."); })))
+                                                    .child(Button::new("ps_h_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("0°").small().selected(ps.hue == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 0; this.trigger_async_processing(cx, "Shifting hue..."); })))
+                                                    .child(Button::new("ps_h_90").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("90°").small().selected(ps.hue == 90).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 90; this.trigger_async_processing(cx, "Shifting hue..."); })))
+                                                    .child(Button::new("ps_h_180").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("180°").small().selected(ps.hue == 180).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 180; this.trigger_async_processing(cx, "Shifting hue..."); })))
                                             )
                                     )
                                     .child(
@@ -278,6 +281,34 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                 this.app.dither_enabled = *val; this.trigger_async_processing(cx, "Applying dithering diffusion...");
                                             })))
                                     )
+                                    .child(
+                                        h_flex().items_center().justify_between()
+                                            .child(div().text_sm().child("Cyberpunk Pixel Sorting"))
+                                            .child(Switch::new("sw_psort").disabled(is_loading).checked(psort).cursor_pointer().on_click(cx.listener(|this, val: &bool, _, cx| {
+                                                this.app.pixel_sort_enabled = *val; this.trigger_async_processing(cx, "Applying pixel sorting...");
+                                            })))
+                                    )
+                                    .child(
+                                        v_flex().gap_2().pt_1()
+                                            .child(div().text_sm().child(format!("Seam Carving Target: {}px", if seam_target == 0 { "Full".to_string() } else { seam_target.to_string() })))
+                                            .child(
+                                                h_flex().gap_1()
+                                                    .child(Button::new("sc_full").disabled(is_loading).child("100%").small().selected(seam_target == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                        this.app.seam_carve_target = 0;
+                                                        this.trigger_async_processing(cx, "Restoring full width...");
+                                                    })))
+                                                    .child(Button::new("sc_85").disabled(is_loading).child("85%").small().selected(seam_target > 0 && seam_target >= (img_w as f32 * 0.8) as u32).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                        let w = (this.app.image_width as f32 * 0.85) as u32;
+                                                        this.app.seam_carve_target = if w > 0 { w } else { 1600 };
+                                                        this.trigger_async_processing(cx, "Seam carving (85%)...");
+                                                    })))
+                                                    .child(Button::new("sc_70").disabled(is_loading).child("70%").small().selected(seam_target > 0 && seam_target < (img_w as f32 * 0.8) as u32).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                        let w = (this.app.image_width as f32 * 0.70) as u32;
+                                                        this.app.seam_carve_target = if w > 0 { w } else { 1280 };
+                                                        this.trigger_async_processing(cx, "Seam carving (70%)...");
+                                                    })))
+                                            )
+                                    )
                             }
                         )
                         .into_any_element()
@@ -286,8 +317,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_eng_0").child(gpui::svg().path("panel-left.svg").size_4().text_color(cx.theme().primary)).label("Backend & Display").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_eng_1").child(gpui::svg().path("calendar.svg").size_4().text_color(cx.theme().primary)).label("Transitions & Daemon").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_eng_0").child(gpui::svg().path("panel-left.svg").size_4().text_color(cx.theme().primary)).child("Backend & Display").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_eng_1").child(gpui::svg().path("calendar.svg").size_4().text_color(cx.theme().primary)).child("Transitions & Daemon").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
@@ -452,8 +483,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 })))
                         )
                         .child(
-                            Button::new("btn_exp_term").disabled(is_loading).label("Export Configs Now...")
+                            Button::new("btn_exp_term").disabled(is_loading)
                                 .child(gpui::svg().path("replace.svg").size_4().text_color(cx.theme().primary))
+                                .child("Export Configs Now...")
                                 .w_full()
                                 .cursor_pointer().on_click(cx.listener(|this, _, _, _| {
                                     if let Ok(home) = std::env::var("HOME") {
@@ -464,8 +496,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                         .child(div().h_px().w_full().bg(cx.theme().border).my_2())
                         .child(div().text_sm().font_bold().child("Image Export"))
                         .child(
-                            Button::new("btn_save_img").disabled(is_loading).label("Save Graded Image As...")
+                            Button::new("btn_save_img").disabled(is_loading)
                                 .child(gpui::svg().path("file.svg").size_4().text_color(cx.theme().primary))
+                                .child("Save Graded Image As...")
                                 .primary()
                                 .w_full()
                                 .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
@@ -513,14 +546,17 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 )
                         })
                         .child(
-                            Button::new("btn_batch_scan").disabled(is_loading).label("Batch Process Folder...")
+                            Button::new("btn_batch_scan").disabled(is_loading)
                                 .child(gpui::svg().path("folder.svg").size_4().text_color(cx.theme().primary))
+                                .child("Batch Process Folder...")
                                 .w_full()
                                 .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                     let theme = this.app.current_theme.clone();
                                     let params = this.app.photoshop_params.clone();
                                     let blur = this.app.blur_sigma;
                                     let dither = this.app.dither_enabled;
+                                    let seam = this.app.seam_carve_target;
+                                    let psort = this.app.pixel_sort_enabled;
                                     let alg = this.app.algorithm;
                                     let luma = this.app.preserve_luma;
                                     let hald = this.app.hald_level;
@@ -544,7 +580,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                         if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
                                                             if ["png", "jpg", "jpeg", "webp"].contains(&ext.as_str()) {
                                                                 if let Ok(img) = crate::app::helpers::open_image(&path) {
-                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params.clone(), blur, dither, alg, luma, hald) {
+                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params.clone(), blur, dither, seam, psort, alg, luma, hald) {
                                                                         if let Some(name) = path.file_name() {
                                                                             let _ = processed.save(target_dir.join(name));
                                                                         }

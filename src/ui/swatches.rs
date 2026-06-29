@@ -50,8 +50,8 @@ pub fn render_swatches(
         })))
         .child(
             Button::new("btn_edit_palette")
-                .label("Edit Palette...")
                 .child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary))
+                .child("Edit Palette...")
                 .w_full()
                 .small()
                 .cursor_pointer()

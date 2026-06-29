@@ -18,6 +18,11 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
     } else {
         "Processing...".to_string()
     };
+    let error_msg = if let crate::app::AppState::Error(ref e) = view.app.state {
+        Some(e.clone())
+    } else {
+        None
+    };
     let workspace_view = view.app.workspace_view;
     let preview_path = view.app.preview_path.clone();
     let base_path = view.app.base_image_path.clone();
@@ -48,27 +53,27 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                 .items_center()
                 .gap_2()
                 .child(
-                    Button::new("wv_std").child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("Output Visual").small()
+                    Button::new("wv_std").child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).child("Output Visual").small()
                         .selected(workspace_view == WorkspaceView::Standard)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Standard; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_diff").child(gpui::svg().path("frame.svg").size_4().text_color(cx.theme().primary)).label("Split Diff").small()
+                    Button::new("wv_diff").child(gpui::svg().path("frame.svg").size_4().text_color(cx.theme().primary)).child("Split Diff").small()
                         .selected(workspace_view == WorkspaceView::SplitDiff)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::SplitDiff; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_tel").child(gpui::svg().path("layout-dashboard.svg").size_4().text_color(cx.theme().primary)).label("Dashboard Info").small()
+                    Button::new("wv_tel").child(gpui::svg().path("layout-dashboard.svg").size_4().text_color(cx.theme().primary)).child("Dashboard Info").small()
                         .selected(workspace_view == WorkspaceView::Telemetry)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Telemetry; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_extract").child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).label("Extract Color").small()
+                    Button::new("wv_extract").child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child("Extract Color").small()
                         .selected(view.app.workspace_view == WorkspaceView::ExtractColor)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::ExtractColor; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_gal").child(gpui::svg().path("folder.svg").size_4().text_color(cx.theme().primary)).label("Album Gallery").small()
+                    Button::new("wv_gal").child(gpui::svg().path("folder.svg").size_4().text_color(cx.theme().primary)).child("Album Gallery").small()
                         .selected(workspace_view == WorkspaceView::Albums)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Albums; cx.notify(); }))
                 )
@@ -101,11 +106,11 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                 .child(
                                     h_flex().gap_2().items_center().justify_center().w_full()
                                         .child(div().text_xs().font_bold().child("Split Comparison:"))
-                                        .child(Button::new("split_10").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("10% Orig").small().selected((split_ratio - 0.1).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
-                                        .child(Button::new("split_30").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("30% Orig").small().selected((split_ratio - 0.3).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
-                                        .child(Button::new("split_50").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("50% / 50%").small().selected((split_ratio - 0.5).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
-                                        .child(Button::new("split_70").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("70% Orig").small().selected((split_ratio - 0.7).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
-                                        .child(Button::new("split_90").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("90% Orig").small().selected((split_ratio - 0.9).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
+                                        .child(Button::new("split_10").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).child("10% Orig").small().selected((split_ratio - 0.1).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
+                                        .child(Button::new("split_30").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).child("30% Orig").small().selected((split_ratio - 0.3).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
+                                        .child(Button::new("split_50").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).child("50% / 50%").small().selected((split_ratio - 0.5).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
+                                        .child(Button::new("split_70").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).child("70% Orig").small().selected((split_ratio - 0.7).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
+                                        .child(Button::new("split_90").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).child("90% Orig").small().selected((split_ratio - 0.9).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
                                 )
                                 .child(
                                     h_flex().flex_1().w_full().gap_3().overflow_hidden()
@@ -168,7 +173,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                             h_flex().gap_2()
                                                 .child(
                                                     if extracted_cols.is_some() {
-                                                        Button::new("btn_apply_extracted").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).label("Use as Preset")
+                                                        Button::new("btn_apply_extracted").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).child("Use as Preset")
                                                             .primary()
                                                             .cursor_pointer()
                                                             .on_click(cx.listener(|this, _, _, cx| {
@@ -197,7 +202,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     }
                                                 )
                                                 .child(
-                                                    Button::new("btn_extract_cols").disabled(is_loading).child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).label("Extract k-Means Colors")
+                                                    Button::new("btn_extract_cols").disabled(is_loading).child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child("Extract k-Means Colors")
                                                         .primary()
                                                         .cursor_pointer()
                                                         .on_click(cx.listener(|this, _, _, cx| {
@@ -260,7 +265,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                         h_flex().justify_between().items_center()
                                             .child(div().text_xl().font_bold().child(format!("Edit Palette: {}", name)))
                                             .child(
-                                                Button::new("btn_apply_edited_palette").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).label("Apply Theme")
+                                                Button::new("btn_apply_edited_palette").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).child("Apply Theme")
                                                     .primary()
                                                     .cursor_pointer()
                                                     .on_click(cx.listener(|this, _, _, cx| {
@@ -420,7 +425,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                         .child(
                                             if let Some(ref sel) = selected_album {
                                                 h_flex().gap_2().items_center()
-                                                    .child(Button::new("btn_back_alb").disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_4().text_color(cx.theme().primary)).label("Back to Albums").small().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    .child(Button::new("btn_back_alb").disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_4().text_color(cx.theme().primary)).child("Back to Albums").small().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                         this.app.selected_album = None;
                                                         this.app.album_images.clear();
                                                         cx.notify();
@@ -430,7 +435,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                 h_flex().child(div().text_lg().font_bold().child("System Wallpaper Albums"))
                                             }
                                         )
-                                        .child(Button::new("btn_scan_gal").disabled(is_loading).child(gpui::svg().path("search.svg").size_4().text_color(cx.theme().primary)).label("Scan System Gallery").primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                        .child(Button::new("btn_scan_gal").disabled(is_loading).child(gpui::svg().path("search.svg").size_4().text_color(cx.theme().primary)).child("Scan System Gallery").primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                             this.app.albums = WallmodApp::scan_system_gallery();
                                             this.app.selected_album = None;
                                             cx.notify();
@@ -594,6 +599,44 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                     .font_bold()
                                     .text_color(cx.theme().foreground)
                                     .child(loading_msg)
+                            )
+                    )
+                    .into_any_element()
+            )
+        } else if let Some(err) = error_msg {
+            Some(
+                v_flex()
+                    .absolute()
+                    .inset_0()
+                    .bg(gpui::Rgba { r: 0.0, g: 0.0, b: 0.0, a: 0.85 })
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        v_flex()
+                            .w(px(460.0))
+                            .p_6()
+                            .gap_4()
+                            .bg(cx.theme().secondary)
+                            .border_1()
+                            .border_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 0.8 })
+                            .rounded_2xl()
+                            .shadow_2xl()
+                            .items_center()
+                            .child(gpui::svg().path("circle-alert.svg").size_12().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 }))
+                            .child(div().text_lg().font_bold().text_color(cx.theme().foreground).child("Processing Diagnostic Error"))
+                            .child(div().text_sm().text_center().text_color(cx.theme().muted_foreground).child(err))
+                            .child(div().h_px().w_full().bg(cx.theme().border))
+                            .child(div().text_xs().text_color(cx.theme().muted_foreground).child("Troubleshooting: Ensure image format is supported or try a lower resolution target."))
+                            .child(
+                                Button::new("btn_err_dismiss")
+                                    .child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary))
+                                    .child("Dismiss & Return")
+                                    .primary()
+                                    .cursor_pointer()
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.app.state = crate::app::AppState::Idle;
+                                        cx.notify();
+                                    }))
                             )
                     )
                     .into_any_element()
