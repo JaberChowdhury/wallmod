@@ -41,22 +41,22 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                 .items_center()
                 .gap_2()
                 .child(
-                    Button::new("wv_std").label("Output Visual").small()
+                    Button::new("wv_std").label("Output Visual").icon(IconName::Eye).small()
                         .selected(workspace_view == WorkspaceView::Standard)
                         .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Standard; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_diff").label("Split Diff").small()
+                    Button::new("wv_diff").label("Split Diff").icon(IconName::Frame).small()
                         .selected(workspace_view == WorkspaceView::SplitDiff)
                         .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::SplitDiff; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_tel").label("Dashboard Info").small()
+                    Button::new("wv_tel").label("Dashboard Info").icon(IconName::LayoutDashboard).small()
                         .selected(workspace_view == WorkspaceView::Telemetry)
                         .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Telemetry; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_gal").label("Album Gallery").small()
+                    Button::new("wv_gal").label("Album Gallery").icon(IconName::Folder).small()
                         .selected(workspace_view == WorkspaceView::Gallery)
                         .on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Gallery; cx.notify(); }))
                 )
@@ -88,11 +88,11 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                 .child(
                                     h_flex().gap_2().items_center().justify_center().w_full()
                                         .child(div().text_xs().font_bold().child("Split Comparison:"))
-                                        .child(Button::new("split_10").label("10% Orig").small().selected((split_ratio - 0.1).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
-                                        .child(Button::new("split_30").label("30% Orig").small().selected((split_ratio - 0.3).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
-                                        .child(Button::new("split_50").label("50% / 50%").small().selected((split_ratio - 0.5).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
-                                        .child(Button::new("split_70").label("70% Orig").small().selected((split_ratio - 0.7).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
-                                        .child(Button::new("split_90").label("90% Orig").small().selected((split_ratio - 0.9).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
+                                        .child(Button::new("split_10").label("10% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.1).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
+                                        .child(Button::new("split_30").label("30% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.3).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
+                                        .child(Button::new("split_50").label("50% / 50%").icon(IconName::Eye).small().selected((split_ratio - 0.5).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
+                                        .child(Button::new("split_70").label("70% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.7).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
+                                        .child(Button::new("split_90").label("90% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.9).abs() < 0.01).on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
                                 )
                                 .child(
                                     h_flex().flex_1().w_full().gap_3().overflow_hidden()
@@ -162,7 +162,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                 h_flex().child(div().text_lg().font_bold().child("System Wallpaper Albums"))
                                             }
                                         )
-                                        .child(Button::new("btn_scan_gal").label("Scan System Gallery").primary().on_click(cx.listener(|this, _, _, cx| {
+                                        .child(Button::new("btn_scan_gal").label("Scan System Gallery").icon(IconName::Search).primary().on_click(cx.listener(|this, _, _, cx| {
                                             this.app.albums = WallmodApp::scan_system_gallery();
                                             this.app.selected_album = None;
                                             cx.notify();

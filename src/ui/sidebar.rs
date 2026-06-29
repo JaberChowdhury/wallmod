@@ -57,8 +57,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_cg_0").label("Sources & Presets").small().flex_1().selected(sub_tab == 0).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_cg_1").label("Remap Engine").small().flex_1().selected(sub_tab == 1).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_cg_0").label("Sources & Presets").icon(IconName::FolderOpen).small().flex_1().selected(sub_tab == 0).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_cg_1").label("Remap Engine").icon(IconName::Settings).small().flex_1().selected(sub_tab == 1).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
@@ -67,6 +67,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                         h_flex().gap_2().w_full()
                                             .child(
                                                 Button::new("btn_pick_img").label("Open Image...")
+                                                    .icon(IconName::FolderOpen)
                                                     .primary()
                                                     .flex_1()
                                                     .on_click(cx.listener(|_, _, _, cx| {
@@ -85,6 +86,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             )
                                             .child(
                                                 Button::new("btn_pick_lut").label("Import LUT...")
+                                                    .icon(IconName::File)
                                                     .flex_1()
                                                     .on_click(cx.listener(|_, _, _, cx| {
                                                         cx.spawn(async move |this, cx| {
@@ -143,15 +145,15 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     .child(div().text_sm().font_bold().child("Remap Algorithm"))
                                     .child(
                                         h_flex().gap_1().w_full()
-                                            .child(Button::new("alg_g").label("Gauss").small().flex_1().selected(algo == RemapAlgorithm::Gaussian).on_click(cx.listener(|this, _, _, cx| {
+                                            .child(Button::new("alg_g").label("Gauss").icon(IconName::Settings).small().flex_1().selected(algo == RemapAlgorithm::Gaussian).on_click(cx.listener(|this, _, _, cx| {
                                                 this.app.algorithm = RemapAlgorithm::Gaussian; let _ = this.app.run_processing();
                                                 cx.notify();
                                             })))
-                                            .child(Button::new("alg_s").label("Shepard").small().flex_1().selected(algo == RemapAlgorithm::Shepard).on_click(cx.listener(|this, _, _, cx| {
+                                            .child(Button::new("alg_s").label("Shepard").icon(IconName::Settings).small().flex_1().selected(algo == RemapAlgorithm::Shepard).on_click(cx.listener(|this, _, _, cx| {
                                                 this.app.algorithm = RemapAlgorithm::Shepard; let _ = this.app.run_processing();
                                                 cx.notify();
                                             })))
-                                            .child(Button::new("alg_n").label("Nearest").small().flex_1().selected(algo == RemapAlgorithm::NearestNeighbor).on_click(cx.listener(|this, _, _, cx| {
+                                            .child(Button::new("alg_n").label("Nearest").icon(IconName::Settings).small().flex_1().selected(algo == RemapAlgorithm::NearestNeighbor).on_click(cx.listener(|this, _, _, cx| {
                                                 this.app.algorithm = RemapAlgorithm::NearestNeighbor; let _ = this.app.run_processing();
                                                 cx.notify();
                                             })))
@@ -161,10 +163,10 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child("HaldCLUT Resolution"))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("hald_8").label("Lvl 8").small().selected(hald_lvl == 8).on_click(cx.listener(|this, _, _, cx| {
+                                                    .child(Button::new("hald_8").label("Lvl 8").icon(IconName::LayoutDashboard).small().selected(hald_lvl == 8).on_click(cx.listener(|this, _, _, cx| {
                                                         this.app.hald_level = 8; let _ = this.app.run_processing(); cx.notify();
                                                     })))
-                                                    .child(Button::new("hald_16").label("Lvl 16").small().selected(hald_lvl == 16).on_click(cx.listener(|this, _, _, cx| {
+                                                    .child(Button::new("hald_16").label("Lvl 16").icon(IconName::LayoutDashboard).small().selected(hald_lvl == 16).on_click(cx.listener(|this, _, _, cx| {
                                                         this.app.hald_level = 16; let _ = this.app.run_processing(); cx.notify();
                                                     })))
                                             )
@@ -185,8 +187,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_ps_0").label("Basic Adjust").small().flex_1().selected(sub_tab == 0).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_ps_1").label("Color & Blur").small().flex_1().selected(sub_tab == 1).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_ps_0").label("Basic Adjust").icon(IconName::Settings).small().flex_1().selected(sub_tab == 0).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_ps_1").label("Color & Blur").icon(IconName::Palette).small().flex_1().selected(sub_tab == 1).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
@@ -197,9 +199,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Brightness: {}", ps.brightness)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_b_m20").label("-20").small().selected(ps.brightness == -20).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = -20; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_b_0").label("0").small().selected(ps.brightness == 0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 0; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_b_p20").label("+20").small().selected(ps.brightness == 20).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 20; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_b_m20").label("-20").icon(IconName::Minus).small().selected(ps.brightness == -20).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = -20; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_b_0").label("0").icon(IconName::Check).small().selected(ps.brightness == 0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_b_p20").label("+20").icon(IconName::Plus).small().selected(ps.brightness == 20).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 20; let _ = this.app.run_processing(); cx.notify(); })))
                                             )
                                     )
                                     .child(
@@ -207,9 +209,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Contrast: {:.0}", ps.contrast)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_c_m20").label("-20").small().selected(ps.contrast == -20.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = -20.0; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_c_0").label("0").small().selected(ps.contrast == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_c_p20").label("+20").small().selected(ps.contrast == 20.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 20.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_c_m20").label("-20").icon(IconName::Minus).small().selected(ps.contrast == -20.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = -20.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_c_0").label("0").icon(IconName::Check).small().selected(ps.contrast == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_c_p20").label("+20").icon(IconName::Plus).small().selected(ps.contrast == 20.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 20.0; let _ = this.app.run_processing(); cx.notify(); })))
                                             )
                                     )
                             } else {
@@ -220,9 +222,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Saturation: {:.1}", ps.saturation)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_s_m1").label("Desat").small().selected(ps.saturation == -1.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = -1.0; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_s_0").label("Norm").small().selected(ps.saturation == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_s_p05").label("Vivid").small().selected(ps.saturation == 0.5).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.5; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_s_m1").label("Desat").icon(IconName::Minus).small().selected(ps.saturation == -1.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = -1.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_s_0").label("Norm").icon(IconName::Check).small().selected(ps.saturation == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_s_p05").label("Vivid").icon(IconName::Plus).small().selected(ps.saturation == 0.5).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.5; let _ = this.app.run_processing(); cx.notify(); })))
                                             )
                                     )
                                     .child(
@@ -230,9 +232,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Hue Shift: {}°", ps.hue)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("ps_h_0").label("0°").small().selected(ps.hue == 0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 0; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_h_90").label("90°").small().selected(ps.hue == 90).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 90; let _ = this.app.run_processing(); cx.notify(); })))
-                                                    .child(Button::new("ps_h_180").label("180°").small().selected(ps.hue == 180).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 180; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_h_0").label("0°").icon(IconName::Check).small().selected(ps.hue == 0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_h_90").label("90°").icon(IconName::Plus).small().selected(ps.hue == 90).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 90; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("ps_h_180").label("180°").icon(IconName::Plus).small().selected(ps.hue == 180).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 180; let _ = this.app.run_processing(); cx.notify(); })))
                                             )
                                     )
                                     .child(
@@ -240,9 +242,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .child(div().text_sm().child(format!("Blur Radius: {:.1}", blur_sigma)))
                                             .child(
                                                 h_flex().gap_1()
-                                                    .child(Button::new("blur_0").label("0").small().selected(blur_sigma == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 0.0; let _ = this.app.apply_blur(); cx.notify(); })))
-                                                    .child(Button::new("blur_5").label("5").small().selected(blur_sigma == 5.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 5.0; let _ = this.app.apply_blur(); cx.notify(); })))
-                                                    .child(Button::new("blur_15").label("15").small().selected(blur_sigma == 15.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 15.0; let _ = this.app.apply_blur(); cx.notify(); })))
+                                                    .child(Button::new("blur_0").label("0").icon(IconName::Check).small().selected(blur_sigma == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 0.0; let _ = this.app.apply_blur(); cx.notify(); })))
+                                                    .child(Button::new("blur_5").label("5").icon(IconName::Plus).small().selected(blur_sigma == 5.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 5.0; let _ = this.app.apply_blur(); cx.notify(); })))
+                                                    .child(Button::new("blur_15").label("15").icon(IconName::Plus).small().selected(blur_sigma == 15.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 15.0; let _ = this.app.apply_blur(); cx.notify(); })))
                                             )
                                     )
                                     .child(
@@ -261,8 +263,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_eng_0").label("Backend & Display").small().flex_1().selected(sub_tab == 0).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_eng_1").label("Transitions & Daemon").small().flex_1().selected(sub_tab == 1).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_eng_0").label("Backend & Display").icon(IconName::PanelLeft).small().flex_1().selected(sub_tab == 0).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_eng_1").label("Transitions & Daemon").icon(IconName::Calendar).small().flex_1().selected(sub_tab == 1).on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
@@ -274,6 +276,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             .children(WallpaperBackend::ALL.iter().map(|&b| {
                                                 let is_sel = backend == b;
                                                 Button::new(SharedString::from(format!("be_{}", b.code()))).label(b.to_string())
+                                                    .icon(IconName::Settings)
                                                     .w_full()
                                                     .small()
                                                     .selected(is_sel)
@@ -290,6 +293,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                 let is_sel = display == d;
                                                 let d_str = d.to_string();
                                                 Button::new(SharedString::from(format!("disp_{}", d))).label(d)
+                                                    .icon(IconName::Maximize)
                                                     .small()
                                                     .selected(is_sel)
                                                     .on_click(cx.listener(move |this, _, _, cx| {
@@ -307,6 +311,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                 let is_sel = transition == t;
                                                 let t_str = t.to_string();
                                                 Button::new(SharedString::from(format!("tr_{}", t))).label(t)
+                                                    .icon(IconName::Replace)
                                                     .small()
                                                     .selected(is_sel)
                                                     .on_click(cx.listener(move |this, _, _, cx| {
@@ -330,6 +335,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                 .child(
                                                     Button::new("btn_day_dropdown")
                                                         .label(format!("Day: {}", day_t))
+                                                        .icon(IconName::Sun)
                                                         .w_full().small().outline()
                                                         .dropdown_menu({
                                                             let ve = view_entity.clone();
@@ -349,6 +355,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                 .child(
                                                     Button::new("btn_night_dropdown")
                                                         .label(format!("Night: {}", night_t))
+                                                        .icon(IconName::Moon)
                                                         .w_full().small().outline()
                                                         .dropdown_menu({
                                                             let ve = view_entity.clone();
@@ -372,6 +379,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                         )
                         .child(
                             Button::new("btn_apply_wp").label("Apply to Desktop Now")
+                                .icon(IconName::Check)
                                 .primary()
                                 .w_full()
                                 .mt_2()
@@ -422,6 +430,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                         )
                         .child(
                             Button::new("btn_exp_term").label("Export Configs Now...")
+                                .icon(IconName::Replace)
                                 .w_full()
                                 .on_click(cx.listener(|this, _, _, _| {
                                     if let Ok(home) = std::env::var("HOME") {
@@ -433,6 +442,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                         .child(div().text_sm().font_bold().child("Image Export"))
                         .child(
                             Button::new("btn_save_img").label("Save Graded Image As...")
+                                .icon(IconName::File)
                                 .primary()
                                 .w_full()
                                 .on_click(cx.listener(|_, _, _, cx| {
@@ -457,6 +467,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                         .child(div().text_sm().font_bold().child("Dominant Color Extraction"))
                         .child(
                             Button::new("btn_extract_cols").label("Extract k-Means Dominant Colors")
+                                .icon(IconName::Palette)
                                 .w_full()
                                 .small()
                                 .on_click(cx.listener(|this, _, _, cx| {
