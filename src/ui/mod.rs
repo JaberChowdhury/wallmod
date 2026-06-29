@@ -203,6 +203,18 @@ impl WallmodView {
         }
     }
 
+    pub fn trigger_node_processing(&mut self, cx: &mut Context<Self>, msg: &str) {
+        if self.app.auto_apply_nodes {
+            self.trigger_async_processing(cx, msg);
+        } else {
+            self.app.state = crate::app::AppState::Notice(
+                "Pipeline modified (Manual Trigger Mode). Click '▶ Apply Pipeline' to render."
+                    .to_string(),
+            );
+            cx.notify();
+        }
+    }
+
     pub fn trigger_async_processing(&mut self, cx: &mut Context<Self>, msg: &str) {
         self.app.state = crate::app::AppState::Loading(0.5, msg.to_string());
         cx.notify();

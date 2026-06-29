@@ -88,6 +88,7 @@ pub struct WallmodApp {
     pub float_show_fps: bool,
     pub float_show_ram: bool,
     pub float_show_cpu: bool,
+    pub auto_apply_nodes: bool,
 }
 
 impl Default for WallmodApp {
@@ -165,6 +166,7 @@ impl WallmodApp {
             float_show_fps: true,
             float_show_ram: true,
             float_show_cpu: true,
+            auto_apply_nodes: false,
         }
     }
 

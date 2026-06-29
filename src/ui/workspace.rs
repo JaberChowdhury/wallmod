@@ -541,6 +541,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                             let chain = view.app.theme_chain.clone();
                             let chaining_mode = view.app.chaining_mode;
                             let global_bd = view.app.global_bit_depth;
+                            let auto_apply = view.app.auto_apply_nodes;
 
                             v_flex().size_full().gap_6().p_6().overflow_y_scrollbar()
                                 .child(
@@ -554,7 +555,18 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                 ))
                                         )
                                         .child(
-                                            h_flex().gap_2()
+                                            h_flex().gap_2().flex_wrap()
+                                                .child(Button::new("btn_apply_pipeline").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).label("▶ Apply Pipeline").small().primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    this.trigger_async_processing(cx, "Applying node pipeline...");
+                                                })))
+                                                .child(Button::new("btn_toggle_auto_apply").disabled(is_loading).label(if auto_apply { "⚡ Auto-Apply: ON" } else { "⚡ Auto-Apply: OFF" }).small().outline().selected(auto_apply).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    this.app.auto_apply_nodes = !this.app.auto_apply_nodes;
+                                                    if this.app.auto_apply_nodes {
+                                                        this.trigger_async_processing(cx, "Auto-apply enabled, rendering pipeline...");
+                                                    } else {
+                                                        cx.notify();
+                                                    }
+                                                })))
                                                 .child(Button::new("btn_pipe_mode").disabled(is_loading).child(gpui::svg().path("replace.svg").size_4().text_color(cx.theme().primary)).label(if chaining_mode { "Switch to Explore Mode" } else { "Switch to Chaining Mode" }).small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     this.app.chaining_mode = !this.app.chaining_mode;
                                                     cx.notify();
@@ -564,7 +576,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, op: crate::app::state::PipelineOp::Theme(init.clone()), theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
                                                     this.app.current_theme = init;
                                                     this.app.selected_preset = Some("Default".to_string());
-                                                    this.trigger_async_processing(cx, "Resetting chain...");
+                                                    this.trigger_node_processing(cx, "Resetting chain...");
                                                 })))
                                         )
                                 )
@@ -584,7 +596,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         bit_depth: this.app.global_bit_depth,
                                                     });
                                                     this.app.chaining_mode = true;
-                                                    this.trigger_async_processing(cx, "Added Theme Grade step...");
+                                                    this.trigger_node_processing(cx, "Added Theme Grade step...");
                                                 })))
                                                 .child(Button::new("btn_add_blur").disabled(is_loading).label("+ Blur Step").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
@@ -597,7 +609,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         bit_depth: this.app.global_bit_depth,
                                                     });
                                                     this.app.chaining_mode = true;
-                                                    this.trigger_async_processing(cx, "Added Blur step...");
+                                                    this.trigger_node_processing(cx, "Added Blur step...");
                                                 })))
                                                 .child(Button::new("btn_add_ps").disabled(is_loading).label("+ Color Adjust").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
@@ -615,7 +627,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         bit_depth: this.app.global_bit_depth,
                                                     });
                                                     this.app.chaining_mode = true;
-                                                    this.trigger_async_processing(cx, "Added Color Adjust step...");
+                                                    this.trigger_node_processing(cx, "Added Color Adjust step...");
                                                 })))
                                                 .child(Button::new("btn_add_dither").disabled(is_loading).label("+ Dither").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
@@ -628,7 +640,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         bit_depth: this.app.global_bit_depth,
                                                     });
                                                     this.app.chaining_mode = true;
-                                                    this.trigger_async_processing(cx, "Added Dithering step...");
+                                                    this.trigger_node_processing(cx, "Added Dithering step...");
                                                 })))
                                                 .child(Button::new("btn_add_sort").disabled(is_loading).label("+ Pixel Sort").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
@@ -641,7 +653,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         bit_depth: this.app.global_bit_depth,
                                                     });
                                                     this.app.chaining_mode = true;
-                                                    this.trigger_async_processing(cx, "Added Pixel Sort step...");
+                                                    this.trigger_node_processing(cx, "Added Pixel Sort step...");
                                                 })))
                                                 .child(div().w_px().h_6().bg(cx.theme().border))
                                                 .child(Button::new("btn_export_pipe").disabled(is_loading).label("Export Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
@@ -665,7 +677,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                     let _ = this.update(cx, |view, cx| {
                                                                         view.app.theme_chain = imported;
                                                                         view.app.chaining_mode = true;
-                                                                        view.trigger_async_processing(cx, "Imported pipeline chain loaded...");
+                                                                        view.trigger_node_processing(cx, "Imported pipeline chain loaded...");
                                                                     });
                                                                 }
                                                             }
@@ -706,7 +718,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                             if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
                                                                 n.enabled = !n.enabled;
                                                             }
-                                                            this.trigger_async_processing(cx, "Toggling node...");
+                                                            this.trigger_node_processing(cx, "Toggling node...");
                                                         })))
                                                 )
                                                 .child(div().text_xs().text_color(cx.theme().muted_foreground).child(format!("Color Style: {}", nbd.display_name())))
@@ -714,15 +726,15 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     h_flex().gap_1().w_full().pt_1()
                                                         .child(Button::new(format!("bd32_{}", nid)).disabled(is_loading).child("32b").small().flex_1().selected(nbd == crate::app::state::BitDepthStyle::Bit32).cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                             if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) { n.bit_depth = crate::app::state::BitDepthStyle::Bit32; }
-                                                            this.trigger_async_processing(cx, "Updating node bit depth...");
+                                                            this.trigger_node_processing(cx, "Updating node bit depth...");
                                                         })))
                                                         .child(Button::new(format!("bd16_{}", nid)).disabled(is_loading).child("16b").small().flex_1().selected(nbd == crate::app::state::BitDepthStyle::Bit16).cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                             if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) { n.bit_depth = crate::app::state::BitDepthStyle::Bit16; }
-                                                            this.trigger_async_processing(cx, "Updating node bit depth...");
+                                                            this.trigger_node_processing(cx, "Updating node bit depth...");
                                                         })))
                                                         .child(Button::new(format!("bd8_{}", nid)).disabled(is_loading).child("8b").small().flex_1().selected(nbd == crate::app::state::BitDepthStyle::Bit8).cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                             if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) { n.bit_depth = crate::app::state::BitDepthStyle::Bit8; }
-                                                            this.trigger_async_processing(cx, "Updating node bit depth...");
+                                                            this.trigger_node_processing(cx, "Updating node bit depth...");
                                                         })))
                                                 )
                                                 .child(
@@ -733,7 +745,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                     if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
                                                                         if pos > 0 {
                                                                             this.app.theme_chain.swap(pos, pos - 1);
-                                                                            this.trigger_async_processing(cx, "Reordering pipeline step...");
+                                                                            this.trigger_node_processing(cx, "Reordering pipeline step...");
                                                                         }
                                                                     }
                                                                 })))
@@ -741,7 +753,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                     if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
                                                                         if pos + 1 < this.app.theme_chain.len() {
                                                                             this.app.theme_chain.swap(pos, pos + 1);
-                                                                            this.trigger_async_processing(cx, "Reordering pipeline step...");
+                                                                            this.trigger_node_processing(cx, "Reordering pipeline step...");
                                                                         }
                                                                     }
                                                                 })))
@@ -754,12 +766,12 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                         let max_id = this.app.theme_chain.iter().map(|x| x.id).max().unwrap_or(0);
                                                                         cloned.id = max_id + 1;
                                                                         this.app.theme_chain.insert(pos + 1, cloned);
-                                                                        this.trigger_async_processing(cx, "Duplicating node...");
+                                                                        this.trigger_node_processing(cx, "Duplicating node...");
                                                                     }
                                                                 })))
                                                                 .child(Button::new(format!("del_n_{}", nid)).disabled(is_loading).child(gpui::svg().path("trash.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Delete").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                                     this.app.theme_chain.retain(|x| x.id != nid);
-                                                                    this.trigger_async_processing(cx, "Removing node from chain...");
+                                                                    this.trigger_node_processing(cx, "Removing node from chain...");
                                                                 })))
                                                         )
                                                 );
