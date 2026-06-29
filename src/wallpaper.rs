@@ -7,7 +7,7 @@ use std::process::Command;
 /// Asynchronously sets the given image file path as the active system desktop wallpaper
 /// with customized Wayland transition animation and display output targeting.
 pub async fn set_wallpaper_async(path: PathBuf, transition: String, display: String, backend: String) -> Result<PathBuf, String> {
-    tokio::task::spawn_blocking(move || {
+    crate::backend::runtime::spawn_blocking(move || {
         let path_str = path.to_string_lossy().to_string();
 
         let run_swww = || {
@@ -125,7 +125,7 @@ pub async fn set_wallpaper_async(path: PathBuf, transition: String, display: Str
 /// Applies a Gaussian blur on a background thread to prevent UI blocking.
 /// `sigma` controls the blur radius (e.g., 5.0 for a moderate blur).
 pub async fn process_blur(img: image::DynamicImage, sigma: f32) -> Result<(Vec<u8>, u32, u32, image::DynamicImage), String> {
-    tokio::task::spawn_blocking(move || {
+    crate::backend::runtime::spawn_blocking(move || {
         let blurred_buffer = image::imageops::blur(&img, sigma);
         let blurred_dyn = image::DynamicImage::ImageRgba8(blurred_buffer);
         let rgba = blurred_dyn.to_rgba8();

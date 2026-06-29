@@ -4,6 +4,7 @@ pub mod cache;
 pub mod dither;
 pub mod error;
 pub mod exporter;
+pub mod runtime;
 pub mod seam_carve;
 
 use crate::app::state::RemapAlgorithm;
