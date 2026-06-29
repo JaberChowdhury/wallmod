@@ -78,6 +78,12 @@ pub struct WallmodApp {
     pub theme_chain: Vec<crate::app::state::ThemeChainNode>,
     pub chaining_mode: bool,
     pub global_bit_depth: crate::app::state::BitDepthStyle,
+    pub sys_ram_percent: f32,
+    pub sys_cpu_threads: Vec<f32>,
+    pub sys_last_cpu_ticks: Vec<(u64, u64)>,
+    pub sys_last_update: std::time::Instant,
+    pub frame_timestamps: std::collections::VecDeque<std::time::Instant>,
+    pub current_fps: f32,
 }
 
 impl Default for WallmodApp {
@@ -144,6 +150,12 @@ impl WallmodApp {
             }],
             chaining_mode: false,
             global_bit_depth: crate::app::state::BitDepthStyle::Bit32,
+            sys_ram_percent: 0.0,
+            sys_cpu_threads: Vec::new(),
+            sys_last_cpu_ticks: Vec::new(),
+            sys_last_update: std::time::Instant::now() - std::time::Duration::from_secs(10),
+            frame_timestamps: std::collections::VecDeque::new(),
+            current_fps: 60.0,
         }
     }
 
@@ -640,5 +652,120 @@ impl WallmodApp {
             return true;
         }
         false
+    }
+
+    pub fn update_system_stats(&mut self) {
+        let now = std::time::Instant::now();
+        if now.duration_since(self.sys_last_update).as_millis() < 400 {
+            return;
+        }
+        self.sys_last_update = now;
+
+        // RAM Usage
+        if let Ok(content) = std::fs::read_to_string("/proc/meminfo") {
+            let mut total = 0.0;
+            let mut avail = 0.0;
+            for line in content.lines() {
+                if line.starts_with("MemTotal:") {
+                    total = line
+                        .split_whitespace()
+                        .nth(1)
+                        .and_then(|v| v.parse::<f64>().ok())
+                        .unwrap_or(0.0);
+                } else if line.starts_with("MemAvailable:") {
+                    avail = line
+                        .split_whitespace()
+                        .nth(1)
+                        .and_then(|v| v.parse::<f64>().ok())
+                        .unwrap_or(0.0);
+                }
+            }
+            if total > 0.0 {
+                self.sys_ram_percent = (((total - avail) / total) * 100.0) as f32;
+            }
+        }
+
+        // CPU Thread Usage
+        if let Ok(content) = std::fs::read_to_string("/proc/stat") {
+            let mut new_ticks = Vec::new();
+            let mut cpu_usages = Vec::new();
+            for line in content.lines() {
+                if line.starts_with("cpu") && !line.starts_with("cpu ") {
+                    let parts: Vec<u64> = line
+                        .split_whitespace()
+                        .skip(1)
+                        .filter_map(|p| p.parse::<u64>().ok())
+                        .collect();
+                    if parts.len() >= 4 {
+                        let user = parts[0];
+                        let nice = parts[1];
+                        let system = parts[2];
+                        let idle = parts[3];
+                        let iowait = if parts.len() > 4 {
+                            parts[4]
+                        } else {
+                            0
+                        };
+                        let irq = if parts.len() > 5 {
+                            parts[5]
+                        } else {
+                            0
+                        };
+                        let softirq = if parts.len() > 6 {
+                            parts[6]
+                        } else {
+                            0
+                        };
+                        let steal = if parts.len() > 7 {
+                            parts[7]
+                        } else {
+                            0
+                        };
+                        let total = user + nice + system + idle + iowait + irq + softirq + steal;
+                        let idle_total = idle + iowait;
+                        let idx = new_ticks.len();
+                        new_ticks.push((idle_total, total));
+
+                        if let Some(&(last_idle, last_total)) = self.sys_last_cpu_ticks.get(idx) {
+                            let diff_total = total.saturating_sub(last_total);
+                            let diff_idle = idle_total.saturating_sub(last_idle);
+                            if diff_total > 0 {
+                                let usage = (1.0 - (diff_idle as f64 / diff_total as f64)) * 100.0;
+                                cpu_usages.push(usage.clamp(0.0, 100.0) as f32);
+                            } else {
+                                cpu_usages.push(*self.sys_cpu_threads.get(idx).unwrap_or(&0.0));
+                            }
+                        } else {
+                            cpu_usages.push(0.0);
+                        }
+                    }
+                }
+            }
+            if !new_ticks.is_empty() {
+                self.sys_last_cpu_ticks = new_ticks;
+                self.sys_cpu_threads = cpu_usages;
+            }
+        }
+    }
+
+    pub fn record_frame(&mut self) {
+        let now = std::time::Instant::now();
+        self.frame_timestamps.push_back(now);
+        while let Some(&front) = self.frame_timestamps.front() {
+            if now.duration_since(front).as_secs_f32() > 1.0 {
+                self.frame_timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+        let len = self.frame_timestamps.len();
+        if let Some(&first) = self.frame_timestamps.front() {
+            let elapsed = now.duration_since(first).as_secs_f32();
+            if elapsed > 0.1 && len > 1 {
+                self.current_fps = ((len - 1) as f32 / elapsed).round();
+            } else {
+                self.current_fps = len as f32;
+            }
+        }
     }
 }

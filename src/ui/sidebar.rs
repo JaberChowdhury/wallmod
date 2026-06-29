@@ -657,7 +657,38 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                 SidebarTab::Settings => {
                     let dither = view.app.dither_enabled;
                     let level = view.app.hald_level;
+                    let ram_pct = view.app.sys_ram_percent;
+                    let fps = view.app.current_fps;
+                    let cpu_threads = view.app.sys_cpu_threads.clone();
+
                     v_flex().gap_4().w_full().flex_1().overflow_y_scrollbar()
+                        .child(div().h_px().w_full().bg(cx.theme().border))
+                        .child(div().text_sm().font_bold().child("System Performance Stats"))
+                        .child(
+                            v_flex().gap_3().p_3().border_1().border_color(cx.theme().border).rounded_lg().bg(cx.theme().secondary)
+                                .child(
+                                    h_flex().justify_between().items_center()
+                                        .child(div().text_xs().font_bold().child("RAM Usage"))
+                                        .child(div().text_xs().font_bold().text_color(cx.theme().primary).child(format!("{:.1}%", ram_pct)))
+                                )
+                                .child(
+                                    div().w_full().h(px(8.0)).rounded_full().bg(cx.theme().background).overflow_hidden()
+                                        .child(div().h_full().w(gpui::Length::Definite(gpui::DefiniteLength::Fraction((ram_pct / 100.0).clamp(0.0, 1.0)))).bg(cx.theme().primary))
+                                )
+                                .child(
+                                    h_flex().justify_between().items_center().pt_1()
+                                        .child(div().text_xs().font_bold().child("App Render FPS"))
+                                        .child(div().text_xs().font_bold().text_color(gpui::rgb(0x22c55e)).child(format!("{:.0} FPS", fps)))
+                                )
+                                .child(div().text_xs().font_bold().pt_1().child(format!("CPU Threads Load ({} Cores)", cpu_threads.len())))
+                                .child(
+                                    div().flex().flex_wrap().gap_1().w_full()
+                                        .children(cpu_threads.iter().enumerate().map(|(idx, &load)| {
+                                            let color = if load > 80.0 { gpui::rgb(0xef4444) } else if load > 50.0 { gpui::rgb(0xf59e0b) } else { gpui::rgb(0x22c55e) };
+                                            div().p_1().rounded_md().bg(cx.theme().background).border_1().border_color(cx.theme().border).text_xs().text_color(color).child(format!("C{}: {:.0}%", idx, load))
+                                        }))
+                                )
+                        )
                         .child(div().h_px().w_full().bg(cx.theme().border))
                         .child(div().text_sm().font_bold().child("Application Settings"))
                         .child(

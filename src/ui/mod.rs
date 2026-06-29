@@ -178,6 +178,17 @@ impl WallmodView {
         })
         .detach();
 
+        cx.spawn(async move |this, cx| loop {
+            cx.background_executor().timer(std::time::Duration::from_millis(500)).await;
+            let _ = this.update(cx, |view, cx| {
+                view.app.update_system_stats();
+                if view.app.sidebar_tab == crate::app::state::SidebarTab::Settings {
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
+
         Self {
             app: WallmodApp::new(),
             blur_slider,
@@ -293,6 +304,7 @@ impl WallmodView {
 
 impl Render for WallmodView {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.app.record_frame();
         v_flex()
             .size_full()
             .bg(cx.theme().background)
