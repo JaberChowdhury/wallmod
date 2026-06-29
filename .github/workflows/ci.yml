@@ -53,3 +53,44 @@ jobs:
 
       - name: Run Tests
         run: cargo test --verbose
+
+  release:
+    name: Build & Release (Production)
+    needs: build_and_test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake pkg-config libwayland-dev libxkbcommon-dev libfontconfig1-dev libgtk-3-dev
+
+      - name: Build Release Binary
+        run: cargo build --release
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+
+      - name: Create Deb Package
+        run: cargo deb
+
+      - name: Create Tarball
+        run: |
+          tar -czvf wallmod-linux-x86_64.tar.gz -C target/release wallmod
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            target/debian/*.deb
+            wallmod-linux-x86_64.tar.gz
+          generate_release_notes: true

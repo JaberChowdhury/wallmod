@@ -1,6 +1,6 @@
 [package]
 name = "wallmod"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Antigravity <antigravity@deepmind.google>"]
 description = "Wallpaper Theme Changer - A production-ready desktop Linux image customization application built with GPUI and gpui-component."
@@ -24,3 +24,14 @@ lutgen = "0.15.0"
 
 [features]
 lutgen = []
+
+[package.metadata.deb]
+maintainer = "Jaber <jaberhc2002@gmail.com>"
+copyright = "2026 Jaber"
+depends = "$auto"
+extended-description = "Wallpaper Theme Changer - A production-ready desktop Linux image customization application."
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/wallmod", "usr/bin/", "755"],
+]
