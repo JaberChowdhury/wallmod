@@ -89,7 +89,7 @@ impl WallmodApp {
             selected_album: None,
             album_images: Vec::new(),
             scanning_gallery: false,
-            sidebar_tab: SidebarTab::ThemeLut,
+            sidebar_tab: SidebarTab::ColorGrading,
             wallpaper_backend: WallpaperBackend::Auto,
             is_dark_mode: true,
             blur_sigma: 0.0,

@@ -138,21 +138,31 @@ pub enum AppState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SidebarTab {
-    ThemeLut,
+    ColorGrading,
+    PhotoshopEffects,
     DesktopEngine,
     ExportSync,
+    ToolsExt,
 }
 
 impl SidebarTab {
-    pub const ALL: &[SidebarTab] = &[SidebarTab::ThemeLut, SidebarTab::DesktopEngine, SidebarTab::ExportSync];
+    pub const ALL: &[SidebarTab] = &[
+        SidebarTab::ColorGrading,
+        SidebarTab::PhotoshopEffects,
+        SidebarTab::DesktopEngine,
+        SidebarTab::ExportSync,
+        SidebarTab::ToolsExt,
+    ];
 }
 
 impl std::fmt::Display for SidebarTab {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SidebarTab::ThemeLut => write!(f, "[ * ] Theme & LUT"),
-            SidebarTab::DesktopEngine => write!(f, "[ > ] Desktop & Wayland"),
-            SidebarTab::ExportSync => write!(f, "[ + ] Export & Sync"),
+            SidebarTab::ColorGrading => write!(f, "[*] Color Grading"),
+            SidebarTab::PhotoshopEffects => write!(f, "[/] Adjust & Effects"),
+            SidebarTab::DesktopEngine => write!(f, "[>] Wallpaper Engine"),
+            SidebarTab::ExportSync => write!(f, "[+] Export & Sync"),
+            SidebarTab::ToolsExt => write!(f, "[i] AI & Tools"),
         }
     }
 }

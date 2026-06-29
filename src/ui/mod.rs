@@ -1,9 +1,9 @@
 //! Centralized GPUI Shadcn UI Presentation Layer.
 //! Separated completely from core business models.
-//! Features 100% feature parity with all wallmod capabilities.
+//! Organized cleanly into 5 distinct categories to avoid sidebar clutter.
 
 use crate::app::{
-    WallmodApp, RemapAlgorithm, SidebarTab, AppTab, WorkspaceView, WallpaperBackend,
+    WallmodApp, RemapAlgorithm, SidebarTab, WorkspaceView, WallpaperBackend,
     PRESET_NAMES, SWWW_TRANSITIONS, TARGET_DISPLAYS,
 };
 use gpui::*;
@@ -25,7 +25,6 @@ impl WallmodView {
 
 impl Render for WallmodView {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let active_tab = self.app.active_tab;
         let sidebar_tab = self.app.sidebar_tab;
         let workspace_view = self.app.workspace_view;
         let preview_path = self.app.preview_path.clone();
@@ -64,7 +63,7 @@ impl Render for WallmodView {
             .bg(cx.theme().background)
             .text_color(cx.theme().foreground)
             .child(
-                // Header / Top Bar
+                // Header / Top Bar Categories
                 h_flex()
                     .w_full()
                     .h_12()
@@ -77,39 +76,52 @@ impl Render for WallmodView {
                         h_flex().gap_2().items_center()
                             .child(Icon::new(IconName::Palette).size_5().text_color(cx.theme().primary))
                             .child(div().font_bold().text_lg().child("wallmod"))
-                            .child(div().text_sm().text_color(cx.theme().muted_foreground).child("— ricer edition [ * ]"))
+                            .child(div().text_sm().text_color(cx.theme().muted_foreground).child("— ricer edition"))
                     )
                     .child(
                         h_flex().gap_1()
                             .child(
-                                Button::new("tab_themer").label("Themer")
-                                    .selected(active_tab == AppTab::Themer)
+                                Button::new("cat_cg").label("[*] Color Grading")
+                                    .small()
+                                    .selected(sidebar_tab == SidebarTab::ColorGrading)
                                     .on_click(cx.listener(|this, _, _, cx| {
-                                        this.app.active_tab = AppTab::Themer;
+                                        this.app.sidebar_tab = SidebarTab::ColorGrading;
                                         cx.notify();
                                     }))
                             )
                             .child(
-                                Button::new("tab_upscaler").label("Upscaler")
-                                    .selected(active_tab == AppTab::Upscaler)
+                                Button::new("cat_ps").label("[/] Adjust & Effects")
+                                    .small()
+                                    .selected(sidebar_tab == SidebarTab::PhotoshopEffects)
                                     .on_click(cx.listener(|this, _, _, cx| {
-                                        this.app.active_tab = AppTab::Upscaler;
+                                        this.app.sidebar_tab = SidebarTab::PhotoshopEffects;
                                         cx.notify();
                                     }))
                             )
                             .child(
-                                Button::new("tab_ocr").label("OCR Engine")
-                                    .selected(active_tab == AppTab::Ocr)
+                                Button::new("cat_eng").label("[>] Wallpaper Engine")
+                                    .small()
+                                    .selected(sidebar_tab == SidebarTab::DesktopEngine)
                                     .on_click(cx.listener(|this, _, _, cx| {
-                                        this.app.active_tab = AppTab::Ocr;
+                                        this.app.sidebar_tab = SidebarTab::DesktopEngine;
                                         cx.notify();
                                     }))
                             )
                             .child(
-                                Button::new("tab_comp").label("Compression")
-                                    .selected(active_tab == AppTab::Compression)
+                                Button::new("cat_exp").label("[+] Export & Sync")
+                                    .small()
+                                    .selected(sidebar_tab == SidebarTab::ExportSync)
                                     .on_click(cx.listener(|this, _, _, cx| {
-                                        this.app.active_tab = AppTab::Compression;
+                                        this.app.sidebar_tab = SidebarTab::ExportSync;
+                                        cx.notify();
+                                    }))
+                            )
+                            .child(
+                                Button::new("cat_ai").label("[i] AI & Tools")
+                                    .small()
+                                    .selected(sidebar_tab == SidebarTab::ToolsExt)
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.app.sidebar_tab = SidebarTab::ToolsExt;
                                         cx.notify();
                                     }))
                             )
@@ -134,7 +146,7 @@ impl Render for WallmodView {
                     .w_full()
                     .overflow_hidden()
                     .child(
-                        // Left Sidebar
+                        // Clean Categorized Left Sidebar
                         v_flex()
                             .w(px(340.0))
                             .h_full()
@@ -143,24 +155,12 @@ impl Render for WallmodView {
                             .p_4()
                             .gap_4()
                             .child(
-                                h_flex().gap_1().w_full().justify_between()
-                                    .child(Button::new("sb_theme").label("[*] Theme & LUT").small().selected(sidebar_tab == SidebarTab::ThemeLut).on_click(cx.listener(|this, _, _, cx| {
-                                        this.app.sidebar_tab = SidebarTab::ThemeLut;
-                                        cx.notify();
-                                    })))
-                                    .child(Button::new("sb_eng").label("[>] Engine").small().selected(sidebar_tab == SidebarTab::DesktopEngine).on_click(cx.listener(|this, _, _, cx| {
-                                        this.app.sidebar_tab = SidebarTab::DesktopEngine;
-                                        cx.notify();
-                                    })))
-                                    .child(Button::new("sb_exp").label("[+] Export").small().selected(sidebar_tab == SidebarTab::ExportSync).on_click(cx.listener(|this, _, _, cx| {
-                                        this.app.sidebar_tab = SidebarTab::ExportSync;
-                                        cx.notify();
-                                    })))
+                                div().text_base().font_bold().text_color(cx.theme().primary).child(sidebar_tab.to_string())
                             )
                             .child(div().h_px().w_full().bg(cx.theme().border))
                             .child(
                                 match sidebar_tab {
-                                    SidebarTab::ThemeLut => {
+                                    SidebarTab::ColorGrading => {
                                         v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                                             .child(
                                                 h_flex().gap_2().w_full()
@@ -199,7 +199,7 @@ impl Render for WallmodView {
                                                             }))
                                                     )
                                             )
-                                            .child(div().text_sm().font_bold().pt_1().child("Color Presets (13 Total)"))
+                                            .child(div().text_sm().font_bold().pt_1().child("Curated Color Schemes (13 Total)"))
                                             .child(
                                                 v_flex().gap_1()
                                                     .children(PRESET_NAMES.iter().map(|&name| {
@@ -248,14 +248,17 @@ impl Render for WallmodView {
                                             )
                                             .child(
                                                 h_flex().items_center().justify_between().pt_1()
-                                                    .child(div().text_sm().child("Preserve Luma"))
+                                                    .child(div().text_sm().child("Preserve Shadow Luma"))
                                                     .child(Switch::new("sw_luma").checked(luma).on_click(cx.listener(|this, val: &bool, _, cx| {
                                                         this.app.preserve_luma = *val; let _ = this.app.run_processing();
                                                         cx.notify();
                                                     })))
                                             )
-                                            .child(div().h_px().w_full().bg(cx.theme().border).my_1())
-                                            .child(div().text_sm().font_bold().child("Photoshop Adjustments"))
+                                            .into_any_element()
+                                    }
+                                    SidebarTab::PhotoshopEffects => {
+                                        v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
+                                            .child(div().text_sm().font_bold().child("Photoshop Color Adjustments"))
                                             .child(
                                                 h_flex().items_center().justify_between()
                                                     .child(div().text_sm().child(format!("Brightness: {}", ps.brightness)))
@@ -296,7 +299,7 @@ impl Render for WallmodView {
                                                             .child(Button::new("ps_h_180").label("180°").small().selected(ps.hue == 180).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 180; let _ = this.app.run_processing(); cx.notify(); })))
                                                     )
                                             )
-                                            .child(div().h_px().w_full().bg(cx.theme().border).my_1())
+                                            .child(div().h_px().w_full().bg(cx.theme().border).my_2())
                                             .child(div().text_sm().font_bold().child("Algorithmic Effects"))
                                             .child(
                                                 h_flex().items_center().justify_between()
@@ -315,29 +318,6 @@ impl Render for WallmodView {
                                                         this.app.dither_enabled = *val; let _ = this.app.apply_dither();
                                                         cx.notify();
                                                     })))
-                                            )
-                                            .child(
-                                                Button::new("btn_extract_cols").label("Extract k-Means Dominant Colors")
-                                                    .w_full()
-                                                    .small()
-                                                    .on_click(cx.listener(|this, _, _, cx| {
-                                                        let _ = this.app.extract_dominant_colors();
-                                                        cx.notify();
-                                                    }))
-                                            )
-                                            .child(
-                                                if let Some(cols) = extracted_cols {
-                                                    v_flex().gap_1()
-                                                        .child(div().text_xs().text_color(cx.theme().muted_foreground).child("Extracted Palettes:"))
-                                                        .child(
-                                                            h_flex().gap_1().flex_wrap()
-                                                                .children(cols.iter().map(|hex| {
-                                                                    div().px_2().py_1().rounded_md().text_xs().font_bold().border_1().border_color(cx.theme().border).child(hex.clone())
-                                                                }))
-                                                        )
-                                                } else {
-                                                    v_flex()
-                                                }
                                             )
                                             .into_any_element()
                                     }
@@ -479,6 +459,39 @@ impl Render for WallmodView {
                                             )
                                             .into_any_element()
                                     }
+                                    SidebarTab::ToolsExt => {
+                                        v_flex().gap_4().w_full().flex_1().overflow_y_scrollbar()
+                                            .child(div().text_sm().font_bold().child("Dominant Color Extraction"))
+                                            .child(
+                                                Button::new("btn_extract_cols").label("Extract k-Means Dominant Colors")
+                                                    .w_full()
+                                                    .small()
+                                                    .on_click(cx.listener(|this, _, _, cx| {
+                                                        let _ = this.app.extract_dominant_colors();
+                                                        cx.notify();
+                                                    }))
+                                            )
+                                            .child(
+                                                if let Some(cols) = extracted_cols {
+                                                    v_flex().gap_1()
+                                                        .child(div().text_xs().text_color(cx.theme().muted_foreground).child("Extracted Oklab Palettes:"))
+                                                        .child(
+                                                            h_flex().gap_1().flex_wrap()
+                                                                .children(cols.iter().map(|hex| {
+                                                                    div().px_2().py_1().rounded_md().text_xs().font_bold().border_1().border_color(cx.theme().border).child(hex.clone())
+                                                                }))
+                                                        )
+                                                } else {
+                                                    v_flex()
+                                                }
+                                            )
+                                            .child(div().h_px().w_full().bg(cx.theme().border))
+                                            .child(div().text_sm().font_bold().child("AI Super-Resolution Engine"))
+                                            .child(div().p_3().border_1().border_color(cx.theme().border).rounded_md().bg(cx.theme().secondary).text_xs().child("Real-ESRGAN neural upscaling pipeline is queued in Category H roadmap."))
+                                            .child(div().text_sm().font_bold().child("OCR Wallpaper Extraction"))
+                                            .child(div().p_3().border_1().border_color(cx.theme().border).rounded_md().bg(cx.theme().secondary).text_xs().child("Tesseract quote and text extraction pipeline is queued in Category H roadmap."))
+                                            .into_any_element()
+                                    }
                                 }
                             )
                     )
@@ -521,7 +534,7 @@ impl Render for WallmodView {
                                                     v_flex().gap_4().items_center().justify_center().p_12().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
                                                         .child(Icon::new(IconName::Folder).size_12().text_color(cx.theme().muted_foreground))
                                                         .child(div().text_lg().font_bold().child("No Image Loaded"))
-                                                        .child(div().text_sm().text_color(cx.theme().muted_foreground).child("Click 'Open Image...' on the left sidebar to begin color grading."))
+                                                        .child(div().text_sm().text_color(cx.theme().muted_foreground).child("Click 'Open Image...' in Color Grading tab to begin color grading."))
                                                         .into_any_element()
                                                 }
                                             }
