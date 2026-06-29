@@ -306,6 +306,15 @@ fn render_floating_stats(
     app: &crate::app::WallmodApp,
     cx: &mut Context<WallmodView>,
 ) -> AnyElement {
+    let avg_cpu = if app.sys_cpu_threads.is_empty() {
+        0.0
+    } else {
+        app.sys_cpu_threads.iter().sum::<f32>() / app.sys_cpu_threads.len() as f32
+    };
+    let any_high = app.sys_ram_percent > 80.0
+        || avg_cpu > 80.0
+        || app.sys_cpu_threads.iter().any(|&t| t > 80.0);
+
     let mut items = Vec::new();
     if app.float_show_fps {
         items.push(
@@ -325,6 +334,11 @@ fn render_floating_stats(
         );
     }
     if app.float_show_ram {
+        let ram_col = if app.sys_ram_percent > 80.0 {
+            gpui::rgb(0xffffff).into()
+        } else {
+            cx.theme().primary
+        };
         items.push(
             h_flex()
                 .justify_between()
@@ -335,20 +349,15 @@ fn render_floating_stats(
                     div()
                         .text_xs()
                         .font_bold()
-                        .text_color(cx.theme().primary)
+                        .text_color(ram_col)
                         .child(format!("{:.1}%", app.sys_ram_percent)),
                 )
                 .into_any_element(),
         );
     }
     if app.float_show_cpu {
-        let avg_cpu = if app.sys_cpu_threads.is_empty() {
-            0.0
-        } else {
-            app.sys_cpu_threads.iter().sum::<f32>() / app.sys_cpu_threads.len() as f32
-        };
         let color = if avg_cpu > 80.0 {
-            gpui::rgb(0xef4444)
+            gpui::rgb(0xffffff)
         } else if avg_cpu > 50.0 {
             gpui::rgb(0xf59e0b)
         } else {
@@ -376,6 +385,29 @@ fn render_floating_stats(
         );
     }
 
+    let bg_color = if any_high {
+        gpui::Rgba {
+            r: 0.85,
+            g: 0.15,
+            b: 0.15,
+            a: 0.65,
+        }
+        .into()
+    } else {
+        cx.theme().secondary.opacity(0.60)
+    };
+    let border_color = if any_high {
+        gpui::Rgba {
+            r: 0.95,
+            g: 0.30,
+            b: 0.30,
+            a: 0.80,
+        }
+        .into()
+    } else {
+        cx.theme().border.opacity(0.4)
+    };
+
     div()
         .absolute()
         .bottom_6()
@@ -386,9 +418,9 @@ fn render_floating_stats(
         .flex_col()
         .min_w(px(130.0))
         .rounded_xl()
-        .bg(cx.theme().secondary.opacity(0.60))
+        .bg(bg_color)
         .border_1()
-        .border_color(cx.theme().border.opacity(0.4))
+        .border_color(border_color)
         .shadow_2xl()
         .child(
             h_flex()
