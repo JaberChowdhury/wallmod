@@ -10,7 +10,7 @@ pub mod workspace;
 use crate::app::WallmodApp;
 use gpui::*;
 use gpui_component::slider::{SliderEvent, SliderState};
-use gpui_component::{h_flex, v_flex, ActiveTheme, StyledExt};
+use gpui_component::{h_flex, v_flex, ActiveTheme};
 
 pub struct WallmodView {
     pub app: WallmodApp,
@@ -174,6 +174,38 @@ impl WallmodView {
             });
         })
         .detach();
+    }
+
+    pub fn trigger_async_extraction(&mut self, cx: &mut Context<Self>) {
+        if self.app.base_image_dyn.is_none() {
+            return;
+        }
+        self.app.state = crate::app::AppState::Loading(0.5, "Extracting dominant colors...".to_string());
+        cx.notify();
+
+        let base_image_dyn = self.app.base_image_dyn.clone().unwrap();
+
+        cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(std::time::Duration::from_millis(100)).await;
+
+            let result = cx.background_executor().spawn(async move {
+                crate::modules::extractor::extract_dominant_colors(&base_image_dyn, 8)
+            }).await;
+
+            let _ = this.update(cx, |view, cx| {
+                match result {
+                    Ok(colors) => {
+                        view.app.extracted_colors = Some(colors);
+                        view.app.state = crate::app::AppState::Idle;
+                    }
+                    Err(err) => {
+                        eprintln!("Extraction error: {}", err);
+                        view.app.state = crate::app::AppState::Error(err);
+                    }
+                }
+                cx.notify();
+            });
+        }).detach();
     }
 }
 

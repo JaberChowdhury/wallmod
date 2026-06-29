@@ -6,7 +6,7 @@ use crate::ui::swatches::render_swatches;
 use crate::ui::WallmodView;
 use gpui::*;
 use gpui_component::{
-    button::*, h_flex, scroll::ScrollableElement, v_flex, ActiveTheme, Icon, IconName, Selectable,
+    button::*, h_flex, scroll::ScrollableElement, v_flex, ActiveTheme, Selectable,
     Sizable, StyledExt, Disableable,
 };
 
@@ -44,24 +44,29 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                 .items_center()
                 .gap_2()
                 .child(
-                    Button::new("wv_std").label("Output Visual").icon(IconName::Eye).small()
+                    Button::new("wv_std").child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("Output Visual").small()
                         .selected(workspace_view == WorkspaceView::Standard)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Standard; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_diff").label("Split Diff").icon(IconName::Frame).small()
+                    Button::new("wv_diff").child(gpui::svg().path("frame.svg").size_4().text_color(cx.theme().primary)).label("Split Diff").small()
                         .selected(workspace_view == WorkspaceView::SplitDiff)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::SplitDiff; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_tel").label("Dashboard Info").icon(IconName::LayoutDashboard).small()
+                    Button::new("wv_tel").child(gpui::svg().path("layout-dashboard.svg").size_4().text_color(cx.theme().primary)).label("Dashboard Info").small()
                         .selected(workspace_view == WorkspaceView::Telemetry)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Telemetry; cx.notify(); }))
                 )
                 .child(
-                    Button::new("wv_gal").label("Album Gallery").icon(IconName::Folder).small()
-                        .selected(workspace_view == WorkspaceView::Gallery)
-                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Gallery; cx.notify(); }))
+                    Button::new("wv_extract").child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).label("Extract Color").small()
+                        .selected(view.app.workspace_view == WorkspaceView::ExtractColor)
+                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::ExtractColor; cx.notify(); }))
+                )
+                .child(
+                    Button::new("wv_gal").child(gpui::svg().path("folder.svg").size_4().text_color(cx.theme().primary)).label("Album Gallery").small()
+                        .selected(workspace_view == WorkspaceView::Albums)
+                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Albums; cx.notify(); }))
                 )
         )
         .child(
@@ -81,7 +86,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                     .into_any_element()
                             } else {
                                 v_flex().gap_4().items_center().justify_center().p_12().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
-                                    .child(Icon::new(IconName::Inbox).size_12().text_color(cx.theme().muted_foreground))
+                                    .child(gpui::svg().path("inbox.svg").size_12().text_color(cx.theme().muted_foreground))
                                     .child(div().text_lg().font_bold().child("No Image Loaded"))
                                     .child(div().text_sm().text_color(cx.theme().muted_foreground).child("Click 'Open Image...' in Color Grading tab to begin color grading."))
                                     .into_any_element()
@@ -91,12 +96,12 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                             v_flex().size_full().gap_3()
                                 .child(
                                     h_flex().gap_2().items_center().justify_center().w_full()
-                                        .child(h_flex().gap_2().items_center().child(Icon::new(IconName::PanelLeft).text_color(cx.theme().primary).size_4()).child(div().text_xs().font_bold().child("Split Comparison:")))
-                                        .child(Button::new("split_10").disabled(is_loading).label("10% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.1).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
-                                        .child(Button::new("split_30").disabled(is_loading).label("30% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.3).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
-                                        .child(Button::new("split_50").disabled(is_loading).label("50% / 50%").icon(IconName::Eye).small().selected((split_ratio - 0.5).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
-                                        .child(Button::new("split_70").disabled(is_loading).label("70% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.7).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
-                                        .child(Button::new("split_90").disabled(is_loading).label("90% Orig").icon(IconName::Eye).small().selected((split_ratio - 0.9).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
+                                        .child(div().text_xs().font_bold().child("Split Comparison:"))
+                                        .child(Button::new("split_10").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("10% Orig").small().selected((split_ratio - 0.1).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.1; cx.notify(); })))
+                                        .child(Button::new("split_30").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("30% Orig").small().selected((split_ratio - 0.3).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.3; cx.notify(); })))
+                                        .child(Button::new("split_50").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("50% / 50%").small().selected((split_ratio - 0.5).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.5; cx.notify(); })))
+                                        .child(Button::new("split_70").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("70% Orig").small().selected((split_ratio - 0.7).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.7; cx.notify(); })))
+                                        .child(Button::new("split_90").disabled(is_loading).child(gpui::svg().path("eye.svg").size_4().text_color(cx.theme().primary)).label("90% Orig").small().selected((split_ratio - 0.9).abs() < 0.01).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.split_diff_ratio = 0.9; cx.notify(); })))
                                 )
                                 .child(
                                     h_flex().flex_1().w_full().gap_3().overflow_hidden()
@@ -128,7 +133,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                         }
                         WorkspaceView::Telemetry => {
                             v_flex().gap_4().w_full().max_w(px(650.0)).p_6().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
-                                .child(h_flex().gap_2().items_center().child(Icon::new(IconName::LayoutDashboard).text_color(cx.theme().primary).size_5()).child(div().text_lg().font_bold().child("Telemetry & Inspection Dashboard")))
+                                .child(div().text_lg().font_bold().child("Telemetry & Inspection Dashboard"))
                                 .child(render_swatches(&current_theme, cx))
                                 .child(render_histogram(hist_data.as_ref(), cx))
                                 .child(
@@ -149,24 +154,100 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                 .child(div().text_xs().text_color(cx.theme().muted_foreground).pt_2().child("All color transforms are computed using 64-bit precision floating point math before quantizing down to 8-bit sRGB buffers."))
                                 .into_any_element()
                         }
-                        WorkspaceView::Gallery => {
+                        WorkspaceView::ExtractColor => {
+                            let extracted_cols = view.app.extracted_colors.clone();
+                            v_flex().gap_4().size_full().p_6()
+                                .child(
+                                    h_flex().justify_between().items_center()
+                                        .child(div().text_xl().font_bold().child("Dominant Color Analytics"))
+                                        .child(
+                                            h_flex().gap_2()
+                                                .child(
+                                                    if extracted_cols.is_some() {
+                                                        Button::new("btn_apply_extracted").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).label("Use as Preset")
+                                                            .primary()
+                                                            .cursor_pointer()
+                                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                                if let Some(extracted) = &this.app.extracted_colors {
+                                                                    let colors: Vec<[u8; 3]> = extracted.iter().filter_map(|(hex, _)| {
+                                                                        let s = hex.trim_start_matches('#');
+                                                                        if s.len() == 6 {
+                                                                            let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+                                                                            let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+                                                                            let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+                                                                            Some([r, g, b])
+                                                                        } else {
+                                                                            None
+                                                                        }
+                                                                    }).collect();
+                                                                    this.app.current_theme = crate::app::state::ThemeSource::CustomPalette("Extracted".to_string(), colors);
+                                                                    this.app.selected_preset = None;
+                                                                    this.trigger_async_processing(cx, "Applying extracted palette...");
+                                                                }
+                                                            }))
+                                                            .into_any_element()
+                                                    } else {
+                                                        div().into_any_element()
+                                                    }
+                                                )
+                                                .child(
+                                                    Button::new("btn_extract_cols").disabled(is_loading).child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).label("Extract k-Means Colors")
+                                                        .primary()
+                                                        .cursor_pointer()
+                                                        .on_click(cx.listener(|this, _, _, cx| {
+                                                            this.trigger_async_extraction(cx);
+                                                        }))
+                                                )
+                                        )
+                                )
+                                .child(div().h_px().w_full().bg(cx.theme().border))
+                                .child(
+                                    if let Some(cols) = extracted_cols {
+                                        v_flex().gap_4().w_full()
+                                            .children(cols.into_iter().enumerate().map(|(_i, (hex, pct))| {
+                                                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                                                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                                                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                                                let pct_display = format!("{:.1}%", pct * 100.0);
+                                                
+                                                h_flex().gap_4().items_center().w_full()
+                                                    .child(div().w(px(70.0)).text_sm().font_bold().child(hex.clone()))
+                                                    .child(
+                                                        div().flex_1().h(px(24.0)).bg(cx.theme().secondary).rounded_full().overflow_hidden().flex().items_center()
+                                                            .child(
+                                                                div().h_full().bg(gpui::Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 })
+                                                                    .w(gpui::relative(if pct.is_nan() { 0.0 } else { pct.clamp(0.0, 1.0) }))
+                                                            )
+                                                    )
+                                                    .child(div().w(px(50.0)).text_sm().text_color(cx.theme().muted_foreground).child(pct_display))
+                                            }))
+                                            .into_any_element()
+                                    } else {
+                                        div().flex_1().flex().items_center().justify_center().text_color(cx.theme().muted_foreground)
+                                            .child("No colors extracted. Click the button above to run the K-Means extraction algorithm.")
+                                            .into_any_element()
+                                    }
+                                )
+                                .into_any_element()
+                        }
+                        WorkspaceView::Albums => {
                             v_flex().gap_4().size_full()
                                 .child(
                                     h_flex().justify_between().items_center()
                                         .child(
                                             if let Some(ref sel) = selected_album {
                                                 h_flex().gap_2().items_center()
-                                                    .child(Button::new("btn_back_alb").disabled(is_loading).label("Back to Albums").icon(IconName::ArrowLeft).small().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    .child(Button::new("btn_back_alb").disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_4().text_color(cx.theme().primary)).label("Back to Albums").small().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                         this.app.selected_album = None;
                                                         this.app.album_images.clear();
                                                         cx.notify();
                                                     })))
-                                                    .child(h_flex().gap_2().items_center().child(Icon::new(IconName::FolderOpen).text_color(cx.theme().primary).size_5()).child(div().text_lg().font_bold().child(format!("Album: {}", sel.file_name().and_then(|n| n.to_str()).unwrap_or("Folder")))))
+                                                    .child(div().text_lg().font_bold().child(format!("Album: {}", sel.file_name().and_then(|n| n.to_str()).unwrap_or("Folder"))))
                                             } else {
-                                                h_flex().gap_2().items_center().child(Icon::new(IconName::Folder).text_color(cx.theme().primary).size_5()).child(div().text_lg().font_bold().child("System Wallpaper Albums"))
+                                                h_flex().child(div().text_lg().font_bold().child("System Wallpaper Albums"))
                                             }
                                         )
-                                        .child(Button::new("btn_scan_gal").disabled(is_loading).label("Scan System Gallery").icon(IconName::Search).primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                        .child(Button::new("btn_scan_gal").disabled(is_loading).child(gpui::svg().path("search.svg").size_4().text_color(cx.theme().primary)).label("Scan System Gallery").primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                             this.app.albums = WallmodApp::scan_system_gallery();
                                             this.app.selected_album = None;
                                             cx.notify();
@@ -189,20 +270,35 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                             .flex().flex_col().justify_between().items_center().cursor_pointer()
                                                             .cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                                 let p = p_clone.clone();
-                                                                this.app.state = crate::app::AppState::Loading(0.2, "Reading image from album...".to_string());
+                                                                this.app.preview_path = Some(p.clone());
                                                                 this.app.workspace_view = WorkspaceView::Standard;
                                                                 cx.notify();
                                                                 cx.spawn(async move |this, cx| {
-                                                                    if let Ok(Ok(dyn_img)) = crate::backend::runtime::spawn_blocking({ let p = p.clone(); move || image::open(&p) }).await {
-                                                                        let _ = this.update(cx, |view, cx| {
-                                                                            view.app.on_image_selected(p, dyn_img);
-                                                                            view.app.state = crate::app::AppState::Idle;
-                                                                            cx.notify();
-                                                                        });
-                                                                        cx.background_executor().timer(std::time::Duration::from_millis(1500)).await;
-                                                                        let _ = this.update(cx, |view, cx| {
-                                                                            view.trigger_async_processing(cx, "Processing album image...");
-                                                                        });
+                                                                    cx.background_executor().timer(std::time::Duration::from_millis(1500)).await;
+                                                                    let _ = this.update(cx, |view, cx| {
+                                                                        view.app.state = crate::app::AppState::Loading(0.2, "Loading full image...".to_string());
+                                                                        cx.notify();
+                                                                    });
+                                                                    let res = crate::backend::runtime::spawn_blocking({ let p = p.clone(); move || crate::app::helpers::open_image(&p) }).await;
+                                                                    match res {
+                                                                        Ok(Ok(dyn_img)) => {
+                                                                            let _ = this.update(cx, |view, cx| {
+                                                                                view.app.on_image_selected(p, dyn_img);
+                                                                                view.trigger_async_processing(cx, "Processing album image...");
+                                                                            });
+                                                                        }
+                                                                        Ok(Err(e)) => {
+                                                                            let _ = this.update(cx, |view, cx| {
+                                                                                view.app.state = crate::app::AppState::Error(format!("Failed to decode image: {}", e));
+                                                                                cx.notify();
+                                                                            });
+                                                                        }
+                                                                        Err(e) => {
+                                                                            let _ = this.update(cx, |view, cx| {
+                                                                                view.app.state = crate::app::AppState::Error(format!("Task failed: {}", e));
+                                                                                cx.notify();
+                                                                            });
+                                                                        }
                                                                     }
                                                                 }).detach();
                                                             }))
@@ -237,7 +333,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                             if let Some(cp) = cover {
                                                                 div().w_full().h(px(120.0)).overflow_hidden().rounded_lg().child(img(cp).size_full().object_fit(ObjectFit::Cover)).into_any_element()
                                                             } else {
-                                                                div().w_full().h(px(120.0)).flex().items_center().justify_center().bg(cx.theme().background).rounded_lg().child(Icon::new(IconName::Folder).size_8().text_color(cx.theme().muted_foreground)).into_any_element()
+                                                                div().w_full().h(px(120.0)).flex().items_center().justify_center().bg(cx.theme().background).rounded_lg().child(gpui::svg().path("folder.svg").size_8().text_color(cx.theme().muted_foreground)).into_any_element()
                                                             }
                                                         )
                                                         .child(

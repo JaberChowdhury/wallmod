@@ -1,7 +1,7 @@
-//! wallmod — Wallpaper Theme Changer (Ricer Edition)
-//!
-//! Engineered with modular GPUI + Shadcn architecture where `gpui-component`
-//! acts as the centralized design system updating all components globally.
+// wallmod — Wallpaper Theme Changer (Ricer Edition)
+//
+// Engineered with modular GPUI + Shadcn architecture where `gpui-component`
+// acts as the centralized design system updating all components globally.
 
 pub mod app;
 pub mod backend;

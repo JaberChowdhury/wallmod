@@ -82,7 +82,8 @@ pub enum WorkspaceView {
     Standard,
     SplitDiff,
     Telemetry,
-    Gallery,
+    ExtractColor,
+    Albums,
 }
 
 impl WorkspaceView {
@@ -90,7 +91,8 @@ impl WorkspaceView {
         WorkspaceView::Standard,
         WorkspaceView::SplitDiff,
         WorkspaceView::Telemetry,
-        WorkspaceView::Gallery,
+        WorkspaceView::ExtractColor,
+        WorkspaceView::Albums,
     ];
 }
 
@@ -100,7 +102,8 @@ impl std::fmt::Display for WorkspaceView {
             WorkspaceView::Standard => write!(f, "Output Visual"),
             WorkspaceView::SplitDiff => write!(f, "Split Diff"),
             WorkspaceView::Telemetry => write!(f, "Dashboard Info"),
-            WorkspaceView::Gallery => write!(f, "Album Gallery"),
+            WorkspaceView::ExtractColor => write!(f, "Extract Color"),
+            WorkspaceView::Albums => write!(f, "Album Gallery"),
         }
     }
 }

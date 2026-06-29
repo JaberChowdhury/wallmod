@@ -7,11 +7,23 @@ pub use state::*;
 
 use crate::modules::histogram::HistogramData;
 
-use lutgen::identity::correct_image;
+use lutgen::identity::{correct_pixel, detect_level};
 use lutgen::interpolation::{GaussianRemapper, NearestNeighborRemapper, ShepardRemapper};
 use lutgen::GenerateLut;
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
+
+/// Multi-threaded image correction using rayon
+fn par_correct_image(image: &mut image::RgbaImage, hald_clut: &image::RgbImage) {
+    let level = detect_level(hald_clut);
+    // RgbaImage pixels have 4 bytes (R, G, B, A)
+    image.par_chunks_mut(4).for_each(|pixel| {
+        let [r, g, b] = correct_pixel(&[pixel[0], pixel[1], pixel[2]], hald_clut, level);
+        pixel[0] = r;
+        pixel[1] = g;
+        pixel[2] = b;
+    });
+}
 
 /// Core Application Struct. Contains zero GUI framework dependencies.
 pub struct WallmodApp {
@@ -29,6 +41,7 @@ pub struct WallmodApp {
     pub algorithm: RemapAlgorithm,
     pub preserve_luma: bool,
     pub hald_level: u8,
+    pub is_zoomed: bool,
     pub workspace_view: WorkspaceView,
     pub wcag_contrast: f32,
     pub swww_transition: String,
@@ -46,7 +59,7 @@ pub struct WallmodApp {
     pub seam_carve_target: u32,
     pub dither_enabled: bool,
     pub active_tab: crate::app::state::AppTab,
-    pub extracted_colors: Option<Vec<String>>,
+    pub extracted_colors: Option<Vec<(String, f32)>>,
     pub histogram_data: Option<HistogramData>,
     pub daemon_enabled: bool,
     pub day_time_hour: u32,
@@ -81,6 +94,7 @@ impl WallmodApp {
             algorithm: RemapAlgorithm::Gaussian,
             preserve_luma: false,
             hald_level: 8,
+            is_zoomed: false,
             workspace_view: WorkspaceView::Standard,
             wcag_contrast: 0.0,
             swww_transition: "wipe".to_string(),
@@ -160,11 +174,11 @@ pub fn process_image_sync(
                 path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
             {
                 if ext == "png" {
-                    if let Ok(lut_img) = image::open(path) {
+                    if let Ok(lut_img) = crate::app::helpers::open_image(path) {
                         let (lw, lh) = (lut_img.width(), lut_img.height());
                         if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
                             let rgb_lut = lut_img.to_rgb8();
-                            correct_image(&mut rgba, &rgb_lut);
+                            par_correct_image(&mut rgba, &rgb_lut);
                             let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
                             if !photoshop_params.is_neutral() {
                                 processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
@@ -208,17 +222,17 @@ pub fn process_image_sync(
             RemapAlgorithm::Gaussian => {
                 let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
                 let hald_clut = remapper.par_generate_lut(hald_level);
-                correct_image(&mut rgba, &hald_clut);
+                par_correct_image(&mut rgba, &hald_clut);
             },
             RemapAlgorithm::Shepard => {
                 let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, preserve_luma);
                 let hald_clut = remapper.par_generate_lut(hald_level);
-                correct_image(&mut rgba, &hald_clut);
+                par_correct_image(&mut rgba, &hald_clut);
             },
             RemapAlgorithm::NearestNeighbor => {
                 let remapper = NearestNeighborRemapper::new(&shades, 1.0, preserve_luma);
                 let hald_clut = remapper.par_generate_lut(hald_level);
-                correct_image(&mut rgba, &hald_clut);
+                par_correct_image(&mut rgba, &hald_clut);
             },
         }
     }
@@ -231,7 +245,9 @@ pub fn process_image_sync(
         );
     }
     if blur_sigma > 0.0 {
-        processed_dyn = processed_dyn.blur(blur_sigma);
+        let rgba = processed_dyn.to_rgba8();
+        let blurred_rgba = crate::modules::blur::parallel_blur(&rgba, blur_sigma);
+        processed_dyn = image::DynamicImage::ImageRgba8(blurred_rgba);
     }
     if dither_enabled {
         let palette_colors = current_theme.get_shades();

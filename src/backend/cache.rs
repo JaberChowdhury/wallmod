@@ -65,7 +65,7 @@ impl CacheManager {
         // Offload heavy CPU processing to a blocking thread pool
         let out_path = cached_path.clone();
         crate::backend::runtime::spawn_blocking(move || -> Result<(), AppError> {
-            let dyn_img = image::open(&img_path)?;
+            let dyn_img = crate::app::helpers::open_image(&img_path)?;
             let mut rgba = dyn_img.to_rgba8();
 
             if !shades.is_empty() {

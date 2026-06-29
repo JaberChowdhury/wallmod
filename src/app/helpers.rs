@@ -1,6 +1,14 @@
 //! Utility functions for color extraction, WCAG contrast auditing, and preset mapping.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use image::{DynamicImage, ImageError, ImageReader};
+
+/// Opens an image with no size limits to prevent failures on high-res wallpapers
+pub fn open_image<P: AsRef<Path>>(path: P) -> Result<DynamicImage, ImageError> {
+    let mut reader = ImageReader::open(path)?;
+    reader.no_limits();
+    reader.with_guessed_format()?.decode()
+}
 
 fn normalize_palette_to_16(mut colors: Vec<[u8; 3]>) -> Vec<[u8; 3]> {
     colors.sort_unstable();
@@ -58,7 +66,7 @@ pub fn get_preset_shades(name: &str) -> Vec<[u8; 3]> {
 pub fn extract_lut_shades(path: &PathBuf) -> Vec<[u8; 3]> {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
         if ext == "png" {
-            if let Ok(img) = image::open(path) {
+            if let Ok(img) = open_image(path) {
                 let (w, h) = (img.width(), img.height());
                 let is_hald = w == h && [8, 12, 14, 16].iter().any(|&l| l * l * l == w);
                 if is_hald {
