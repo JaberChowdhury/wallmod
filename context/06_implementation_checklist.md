@@ -49,4 +49,11 @@ This checklist tracks the status of all unified features collected across our so
 - [x] **Content-Aware Scaling (Seam Carving)**: Sobel gradient energy calculation & Dynamic Programming path removal to shrink wallpapers while preserving subjects without stretching.
 - [x] **Algorithmic Dithering**: Floyd-Steinberg and Bayer quantization error diffusion for retro aesthetics and banding reduction.
 - [x] **Perceptual Color Space Mapping (Oklab/Oklch)**: Shifting color grading math from RGB/LAB to Oklab for mathematically uniform hue shifts without luminance artifacts.
+- [x] **Photoshop Color Adjustments**: Saturation, Brightness, Contrast, and Hue Rotation sliders/buttons integrated into real-time grading pipeline.
 - [ ] **Pixel Sorting Effects**: Edge-detection based pixel segment sorting for glitch art and cyberpunk wallpaper transformations.
+
+## Category H: Future Roadmap & Next-Gen Capabilities
+- [ ] **AI Image Upscaling**: Real-time neural upscaling (Real-ESRGAN/ONNX runtime integration) for low-res wallpapers.
+- [ ] **Video & Live Wallpaper Engine**: Support for animated webm/mp4 wallpapers via mpvpaper or swww video integration.
+- [ ] **OCR Wallpaper Text Extraction**: Extract quote or code snippets from desktop wallpapers using Tesseract OCR.
+- [ ] **Custom Shader Pipeline**: Support user-provided WebGPU / GLSL fragment shaders for live background post-processing.

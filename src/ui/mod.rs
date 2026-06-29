@@ -42,6 +42,7 @@ impl Render for WallmodView {
         let is_dark = self.app.is_dark_mode;
         let blur_sigma = self.app.blur_sigma;
         let dither = self.app.dither_enabled;
+        let ps = self.app.photoshop_params;
         let daemon = self.app.daemon_enabled;
         let wcag = self.app.wcag_contrast;
         let img_w = self.app.image_width;
@@ -252,6 +253,48 @@ impl Render for WallmodView {
                                                         this.app.preserve_luma = *val; let _ = this.app.run_processing();
                                                         cx.notify();
                                                     })))
+                                            )
+                                            .child(div().h_px().w_full().bg(cx.theme().border).my_1())
+                                            .child(div().text_sm().font_bold().child("Photoshop Adjustments"))
+                                            .child(
+                                                h_flex().items_center().justify_between()
+                                                    .child(div().text_sm().child(format!("Brightness: {}", ps.brightness)))
+                                                    .child(
+                                                        h_flex().gap_1()
+                                                            .child(Button::new("ps_b_m20").label("-20").small().selected(ps.brightness == -20).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = -20; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_b_0").label("0").small().selected(ps.brightness == 0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_b_p20").label("+20").small().selected(ps.brightness == 20).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 20; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    )
+                                            )
+                                            .child(
+                                                h_flex().items_center().justify_between()
+                                                    .child(div().text_sm().child(format!("Contrast: {:.0}", ps.contrast)))
+                                                    .child(
+                                                        h_flex().gap_1()
+                                                            .child(Button::new("ps_c_m20").label("-20").small().selected(ps.contrast == -20.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = -20.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_c_0").label("0").small().selected(ps.contrast == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_c_p20").label("+20").small().selected(ps.contrast == 20.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 20.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    )
+                                            )
+                                            .child(
+                                                h_flex().items_center().justify_between()
+                                                    .child(div().text_sm().child(format!("Saturation: {:.1}", ps.saturation)))
+                                                    .child(
+                                                        h_flex().gap_1()
+                                                            .child(Button::new("ps_s_m1").label("Desat").small().selected(ps.saturation == -1.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = -1.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_s_0").label("Norm").small().selected(ps.saturation == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_s_p05").label("Vivid").small().selected(ps.saturation == 0.5).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.5; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    )
+                                            )
+                                            .child(
+                                                h_flex().items_center().justify_between()
+                                                    .child(div().text_sm().child(format!("Hue Shift: {}°", ps.hue)))
+                                                    .child(
+                                                        h_flex().gap_1()
+                                                            .child(Button::new("ps_h_0").label("0°").small().selected(ps.hue == 0).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_h_90").label("90°").small().selected(ps.hue == 90).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 90; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            .child(Button::new("ps_h_180").label("180°").small().selected(ps.hue == 180).on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 180; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    )
                                             )
                                             .child(div().h_px().w_full().bg(cx.theme().border).my_1())
                                             .child(div().text_sm().font_bold().child("Algorithmic Effects"))

@@ -53,6 +53,7 @@ pub struct WallmodApp {
     pub night_time_hour: u32,
     pub day_theme: String,
     pub night_theme: String,
+    pub photoshop_params: crate::modules::photoshop::PhotoshopParams,
 }
 
 impl Default for WallmodApp {
@@ -102,6 +103,7 @@ impl WallmodApp {
             night_time_hour: 20,
             day_theme: "Catppuccin Mocha".to_string(),
             night_theme: "Tokyo Night".to_string(),
+            photoshop_params: crate::modules::photoshop::PhotoshopParams::default(),
         }
     }
 
@@ -179,7 +181,10 @@ impl WallmodApp {
             }
         }
 
-        let processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+        let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+        if !self.photoshop_params.is_neutral() {
+            processed_dyn = crate::modules::photoshop::apply_photoshop_sync(processed_dyn, self.photoshop_params);
+        }
         self.update_preview(processed_dyn);
         Ok(())
     }
