@@ -5,8 +5,8 @@ use crate::ui::WallmodView;
 use gpui::prelude::FluentBuilder;
 use gpui::*;
 use gpui_component::{
-    button::*, h_flex, spinner::Spinner, v_flex, ActiveTheme, Disableable,
-    Selectable, Sizable, StyledExt,
+    button::*, h_flex, spinner::Spinner, v_flex, ActiveTheme, Disableable, Selectable, Sizable,
+    StyledExt,
 };
 
 /// Renders the primary application header bar with clean vector icons and no bracketed text.
@@ -42,13 +42,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .gap_2()
                         .items_center()
                         .child(gpui::svg().path("logo.svg").size_5().text_color(cx.theme().primary))
-                        .child(
-                            div()
-                                .font_bold()
-                                .text_lg()
-                                .font_family("bootstrap-icons")
-                                .child("wallmod"),
-                        )
+                        .child(div().font_bold().text_lg().child("wallmod"))
                         .child(
                             div()
                                 .text_xs()
@@ -138,19 +132,26 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                 .rounded_md()
                                 .cursor_pointer()
                                 .hover(|s| s.bg(cx.theme().secondary))
-                                .on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| {
-                                    if this.app.is_zoomed {
-                                        window.zoom_window();
-                                        this.app.is_zoomed = false;
-                                    } else {
-                                        window.zoom_window();
-                                        this.app.is_zoomed = true;
-                                    }
-                                    cx.notify();
-                                }))
+                                .on_mouse_down(
+                                    MouseButton::Left,
+                                    cx.listener(|this, _, window, cx| {
+                                        if this.app.is_zoomed {
+                                            window.zoom_window();
+                                            this.app.is_zoomed = false;
+                                        } else {
+                                            window.zoom_window();
+                                            this.app.is_zoomed = true;
+                                        }
+                                        cx.notify();
+                                    }),
+                                )
                                 .child(
                                     gpui::svg()
-                                        .path(if view.app.is_zoomed { "window-restore.svg" } else { "frame.svg" })
+                                        .path(if view.app.is_zoomed {
+                                            "window-restore.svg"
+                                        } else {
+                                            "frame.svg"
+                                        })
                                         .size_5()
                                         .text_color(cx.theme().primary),
                                 ), // .child(
@@ -196,7 +197,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                     Button::new("cat_cg")
                         .disabled(is_loading)
                         .label("Color Grading")
-                        .child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary))
+                        .child(
+                            gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary),
+                        )
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::ColorGrading)
@@ -211,7 +214,12 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                     Button::new("cat_ps")
                         .disabled(is_loading)
                         .label("Adjust & Effects")
-                        .child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary))
+                        .child(
+                            gpui::svg()
+                                .path("settings.svg")
+                                .size_4()
+                                .text_color(cx.theme().primary),
+                        )
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::PhotoshopEffects)
@@ -226,7 +234,12 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                     Button::new("cat_eng")
                         .disabled(is_loading)
                         .label("Wallpaper Engine")
-                        .child(gpui::svg().path("panel-left.svg").size_4().text_color(cx.theme().primary))
+                        .child(
+                            gpui::svg()
+                                .path("panel-left.svg")
+                                .size_4()
+                                .text_color(cx.theme().primary),
+                        )
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::DesktopEngine)
@@ -241,7 +254,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                     Button::new("cat_exp")
                         .disabled(is_loading)
                         .label("Export & Sync")
-                        .child(gpui::svg().path("replace.svg").size_4().text_color(cx.theme().primary))
+                        .child(
+                            gpui::svg().path("replace.svg").size_4().text_color(cx.theme().primary),
+                        )
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::ExportSync)
@@ -256,7 +271,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                     Button::new("cat_ai")
                         .disabled(is_loading)
                         .label("AI & Tools")
-                        .child(gpui::svg().path("search.svg").size_4().text_color(cx.theme().primary))
+                        .child(
+                            gpui::svg().path("search.svg").size_4().text_color(cx.theme().primary),
+                        )
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::ToolsExt)
@@ -271,7 +288,12 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                     Button::new("cat_settings")
                         .disabled(is_loading)
                         .label("Settings")
-                        .child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary))
+                        .child(
+                            gpui::svg()
+                                .path("settings.svg")
+                                .size_4()
+                                .text_color(cx.theme().primary),
+                        )
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::Settings)
@@ -281,6 +303,6 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.option_group_tab = 0;
                             cx.notify();
                         })),
-                )
+                ),
         )
 }

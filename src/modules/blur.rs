@@ -1,11 +1,11 @@
-use image::{RgbaImage, Rgba};
+use image::{Rgba, RgbaImage};
 use rayon::prelude::*;
 
 pub fn parallel_blur(img: &RgbaImage, sigma: f32) -> RgbaImage {
     if sigma <= 0.0 {
         return img.clone();
     }
-    
+
     let radius = (sigma * 3.0).ceil() as i32;
     let mut kernel = Vec::with_capacity((radius * 2 + 1) as usize);
     let mut sum = 0.0;
@@ -21,10 +21,10 @@ pub fn parallel_blur(img: &RgbaImage, sigma: f32) -> RgbaImage {
     let (width, height) = img.dimensions();
     let width = width as usize;
     let height = height as usize;
-    
+
     let in_buf = img.pixels().cloned().collect::<Vec<_>>();
-    let mut out_x = vec![Rgba([0,0,0,0]); width * height];
-    
+    let mut out_x = vec![Rgba([0, 0, 0, 0]); width * height];
+
     // Horizontal pass
     out_x.par_chunks_mut(width).enumerate().for_each(|(y, row_out)| {
         for x in 0..width {
@@ -45,8 +45,8 @@ pub fn parallel_blur(img: &RgbaImage, sigma: f32) -> RgbaImage {
         }
     });
 
-    let mut final_buf = vec![Rgba([0,0,0,0]); width * height];
-    
+    let mut final_buf = vec![Rgba([0, 0, 0, 0]); width * height];
+
     // Vertical pass
     final_buf.par_chunks_mut(width).enumerate().for_each(|(y, row_out)| {
         for x in 0..width {

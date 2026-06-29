@@ -13,7 +13,7 @@ use gpui_component::{
     scroll::ScrollableElement,
     slider::Slider,
     switch::*,
-    v_flex, ActiveTheme, Selectable, Sizable, StyledExt, Disableable,
+    v_flex, ActiveTheme, Disableable, Selectable, Sizable, StyledExt,
 };
 use std::path::PathBuf;
 
@@ -468,15 +468,96 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 .child(gpui::svg().path("file.svg").size_4().text_color(cx.theme().primary))
                                 .primary()
                                 .w_full()
-                                .cursor_pointer().on_click(cx.listener(|_, _, _, cx| {
+                                .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                    let out_dir = this.app.export_dir.clone();
                                     cx.spawn(async move |this, cx| {
-                                        if let Some(file) = rfd::AsyncFileDialog::new().set_file_name("wallmod_graded.png").save_file().await {
+                                        let mut dialog = rfd::AsyncFileDialog::new().set_file_name("wallmod_graded.png");
+                                        if let Some(dir) = out_dir {
+                                            dialog = dialog.set_directory(&dir);
+                                        }
+                                        if let Some(file) = dialog.save_file().await {
                                             let save_path = file.path().to_path_buf();
                                             let _ = this.update(cx, |view, cx| {
                                                 if let Some(ref dyn_img) = view.app.processed_dyn {
                                                     let _ = dyn_img.save(save_path);
                                                     view.app.state = crate::app::AppState::Notice("Saved successfully!".to_string());
                                                 }
+                                                cx.notify();
+                                            });
+                                        }
+                                    }).detach();
+                                }))
+                        )
+                        .child(div().h_px().w_full().bg(cx.theme().border).my_2())
+                        .child(div().text_sm().font_bold().child("Batch & Output Management"))
+                        .child({
+                            let export_dir_label = view.app.export_dir.as_ref()
+                                .and_then(|p| p.file_name())
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "Default (Source)".to_string());
+                            h_flex().items_center().justify_between()
+                                .child(div().text_xs().text_color(cx.theme().muted_foreground).child(format!("Output Dir: {}", export_dir_label)))
+                                .child(
+                                    Button::new("btn_set_out_dir").disabled(is_loading).label("Select Folder...")
+                                        .cursor_pointer().on_click(cx.listener(|_, _, _, cx| {
+                                            cx.spawn(async move |this, cx| {
+                                                if let Some(folder) = rfd::AsyncFileDialog::new().pick_folder().await {
+                                                    let path = folder.path().to_path_buf();
+                                                    let _ = this.update(cx, |view, cx| {
+                                                        view.app.export_dir = Some(path);
+                                                        cx.notify();
+                                                    });
+                                                }
+                                            }).detach();
+                                        }))
+                                )
+                        })
+                        .child(
+                            Button::new("btn_batch_scan").disabled(is_loading).label("Batch Process Folder...")
+                                .child(gpui::svg().path("folder.svg").size_4().text_color(cx.theme().primary))
+                                .w_full()
+                                .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                    let theme = this.app.current_theme.clone();
+                                    let params = this.app.photoshop_params.clone();
+                                    let blur = this.app.blur_sigma;
+                                    let dither = this.app.dither_enabled;
+                                    let alg = this.app.algorithm;
+                                    let luma = this.app.preserve_luma;
+                                    let hald = this.app.hald_level;
+                                    let out_dir = this.app.export_dir.clone();
+
+                                    cx.spawn(async move |this, cx| {
+                                        if let Some(folder) = rfd::AsyncFileDialog::new().pick_folder().await {
+                                            let in_path = folder.path().to_path_buf();
+                                            let target_dir = out_dir.unwrap_or_else(|| in_path.join("graded"));
+                                            let _ = std::fs::create_dir_all(&target_dir);
+
+                                            let _ = this.update(cx, |view, cx| {
+                                                view.app.state = crate::app::AppState::Loading(0.5, "Batch scanning & processing folder...".to_string());
+                                                cx.notify();
+                                            });
+
+                                            let _ = tokio::task::spawn_blocking(move || {
+                                                if let Ok(entries) = std::fs::read_dir(&in_path) {
+                                                    for entry in entries.flatten() {
+                                                        let path = entry.path();
+                                                        if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
+                                                            if ["png", "jpg", "jpeg", "webp"].contains(&ext.as_str()) {
+                                                                if let Ok(img) = crate::app::helpers::open_image(&path) {
+                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params.clone(), blur, dither, alg, luma, hald) {
+                                                                        if let Some(name) = path.file_name() {
+                                                                            let _ = processed.save(target_dir.join(name));
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }).await;
+
+                                            let _ = this.update(cx, |view, cx| {
+                                                view.app.state = crate::app::AppState::Notice("Batch processing complete!".to_string());
                                                 cx.notify();
                                             });
                                         }

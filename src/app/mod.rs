@@ -60,7 +60,7 @@ pub struct WallmodApp {
     pub dither_enabled: bool,
     pub active_tab: crate::app::state::AppTab,
     pub extracted_colors: Option<Vec<(String, f32)>>,
-    
+
     // Palette Editor State
     pub selected_color_idx: Option<usize>,
     pub histogram_data: Option<HistogramData>,
@@ -72,6 +72,7 @@ pub struct WallmodApp {
     pub photoshop_params: crate::modules::photoshop::PhotoshopParams,
     pub option_group_tab: usize,
     pub split_diff_ratio: f32,
+    pub export_dir: Option<PathBuf>,
 }
 
 impl Default for WallmodApp {
@@ -126,10 +127,17 @@ impl WallmodApp {
             photoshop_params: crate::modules::photoshop::PhotoshopParams::default(),
             option_group_tab: 0,
             split_diff_ratio: 0.5,
+            export_dir: None,
         }
     }
 
-    pub fn update_preview(&mut self, dyn_img: image::DynamicImage, temp_path: PathBuf, histogram: Option<crate::modules::histogram::HistogramData>, wcag_contrast: f32) {
+    pub fn update_preview(
+        &mut self,
+        dyn_img: image::DynamicImage,
+        temp_path: PathBuf,
+        histogram: Option<crate::modules::histogram::HistogramData>,
+        wcag_contrast: f32,
+    ) {
         self.image_width = dyn_img.width();
         self.image_height = dyn_img.height();
         self.wcag_contrast = wcag_contrast;
@@ -156,118 +164,136 @@ impl WallmodApp {
         // Do not synchronously update preview here; trigger_async_processing will handle it!
     }
 
-pub fn process_image_sync(
-    base_image_dyn: Option<image::DynamicImage>,
-    current_theme: ThemeSource,
-    photoshop_params: crate::modules::photoshop::PhotoshopParams,
-    blur_sigma: f32,
-    dither_enabled: bool,
-    algorithm: RemapAlgorithm,
-    preserve_luma: bool,
-    hald_level: u8,
-) -> Result<Option<(image::DynamicImage, PathBuf, Option<crate::modules::histogram::HistogramData>, f32)>, String> {
-    let Some(dyn_img) = base_image_dyn else {
-        return Ok(None);
-    };
-    let mut rgba = dyn_img.to_rgba8();
-    let shades = current_theme.get_shades();
+    pub fn process_image_sync(
+        base_image_dyn: Option<image::DynamicImage>,
+        current_theme: ThemeSource,
+        photoshop_params: crate::modules::photoshop::PhotoshopParams,
+        blur_sigma: f32,
+        dither_enabled: bool,
+        algorithm: RemapAlgorithm,
+        preserve_luma: bool,
+        hald_level: u8,
+    ) -> Result<
+        Option<(
+            image::DynamicImage,
+            PathBuf,
+            Option<crate::modules::histogram::HistogramData>,
+            f32,
+        )>,
+        String,
+    > {
+        let Some(dyn_img) = base_image_dyn else {
+            return Ok(None);
+        };
+        let mut rgba = dyn_img.to_rgba8();
+        let shades = current_theme.get_shades();
 
-    match &current_theme {
-        ThemeSource::Custom(path) => {
-            if let Some(ext) =
-                path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
-            {
-                if ext == "png" {
-                    if let Ok(lut_img) = crate::app::helpers::open_image(path) {
-                        let (lw, lh) = (lut_img.width(), lut_img.height());
-                        if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
-                            let rgb_lut = lut_img.to_rgb8();
-                            par_correct_image(&mut rgba, &rgb_lut);
-                            let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
-                            if !photoshop_params.is_neutral() {
-                                processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
-                                    processed_dyn,
-                                    photoshop_params,
-                                );
-                            }
-                            if blur_sigma > 0.0 {
-                                processed_dyn = processed_dyn.blur(blur_sigma);
-                            }
-                            if dither_enabled {
-                                let palette_colors = current_theme.get_shades();
-                                if !palette_colors.is_empty() {
-                                    processed_dyn =
-                                        crate::backend::dither::apply_floyd_steinberg(
-                                            &processed_dyn,
-                                            &palette_colors,
-                                        );
+        match &current_theme {
+            ThemeSource::Custom(path) => {
+                if let Some(ext) =
+                    path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
+                {
+                    if ext == "png" {
+                        if let Ok(lut_img) = crate::app::helpers::open_image(path) {
+                            let (lw, lh) = (lut_img.width(), lut_img.height());
+                            if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
+                                let rgb_lut = lut_img.to_rgb8();
+                                par_correct_image(&mut rgba, &rgb_lut);
+                                let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+                                if !photoshop_params.is_neutral() {
+                                    processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
+                                        processed_dyn,
+                                        photoshop_params,
+                                    );
                                 }
-                            }
-                                let histogram = crate::modules::histogram::compute_histogram(&processed_dyn).ok();
-                                let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&processed_dyn);
-                                static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
-                                let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                                let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
+                                if blur_sigma > 0.0 {
+                                    processed_dyn = processed_dyn.blur(blur_sigma);
+                                }
+                                if dither_enabled {
+                                    let palette_colors = current_theme.get_shades();
+                                    if !palette_colors.is_empty() {
+                                        processed_dyn =
+                                            crate::backend::dither::apply_floyd_steinberg(
+                                                &processed_dyn,
+                                                &palette_colors,
+                                            );
+                                    }
+                                }
+                                let histogram =
+                                    crate::modules::histogram::compute_histogram(&processed_dyn)
+                                        .ok();
+                                let wcag_contrast =
+                                    crate::app::helpers::compute_wcag_contrast(&processed_dyn);
+                                static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
+                                    std::sync::atomic::AtomicUsize::new(1);
+                                let count = PREVIEW_COUNTER
+                                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                let temp_path = std::env::temp_dir()
+                                    .join(format!("wallmod_preview_{}.jpg", count));
                                 let _ = processed_dyn.save(&temp_path);
-                                return Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast)));
+                                return Ok(Some((
+                                    processed_dyn,
+                                    temp_path,
+                                    histogram,
+                                    wcag_contrast,
+                                )));
                             }
                         }
                     }
                 }
-            if shades.is_empty() {
-                return Err(format!("Could not extract colors from LUT file {:?}", path));
+                if shades.is_empty() {
+                    return Err(format!("Could not extract colors from LUT file {:?}", path));
+                }
+            },
+            _ => {},
+        }
+
+        if !shades.is_empty() {
+            match algorithm {
+                RemapAlgorithm::Gaussian => {
+                    let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
+                    let hald_clut = remapper.par_generate_lut(hald_level);
+                    par_correct_image(&mut rgba, &hald_clut);
+                },
+                RemapAlgorithm::Shepard => {
+                    let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, preserve_luma);
+                    let hald_clut = remapper.par_generate_lut(hald_level);
+                    par_correct_image(&mut rgba, &hald_clut);
+                },
+                RemapAlgorithm::NearestNeighbor => {
+                    let remapper = NearestNeighborRemapper::new(&shades, 1.0, preserve_luma);
+                    let hald_clut = remapper.par_generate_lut(hald_level);
+                    par_correct_image(&mut rgba, &hald_clut);
+                },
             }
-        },
-        _ => {},
-    }
-
-    if !shades.is_empty() {
-        match algorithm {
-            RemapAlgorithm::Gaussian => {
-                let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
-                let hald_clut = remapper.par_generate_lut(hald_level);
-                par_correct_image(&mut rgba, &hald_clut);
-            },
-            RemapAlgorithm::Shepard => {
-                let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, preserve_luma);
-                let hald_clut = remapper.par_generate_lut(hald_level);
-                par_correct_image(&mut rgba, &hald_clut);
-            },
-            RemapAlgorithm::NearestNeighbor => {
-                let remapper = NearestNeighborRemapper::new(&shades, 1.0, preserve_luma);
-                let hald_clut = remapper.par_generate_lut(hald_level);
-                par_correct_image(&mut rgba, &hald_clut);
-            },
         }
-    }
 
-    let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
-    if !photoshop_params.is_neutral() {
-        processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
-            processed_dyn,
-            photoshop_params,
-        );
-    }
-    if blur_sigma > 0.0 {
-        let rgba = processed_dyn.to_rgba8();
-        let blurred_rgba = crate::modules::blur::parallel_blur(&rgba, blur_sigma);
-        processed_dyn = image::DynamicImage::ImageRgba8(blurred_rgba);
-    }
-    if dither_enabled {
-        let palette_colors = current_theme.get_shades();
-        if !palette_colors.is_empty() {
+        let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+        if !photoshop_params.is_neutral() {
             processed_dyn =
-                crate::backend::dither::apply_floyd_steinberg(&processed_dyn, &palette_colors);
+                crate::modules::photoshop::apply_photoshop_sync(processed_dyn, photoshop_params);
         }
+        if blur_sigma > 0.0 {
+            let rgba = processed_dyn.to_rgba8();
+            let blurred_rgba = crate::modules::blur::parallel_blur(&rgba, blur_sigma);
+            processed_dyn = image::DynamicImage::ImageRgba8(blurred_rgba);
+        }
+        if dither_enabled {
+            let palette_colors = current_theme.get_shades();
+            if !palette_colors.is_empty() {
+                processed_dyn =
+                    crate::backend::dither::apply_floyd_steinberg(&processed_dyn, &palette_colors);
+            }
+        }
+        let histogram = crate::modules::histogram::compute_histogram(&processed_dyn).ok();
+        let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&processed_dyn);
+        static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
+            std::sync::atomic::AtomicUsize::new(1);
+        let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
+        let _ = processed_dyn.save(&temp_path);
+        Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast)))
     }
-    let histogram = crate::modules::histogram::compute_histogram(&processed_dyn).ok();
-    let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&processed_dyn);
-    static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
-    let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
-    let _ = processed_dyn.save(&temp_path);
-    Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast)))
-}
 
     pub fn run_processing(&mut self) -> Result<(), String> {
         let result = Self::process_image_sync(
@@ -297,7 +323,8 @@ pub fn process_image_sync(
         let carved = crate::backend::seam_carve::carve_width(dyn_img, target_width, |_, _| {});
         let histogram = crate::modules::histogram::compute_histogram(&carved).ok();
         let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&carved);
-        static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+        static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
+            std::sync::atomic::AtomicUsize::new(1);
         let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
         let _ = carved.save(&temp_path);

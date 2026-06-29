@@ -157,7 +157,11 @@ impl ThemeSource {
             shades = vec![[0, 0, 0], [128, 128, 128], [255, 255, 255]];
         } else if shades.len() == 1 {
             let c = shades[0];
-            shades.push([c[0].saturating_add(64), c[1].saturating_add(64), c[2].saturating_add(64)]);
+            shades.push([
+                c[0].saturating_add(64),
+                c[1].saturating_add(64),
+                c[2].saturating_add(64),
+            ]);
         }
         shades
     }

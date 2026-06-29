@@ -2,7 +2,7 @@
 
 use crate::app::ThemeSource;
 use gpui::*;
-use gpui_component::{h_flex, v_flex, ActiveTheme, StyledExt, button::Button, Sizable};
+use gpui_component::{button::Button, h_flex, v_flex, ActiveTheme, Sizable, StyledExt};
 
 /// Renders a color swatch card representing the top shades of the selected theme palette.
 pub fn render_swatches(
@@ -70,7 +70,7 @@ pub fn render_swatches(
                     view.app.workspace_view = crate::app::WorkspaceView::PaletteEditor;
                     view.app.selected_color_idx = None;
                     cx.notify();
-                }))
+                })),
         )
 }
 

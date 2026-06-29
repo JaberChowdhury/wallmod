@@ -46,7 +46,11 @@ pub fn extract_dominant_colors(img: &DynamicImage, k: usize) -> Result<Vec<(Stri
             let g = (srgb.green * 255.0).clamp(0.0, 255.0) as u8;
             let b = (srgb.blue * 255.0).clamp(0.0, 255.0) as u8;
             let hex = format!("#{:02X}{:02X}{:02X}", r, g, b);
-            let pct = if total_pixels > 0.0 { counts[idx] as f32 / total_pixels } else { 0.0 };
+            let pct = if total_pixels > 0.0 {
+                counts[idx] as f32 / total_pixels
+            } else {
+                0.0
+            };
             (hex, pct)
         })
         .collect();

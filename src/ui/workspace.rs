@@ -6,14 +6,18 @@ use crate::ui::swatches::render_swatches;
 use crate::ui::WallmodView;
 use gpui::*;
 use gpui_component::{
-    button::*, h_flex, scroll::ScrollableElement, v_flex, ActiveTheme, Selectable,
-    Sizable, StyledExt, Disableable,
+    button::*, h_flex, scroll::ScrollableElement, v_flex, ActiveTheme, Disableable, Selectable,
+    Sizable, StyledExt,
 };
 
 /// Renders the central workspace preview, split diff overlay, dashboard info, or album gallery.
 pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> impl IntoElement {
     let is_loading = view.app.state.is_loading();
-    let loading_msg = if let crate::app::AppState::Loading(_, ref s) = view.app.state { s.clone() } else { "Processing...".to_string() };
+    let loading_msg = if let crate::app::AppState::Loading(_, ref s) = view.app.state {
+        s.clone()
+    } else {
+        "Processing...".to_string()
+    };
     let workspace_view = view.app.workspace_view;
     let preview_path = view.app.preview_path.clone();
     let base_path = view.app.base_image_path.clone();
@@ -223,7 +227,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
                                                         let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
                                                         let pct_display = format!("{:.1}%", pct * 100.0);
-                                                        
+
                                                         v_flex().gap_2().w(px(140.0)).p_3().border_1().border_color(cx.theme().border).rounded_lg().bg(cx.theme().secondary)
                                                             .child(
                                                                 h_flex().gap_3().items_center()
@@ -250,7 +254,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                             if let crate::app::state::ThemeSource::CustomPalette(ref name, ref colors) = current_theme {
                                 let colors_clone = colors.clone();
                                 let selected_idx = view.app.selected_color_idx;
-                                
+
                                 v_flex().gap_4().size_full().p_6()
                                     .child(
                                         h_flex().justify_between().items_center()
@@ -274,14 +278,14 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         let g = rgb[1] as f32 / 255.0;
                                                         let b = rgb[2] as f32 / 255.0;
                                                         let is_selected = selected_idx == Some(i);
-                                                        
+
                                                         div().id(("palette_color", i)).w(px(48.0)).h(px(48.0)).rounded_md().border_2()
                                                             .border_color(if is_selected { cx.theme().primary } else { cx.theme().border })
                                                             .bg(gpui::Rgba { r, g, b, a: 1.0 })
                                                             .cursor_pointer()
                                                             .on_click(cx.listener(move |view, _, _, cx| {
                                                                 view.app.selected_color_idx = Some(i);
-                                                                
+
                                                                 if let crate::app::state::ThemeSource::CustomPalette(_, ref colors) = view.app.current_theme {
                                                                     if let Some(c) = colors.get(i) {
                                                                         let r_slider = cx.new(|_| gpui_component::slider::SliderState::new().min(0.0).max(255.0).step(1.0).default_value(c[0] as f32));

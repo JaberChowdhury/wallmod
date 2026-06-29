@@ -6,26 +6,26 @@ This checklist tracks the status of all unified features collected across our so
 
 ## Category A: Image Input & Source Management
 
-- [] **Single Image Picker**: Asynchronous selection and decoding of raster files (`png`, `jpg`, `jpeg`, `webp`, `avif`, etc.) via `rfd`.
-- [] **Batch Directory Scanner**: Multi-format bulk scanning of entire folders to process wallpapers in one action.
-- [] **Output directory selection**: let user select where to export the image
-- [] **Extract all color from an image in a different tab**: in a different tab add option to extract all colors from the image and visually render the colors for better understanding
+- [x] **Single Image Picker**: Asynchronous selection and decoding of raster files (`png`, `jpg`, `jpeg`, `webp`, `avif`, etc.) via `rfd`.
+- [x] **Batch Directory Scanner**: Multi-format bulk scanning of entire folders to process wallpapers in one action.
+- [x] **Output directory selection**: let user select where to export the image
+- [x] **Extract all color from an image in a different tab**: in a different tab add option to extract all colors from the image and visually render the colors for better understanding
 
 ## Category B: Color Grading & Palette Engine (`lutgen-rs`)
 
-- [] **Preset Palette Catalog**: Instant selection from curated palettes (Catppuccin, Nord, Gruvbox Dark, Tokyo Night, Synthwave, Cyberpunk, Vintage Sepia, Retro 4-Color, etc.) normalized to exactly 16 standard shades.
-- [] **Custom Hex Palette Builder**: Real-time hex string input (`#89b4fa, #f38ba8`) converted to RGB triplets. Note: Core iced library does not provide a native visual color picker, but the text box enables precise theme syncing.
-- [] **Multi-Algorithm Color Interpolation**: Switchable Gaussian, Shepard RBF, and Nearest Neighbor remapping algorithms.
-- [] **Luminance / Luma Preservation**: Boolean toggle preventing crushed shadows or blown highlights during color shift.
-- [] **HaldCLUT Level Resolution Control**: UI slider switching between Level 8 ($512\times512$) and Level 16 ($4096\times4096$) matrix resolutions.
-- [] **High-Quality Background Gaussian Blur**: Asynchronous `tokio::task::spawn_blocking` blur processing ($O(n \cdot r^2)$) using `imageops::blur` with adjustable slider intensity ($\sigma \in [0.0, 25.0]$) without UI freezing.
-- [] **Dominant Color Extraction ($k$-means)**: Reverse ricing extraction of top colors from an image using Oklab.
+- [x] **Preset Palette Catalog**: Instant selection from curated palettes (Catppuccin, Nord, Gruvbox Dark, Tokyo Night, Synthwave, Cyberpunk, Vintage Sepia, Retro 4-Color, etc.) normalized to exactly 16 standard shades.
+- [x] **Custom Hex Palette Builder**: Real-time visual palette editor with precise RGB sliders, live gradient preview, and multi-color manipulation.
+- [x] **Multi-Algorithm Color Interpolation**: Switchable Gaussian, Shepard RBF, and Nearest Neighbor remapping algorithms.
+- [x] **Luminance / Luma Preservation**: Boolean toggle preventing crushed shadows or blown highlights during color shift.
+- [x] **HaldCLUT Level Resolution Control**: UI slider switching between Level 8 ($512\times512$) and Level 16 ($4096\times4096$) matrix resolutions.
+- [x] **High-Quality Background Gaussian Blur**: Asynchronous `tokio::task::spawn_blocking` blur processing ($O(n \cdot r^2)$) using `imageops::blur` with adjustable slider intensity ($\sigma \in [0.0, 25.0]$) without UI freezing.
+- [x] **Dominant Color Extraction ($k$-means)**: Reverse ricing extraction of top colors from an image using Oklab.
 
 ## Category C: Telemetry, Inspection & Analytics (`imagineer`)
 
-- [] **Top Bar Tab Navigation**: Relocated view switching from sidebar dropdown into top-level tabs above workspace preview.
-- [] **Interactive Split-Screen Diff Slider**: Mouse-controlled before/after visual inspection overlay with interactive percentage buttons (`10%`, `30%`, `50%`, `70%`, `90%`).
-- [] **Animated Loading Dot Overlay**: Stylized top-bar pulsating spinner indicator active during asynchronous image decoding and heavy color grading pipelines.
+- [x] **Top Bar Tab Navigation**: Relocated view switching from sidebar dropdown into top-level tabs above workspace preview.
+- [] **Interactive Split-Screen Diff Slider**: Mouse-controlled before/after visual inspection overlay with interactive percentage buttons (`10%`, `30%`, `50%`, `70%`, `90%`) with resizable panel that can be resize by cursor.
+- [] **Animated Loading Dot Overlay(loading animation)**: additionally with existing animation Stylized top-bar pulsating spinner indicator active during asynchronous image decoding and heavy color grading pipelines.
 - [] **Deep Image Metadata Inspector**: Readouts of dimensions, aspect ratio, filename, and processing status.
 - [] **WCAG Accessibility Contrast Auditing**: Live computation of legibility contrast ratios against white/black labels.
 - [] **Live Processing Preview**: Continuous preview rendering while asynchronous theme calculation runs in background.
@@ -48,10 +48,10 @@ This checklist tracks the status of all unified features collected across our so
 
 - [] **Multi-Threaded System Gallery Scanner**: Rayon-powered background folder discovery across system directories.
 - [] **Bento Grid Thumbnails**: Visual image thumbnail cards displayed inside responsive grid layouts, generated in parallel via Rayon.
-- [] **Left Panel Category Tabs**: Clean tabbed interface separating Theme & LUT, Desktop Engine, and Export controls.
+- [x] **Left Panel Category Tabs**: Clean tabbed interface separating Theme & LUT, Desktop Engine, and Export controls.
 - [] **App Theme Toggle**: Live switching between clean Light and Dark CSD application themes.
 - [] **Visual Error Handling Card**: Interactive diagnostic view displaying detailed errors and troubleshooting steps.
-- [] **Bootstrap UI Icon System**: Complete eradication of text-brackets and emojis for a vector icon system, attaching proper Lucide/Zed vector icons (`IconName`) to 100% of buttons, subtabs, adjustment sliders, and dropdown options across all workspace categories.
+- [x] **Bootstrap UI Icon System**: Complete eradication of text-brackets and emojis for a vector icon system, attaching proper Lucide/Zed vector icons (`IconName`) to 100% of buttons, subtabs, adjustment sliders, and dropdown options across all workspace categories.
 
 ## Category G: Next Generation Advanced Algorithmic Engine (Upcoming Goals)
 

@@ -15,9 +15,9 @@ use ui::WallmodView;
 
 use std::borrow::Cow;
 
+use anyhow::Result;
 use std::fs;
 use std::path::PathBuf;
-use anyhow::Result;
 
 struct AppAssets {
     base: PathBuf,
@@ -25,9 +25,7 @@ struct AppAssets {
 
 impl AssetSource for AppAssets {
     fn load(&self, path: &str) -> Result<Option<Cow<'static, [u8]>>> {
-        fs::read(self.base.join(path))
-            .map(|data| Some(Cow::Owned(data)))
-            .map_err(|err| err.into())
+        fs::read(self.base.join(path)).map(|data| Some(Cow::Owned(data))).map_err(|err| err.into())
     }
 
     fn list(&self, path: &str) -> Result<Vec<SharedString>> {
@@ -52,18 +50,25 @@ fn main() {
         base: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets"),
     };
 
-    gpui_platform::application()
-        .with_assets(assets)
-        .run(move |cx| {
-            gpui_component::init(cx);
+    gpui_platform::application().with_assets(assets).run(move |cx| {
+        gpui_component::init(cx);
 
-            let font_bytes = include_bytes!("../fonts/bootstrap-icons.ttf");
-            let _ = cx.text_system().add_fonts(vec![Cow::Borrowed(font_bytes)]);
+        let font_bytes = include_bytes!("../fonts/Iceberg-Regular.ttf");
+        let _ = cx.text_system().add_fonts(vec![Cow::Borrowed(font_bytes)]);
 
-            let window_options = WindowOptions {
+        let theme = gpui_component::Theme::global_mut(cx);
+        theme.font_family = "Iceberg".into();
+        theme.mono_font_family = "Iceberg".into();
+
+        let icon_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets").join("wallmod_logo.jpg");
+        let icon = image::open(&icon_path).ok().map(|img| std::sync::Arc::new(img.into_rgba8()));
+
+        let window_options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1200.), px(800.)), cx)),
             titlebar: None,
             window_decorations: Some(WindowDecorations::Client),
+            icon,
             ..Default::default()
         };
 

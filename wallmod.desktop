@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Wallmod
+Comment=Desktop Wallpaper Color Grading and Theming Engine
+Exec=cargo run --release
+Icon=wallmod_logo
+Terminal=false
+Type=Application
+Categories=Utility;DesktopSettings;

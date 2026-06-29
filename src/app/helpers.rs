@@ -1,7 +1,7 @@
 //! Utility functions for color extraction, WCAG contrast auditing, and preset mapping.
 
-use std::path::{Path, PathBuf};
 use image::{DynamicImage, ImageError, ImageReader};
+use std::path::{Path, PathBuf};
 
 /// Opens an image with no size limits to prevent failures on high-res wallpapers
 pub fn open_image<P: AsRef<Path>>(path: P) -> Result<DynamicImage, ImageError> {
