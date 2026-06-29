@@ -74,7 +74,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                         cx.spawn(async move |this, cx| {
                                                             if let Some(file) = rfd::AsyncFileDialog::new().add_filter("Image", &["png", "jpg", "jpeg", "webp", "avif"]).pick_file().await {
                                                                 let path = file.path().to_path_buf();
-                                                                if let Ok(dyn_img) = crate::backend::runtime::spawn_blocking(move || image::open(&path)).await.unwrap() {
+                                                                if let Ok(Ok(dyn_img)) = crate::backend::runtime::spawn_blocking(move || image::open(&path)).await {
                                                                     let _ = this.update(cx, |view, cx| {
                                                                         view.app.on_image_selected(file.path().to_path_buf(), dyn_img);
                                                                         cx.notify();
@@ -130,11 +130,25 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                             })
                                                     )
                                                     .child(
+                                                        v_flex().gap_2().pt_2()
+                                                            .child(div().text_xs().font_bold().child(format!("Quick Gaussian Blur: {:.1}px", blur_sigma)))
+                                                            .child(
+                                                                h_flex().gap_1().flex_wrap()
+                                                                    .child(Button::new("cg_b_0").label("0").icon(IconName::Check).small().selected(blur_sigma == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                                    .child(Button::new("cg_b_2").label("2").icon(IconName::Plus).small().selected(blur_sigma == 2.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 2.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                                    .child(Button::new("cg_b_5").label("5").icon(IconName::Plus).small().selected(blur_sigma == 5.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 5.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                                    .child(Button::new("cg_b_10").label("10").icon(IconName::Plus).small().selected(blur_sigma == 10.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 10.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                                    .child(Button::new("cg_b_15").label("15").icon(IconName::Plus).small().selected(blur_sigma == 15.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 15.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                                    .child(Button::new("cg_b_25").label("25").icon(IconName::Plus).small().selected(blur_sigma == 25.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 25.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                            )
+                                                    )
+                                                    .child(
                                                         Button::new("btn_apply_theme_main")
                                                             .label("Apply Theme & Process")
                                                             .icon(IconName::Check)
                                                             .primary()
                                                             .w_full()
+                                                            .mt_2()
                                                             .on_click(cx.listener(|this, _, _, cx| {
                                                                 let _ = this.app.run_processing();
                                                                 cx.notify();
@@ -238,13 +252,16 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             )
                                     )
                                     .child(
-                                        h_flex().items_center().justify_between()
-                                            .child(div().text_sm().child(format!("Blur Radius: {:.1}", blur_sigma)))
+                                        v_flex().gap_2().pt_1()
+                                            .child(div().text_sm().child(format!("Blur Radius: {:.1}px", blur_sigma)))
                                             .child(
-                                                h_flex().gap_1()
-                                                    .child(Button::new("blur_0").label("0").icon(IconName::Check).small().selected(blur_sigma == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 0.0; let _ = this.app.apply_blur(); cx.notify(); })))
-                                                    .child(Button::new("blur_5").label("5").icon(IconName::Plus).small().selected(blur_sigma == 5.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 5.0; let _ = this.app.apply_blur(); cx.notify(); })))
-                                                    .child(Button::new("blur_15").label("15").icon(IconName::Plus).small().selected(blur_sigma == 15.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 15.0; let _ = this.app.apply_blur(); cx.notify(); })))
+                                                h_flex().gap_1().flex_wrap()
+                                                    .child(Button::new("blur_0").label("0").icon(IconName::Check).small().selected(blur_sigma == 0.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 0.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("blur_2").label("2").icon(IconName::Plus).small().selected(blur_sigma == 2.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 2.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("blur_5").label("5").icon(IconName::Plus).small().selected(blur_sigma == 5.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 5.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("blur_10").label("10").icon(IconName::Plus).small().selected(blur_sigma == 10.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 10.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("blur_15").label("15").icon(IconName::Plus).small().selected(blur_sigma == 15.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 15.0; let _ = this.app.run_processing(); cx.notify(); })))
+                                                    .child(Button::new("blur_25").label("25").icon(IconName::Plus).small().selected(blur_sigma == 25.0).on_click(cx.listener(|this, _, _, cx| { this.app.blur_sigma = 25.0; let _ = this.app.run_processing(); cx.notify(); })))
                                             )
                                     )
                                     .child(

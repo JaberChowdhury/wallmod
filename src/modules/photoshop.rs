@@ -5,15 +5,19 @@ use rayon::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PhotoshopParams {
-    pub brightness: i32,  // -100 to 100
-    pub contrast: f32,    // -100.0 to 100.0
-    pub saturation: f32,  // -1.0 to 1.0
-    pub hue: i32,         // 0 to 360
+    pub brightness: i32, // -100 to 100
+    pub contrast: f32,   // -100.0 to 100.0
+    pub saturation: f32, // -1.0 to 1.0
+    pub hue: i32,        // 0 to 360
 }
 
 impl std::fmt::Display for PhotoshopParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "B:{}, C:{:.1}, S:{:.1}, H:{}", self.brightness, self.contrast, self.saturation, self.hue)
+        write!(
+            f,
+            "B:{}, C:{:.1}, S:{:.1}, H:{}",
+            self.brightness, self.contrast, self.saturation, self.hue
+        )
     }
 }
 
@@ -74,7 +78,10 @@ pub fn apply_photoshop_sync(img: DynamicImage, params: PhotoshopParams) -> Dynam
 }
 
 /// Applies Photoshop adjustments asynchronously on a background thread.
-pub async fn apply_photoshop_async(img: DynamicImage, params: PhotoshopParams) -> Result<DynamicImage, String> {
+pub async fn apply_photoshop_async(
+    img: DynamicImage,
+    params: PhotoshopParams,
+) -> Result<DynamicImage, String> {
     crate::backend::runtime::spawn_blocking(move || apply_photoshop_sync(img, params))
         .await
         .map_err(|e| format!("Join error: {}", e))

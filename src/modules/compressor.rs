@@ -4,9 +4,9 @@ use oxipng::{optimize_from_memory, Options};
 /// Returns (Optimized Bytes, Original Size, Optimized Size).
 pub fn compress_png(raw_bytes: &[u8]) -> Result<(Vec<u8>, usize, usize), String> {
     let original_size = raw_bytes.len();
-    
+
     let options = Options::max_compression();
-    
+
     match optimize_from_memory(raw_bytes, &options) {
         Ok(optimized_bytes) => {
             let opt_size = optimized_bytes.len();

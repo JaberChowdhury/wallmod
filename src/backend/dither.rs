@@ -3,14 +3,17 @@ use image::Rgba;
 /// Applies Floyd-Steinberg Dithering to an image using a limited color palette.
 /// For each pixel, it finds the closest color in the provided palette, sets the pixel,
 /// and diffuses the quantization error to neighboring pixels.
-pub fn apply_floyd_steinberg(img: &image::DynamicImage, palette: &[[u8; 3]]) -> image::DynamicImage {
+pub fn apply_floyd_steinberg(
+    img: &image::DynamicImage,
+    palette: &[[u8; 3]],
+) -> image::DynamicImage {
     let mut rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
 
     // We need to operate with floating point or signed integers for error diffusion
     // To prevent clipping during diffusion, we copy the image to a buffer of f32
     let mut buffer: Vec<f32> = vec![0.0; (width * height * 3) as usize];
-    
+
     for y in 0..height {
         for x in 0..width {
             let px = rgba.get_pixel(x, y);
@@ -33,7 +36,7 @@ pub fn apply_floyd_steinberg(img: &image::DynamicImage, palette: &[[u8; 3]]) -> 
             let mut new_r = 0.0;
             let mut new_g = 0.0;
             let mut new_b = 0.0;
-            
+
             for color in palette {
                 let dr = old_r - color[0] as f32;
                 let dg = old_g - color[1] as f32;

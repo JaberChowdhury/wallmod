@@ -48,7 +48,7 @@ fn find_vertical_seam(img: &RgbaImage, width: u32, height: u32) -> Vec<u32> {
         for x in 0..width {
             let idx = (y * width + x) as usize;
             let up_idx = ((y - 1) * width + x) as usize;
-            
+
             let mut min_val = dp[up_idx];
             let mut dir = 0i8;
 
@@ -114,8 +114,14 @@ fn remove_vertical_seam(img: &mut RgbaImage, seam: &[u32], width: u32, height: u
 
 /// Perform seam carving to reduce width by `pixels_to_remove`.
 /// Progress callback takes (current, total)
-pub fn carve_width<F>(img: &image::DynamicImage, target_width: u32, mut progress_cb: F) -> image::DynamicImage 
-where F: FnMut(u32, u32) {
+pub fn carve_width<F>(
+    img: &image::DynamicImage,
+    target_width: u32,
+    mut progress_cb: F,
+) -> image::DynamicImage
+where
+    F: FnMut(u32, u32),
+{
     let mut rgba = img.to_rgba8();
     let mut current_width = rgba.width();
     let height = rgba.height();
@@ -130,7 +136,7 @@ where F: FnMut(u32, u32) {
         let seam = find_vertical_seam(&rgba, current_width, height);
         remove_vertical_seam(&mut rgba, &seam, current_width, height);
         current_width -= 1;
-        
+
         if i % 10 == 0 || i == pixels_to_remove - 1 {
             progress_cb(i + 1, pixels_to_remove);
         }

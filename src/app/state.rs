@@ -39,7 +39,11 @@ pub enum RemapAlgorithm {
 }
 
 impl RemapAlgorithm {
-    pub const ALL: &[RemapAlgorithm] = &[RemapAlgorithm::Gaussian, RemapAlgorithm::Shepard, RemapAlgorithm::NearestNeighbor];
+    pub const ALL: &[RemapAlgorithm] = &[
+        RemapAlgorithm::Gaussian,
+        RemapAlgorithm::Shepard,
+        RemapAlgorithm::NearestNeighbor,
+    ];
 }
 
 impl std::fmt::Display for RemapAlgorithm {
@@ -61,7 +65,12 @@ pub enum AppTab {
 }
 
 impl AppTab {
-    pub const ALL: &[AppTab] = &[AppTab::Themer, AppTab::Upscaler, AppTab::Ocr, AppTab::Compression];
+    pub const ALL: &[AppTab] = &[
+        AppTab::Themer,
+        AppTab::Upscaler,
+        AppTab::Ocr,
+        AppTab::Compression,
+    ];
 }
 
 impl std::fmt::Display for AppTab {
@@ -84,7 +93,12 @@ pub enum WorkspaceView {
 }
 
 impl WorkspaceView {
-    pub const ALL: &[WorkspaceView] = &[WorkspaceView::Standard, WorkspaceView::SplitDiff, WorkspaceView::Telemetry, WorkspaceView::Gallery];
+    pub const ALL: &[WorkspaceView] = &[
+        WorkspaceView::Standard,
+        WorkspaceView::SplitDiff,
+        WorkspaceView::Telemetry,
+        WorkspaceView::Gallery,
+    ];
 }
 
 impl std::fmt::Display for WorkspaceView {
@@ -118,7 +132,11 @@ impl ThemeSource {
     pub fn display_name(&self) -> String {
         match self {
             ThemeSource::Preset(name) => name.clone(),
-            ThemeSource::Custom(path) => path.file_name().unwrap_or_default().to_string_lossy().to_string(),
+            ThemeSource::Custom(path) => path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
             ThemeSource::CustomPalette(name, _) => format!("Custom: {}", name),
         }
     }

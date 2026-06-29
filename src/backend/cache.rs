@@ -14,7 +14,8 @@ pub struct CacheManager;
 impl CacheManager {
     /// Returns the user's cache directory: ~/.cache/wallmod/
     pub fn cache_dir() -> Result<PathBuf, AppError> {
-        let home = std::env::var("HOME").map_err(|_| AppError::Io("Could not resolve $HOME variable".to_string()))?;
+        let home = std::env::var("HOME")
+            .map_err(|_| AppError::Io("Could not resolve $HOME variable".to_string()))?;
         let dir = Path::new(&home).join(".cache").join("wallmod");
         if !dir.exists() {
             std::fs::create_dir_all(&dir)?;
@@ -52,7 +53,8 @@ impl CacheManager {
         preserve_luma: bool,
     ) -> Result<(PathBuf, bool), AppError> {
         let cache_dir = Self::cache_dir()?;
-        let hash_filename = Self::compute_hash(&img_path, &theme_name, &shades, algo, level, preserve_luma);
+        let hash_filename =
+            Self::compute_hash(&img_path, &theme_name, &shades, algo, level, preserve_luma);
         let cached_path = cache_dir.join(&hash_filename);
 
         // Check if pre-computed image exists on disk

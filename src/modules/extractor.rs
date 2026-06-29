@@ -21,7 +21,7 @@ pub fn extract_dominant_colors(img: &DynamicImage, k: usize) -> Result<Vec<Strin
 
     // Max iterations: 20, converge threshold: 0.001
     let res = get_kmeans_hamerly(k, 20, 0.001, false, &pixels, 0);
-    
+
     // Sort by frequency (descending) manually by tracking index occurrences
     let mut counts = vec![0usize; k];
     for &idx in &res.indices {
@@ -30,7 +30,7 @@ pub fn extract_dominant_colors(img: &DynamicImage, k: usize) -> Result<Vec<Strin
             counts[i] += 1;
         }
     }
-    
+
     let mut sorted_indices: Vec<usize> = (0..res.centroids.len()).collect();
     sorted_indices.sort_by(|a, b| counts[*b].cmp(&counts[*a]));
 

@@ -112,7 +112,10 @@ impl WallmodApp {
     }
 
     pub fn update_preview(&mut self, dyn_img: image::DynamicImage) {
-        let temp_path = std::env::temp_dir().join("wallmod_preview.png");
+        static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
+            std::sync::atomic::AtomicUsize::new(1);
+        let count = PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let temp_path = std::env::temp_dir().join(format!("wallmod_preview_{}.png", count));
         let _ = dyn_img.save(&temp_path);
         self.image_width = dyn_img.width();
         self.image_height = dyn_img.height();
@@ -124,14 +127,23 @@ impl WallmodApp {
     }
 
     pub fn on_image_selected(&mut self, path: PathBuf, dyn_img: image::DynamicImage) {
-        self.image_filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        self.image_filename = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         self.image_width = dyn_img.width();
         self.image_height = dyn_img.height();
         self.base_image_path = Some(path.clone());
         self.base_image_dyn = Some(dyn_img.clone());
         self.seam_carve_target = self.image_width;
         self.blur_sigma = 0.0;
-        self.update_preview(dyn_img);
+        self.photoshop_params = crate::modules::photoshop::PhotoshopParams::default();
+        self.dither_enabled = false;
+        self.extracted_colors = None;
+        self.selected_album = None;
+        self.album_images.clear();
+        self.state = AppState::Loading(0.5, "Processing new image...".to_string());
         let _ = self.run_processing();
     }
 
@@ -144,14 +156,37 @@ impl WallmodApp {
 
         match &self.current_theme {
             ThemeSource::Custom(path) => {
-                if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
+                if let Some(ext) = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.to_lowercase())
+                {
                     if ext == "png" {
                         if let Ok(lut_img) = image::open(path) {
                             let (lw, lh) = (lut_img.width(), lut_img.height());
                             if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
                                 let rgb_lut = lut_img.to_rgb8();
                                 correct_image(&mut rgba, &rgb_lut);
-                                let processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+                                let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+                                if !self.photoshop_params.is_neutral() {
+                                    processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
+                                        processed_dyn,
+                                        self.photoshop_params,
+                                    );
+                                }
+                                if self.blur_sigma > 0.0 {
+                                    processed_dyn = processed_dyn.blur(self.blur_sigma);
+                                }
+                                if self.dither_enabled {
+                                    let palette_colors = self.current_theme.get_shades();
+                                    if !palette_colors.is_empty() {
+                                        processed_dyn =
+                                            crate::backend::dither::apply_floyd_steinberg(
+                                                &processed_dyn,
+                                                &palette_colors,
+                                            );
+                                    }
+                                }
                                 self.update_preview(processed_dyn);
                                 return Ok(());
                             }
@@ -187,19 +222,27 @@ impl WallmodApp {
 
         let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
         if !self.photoshop_params.is_neutral() {
-            processed_dyn = crate::modules::photoshop::apply_photoshop_sync(processed_dyn, self.photoshop_params);
+            processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
+                processed_dyn,
+                self.photoshop_params,
+            );
+        }
+        if self.blur_sigma > 0.0 {
+            processed_dyn = processed_dyn.blur(self.blur_sigma);
+        }
+        if self.dither_enabled {
+            let palette_colors = self.current_theme.get_shades();
+            if !palette_colors.is_empty() {
+                processed_dyn =
+                    crate::backend::dither::apply_floyd_steinberg(&processed_dyn, &palette_colors);
+            }
         }
         self.update_preview(processed_dyn);
         Ok(())
     }
 
     pub fn apply_blur(&mut self) -> Result<(), String> {
-        let Some(dyn_img) = self.processed_dyn.as_ref().or(self.base_image_dyn.as_ref()) else {
-            return Ok(());
-        };
-        let blurred = dyn_img.blur(self.blur_sigma);
-        self.update_preview(blurred);
-        Ok(())
+        self.run_processing()
     }
 
     pub fn apply_seam_carving(&mut self, target_width: u32) -> Result<(), String> {
@@ -212,13 +255,7 @@ impl WallmodApp {
     }
 
     pub fn apply_dither(&mut self) -> Result<(), String> {
-        let Some(dyn_img) = self.processed_dyn.as_ref().or(self.base_image_dyn.as_ref()) else {
-            return Ok(());
-        };
-        let palette_colors = self.current_theme.get_shades();
-        let dithered = crate::backend::dither::apply_floyd_steinberg(dyn_img, &palette_colors);
-        self.update_preview(dithered);
-        Ok(())
+        self.run_processing()
     }
 
     pub fn extract_dominant_colors(&mut self) -> Result<(), String> {
@@ -239,7 +276,8 @@ impl WallmodApp {
     }
 
     pub fn apply_custom_palette(&mut self) -> Result<(), String> {
-        let colors: Vec<[u8; 3]> = self.custom_palette_input
+        let colors: Vec<[u8; 3]> = self
+            .custom_palette_input
             .split(',')
             .filter_map(|s| {
                 let s = s.trim().trim_start_matches('#');
@@ -265,7 +303,12 @@ impl WallmodApp {
         let mut search_paths = Vec::new();
         if let Ok(home) = std::env::var("HOME") {
             let home_path = PathBuf::from(&home);
-            for sub in ["Pictures", "Downloads", "Wallpapers", ".local/share/backgrounds"] {
+            for sub in [
+                "Pictures",
+                "Downloads",
+                "Wallpapers",
+                ".local/share/backgrounds",
+            ] {
                 let p = home_path.join(sub);
                 if p.exists() {
                     search_paths.push(p);
@@ -277,11 +320,15 @@ impl WallmodApp {
             search_paths.push(usr_bg);
         }
 
-        let exts = ["png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif"];
+        let exts = [
+            "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif",
+        ];
         let mut dirs_to_scan = Vec::new();
 
         fn collect_dirs(dir: &Path, dirs: &mut Vec<PathBuf>, depth: u32) {
-            if depth > 3 { return; }
+            if depth > 3 {
+                return;
+            }
             dirs.push(dir.to_path_buf());
             if let Ok(entries) = std::fs::read_dir(dir) {
                 for entry in entries.flatten() {
@@ -306,12 +353,18 @@ impl WallmodApp {
         dirs_to_scan
             .into_par_iter()
             .filter_map(|dir| {
-                let Ok(entries) = std::fs::read_dir(&dir) else { return None; };
+                let Ok(entries) = std::fs::read_dir(&dir) else {
+                    return None;
+                };
                 let mut img_files = Vec::new();
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_file() {
-                        if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
+                        if let Some(ext) = path
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .map(|e| e.to_lowercase())
+                        {
                             if exts.contains(&ext.as_str()) {
                                 img_files.push(path);
                             }
@@ -322,9 +375,17 @@ impl WallmodApp {
                     None
                 } else {
                     img_files.sort();
-                    let folder_name = dir.file_name().unwrap_or_default().to_string_lossy().to_string();
+                    let folder_name = dir
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
                     Some(Album {
-                        folder_name: if folder_name.is_empty() { dir.to_string_lossy().to_string() } else { folder_name },
+                        folder_name: if folder_name.is_empty() {
+                            dir.to_string_lossy().to_string()
+                        } else {
+                            folder_name
+                        },
                         folder_path: dir,
                         cover_image: img_files.first().cloned(),
                         image_count: img_files.len(),
@@ -335,13 +396,19 @@ impl WallmodApp {
     }
 
     pub fn scan_album_images(album_path: &Path) -> Vec<PathBuf> {
-        let exts = ["png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif"];
+        let exts = [
+            "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif",
+        ];
         let mut imgs = Vec::new();
         if let Ok(entries) = std::fs::read_dir(album_path) {
             for entry in entries.flatten() {
                 let p = entry.path();
                 if p.is_file() {
-                    if let Some(ext) = p.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
+                    if let Some(ext) = p
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map(|e| e.to_lowercase())
+                    {
                         if exts.contains(&ext.as_str()) {
                             imgs.push(p);
                         }
@@ -356,19 +423,29 @@ impl WallmodApp {
     pub fn export_terminal_scheme(&self, dir: &Path) -> Result<(), String> {
         let shades = self.current_theme.get_shades();
         let mut alacritty = String::from("[colors.primary]\nbackground = \"#09090b\"\nforeground = \"#fafafa\"\n\n[colors.normal]\n");
-        let names = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+        let names = [
+            "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+        ];
         for (i, name) in names.iter().enumerate() {
             let rgb = shades.get(i % shades.len()).unwrap_or(&[128, 128, 128]);
-            alacritty.push_str(&format!("{} = \"#{:02x}{:02x}{:02x}\"\n", name, rgb[0], rgb[1], rgb[2]));
+            alacritty.push_str(&format!(
+                "{} = \"#{:02x}{:02x}{:02x}\"\n",
+                name, rgb[0], rgb[1], rgb[2]
+            ));
         }
-        std::fs::write(dir.join("alacritty_theme.toml"), alacritty).map_err(|e| format!("Write error: {}", e))?;
+        std::fs::write(dir.join("alacritty_theme.toml"), alacritty)
+            .map_err(|e| format!("Write error: {}", e))?;
 
         let mut kitty = String::from("background #09090b\nforeground #fafafa\n");
         for (i, _name) in names.iter().enumerate() {
             let rgb = shades.get(i % shades.len()).unwrap_or(&[128, 128, 128]);
-            kitty.push_str(&format!("color{} #{:02x}{:02x}{:02x}\n", i, rgb[0], rgb[1], rgb[2]));
+            kitty.push_str(&format!(
+                "color{} #{:02x}{:02x}{:02x}\n",
+                i, rgb[0], rgb[1], rgb[2]
+            ));
         }
-        std::fs::write(dir.join("kitty_theme.conf"), kitty).map_err(|e| format!("Write error: {}", e))?;
+        std::fs::write(dir.join("kitty_theme.conf"), kitty)
+            .map_err(|e| format!("Write error: {}", e))?;
         Ok(())
     }
 
@@ -377,7 +454,11 @@ impl WallmodApp {
         let now = chrono::Local::now();
         let hour = now.time().hour();
         let is_day = hour >= self.day_time_hour && hour < self.night_time_hour;
-        let expected_theme = if is_day { &self.day_theme } else { &self.night_theme };
+        let expected_theme = if is_day {
+            &self.day_theme
+        } else {
+            &self.night_theme
+        };
 
         if self.current_theme.display_name() != *expected_theme && self.base_image_path.is_some() {
             self.current_theme = ThemeSource::Preset(expected_theme.to_string());

@@ -1,13 +1,13 @@
 //! Main visual workspace and preview component.
 
 use crate::app::{WallmodApp, WorkspaceView};
-use crate::ui::WallmodView;
 use crate::ui::histogram::render_histogram;
 use crate::ui::swatches::render_swatches;
+use crate::ui::WallmodView;
 use gpui::*;
 use gpui_component::{
-    button::*, scroll::ScrollableElement,
-    v_flex, h_flex, ActiveTheme, Icon, IconName, Sizable, Selectable, StyledExt,
+    button::*, h_flex, scroll::ScrollableElement, v_flex, ActiveTheme, Icon, IconName, Selectable,
+    Sizable, StyledExt,
 };
 
 /// Renders the central workspace preview, split diff overlay, dashboard info, or album gallery.
@@ -186,7 +186,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                             .on_click(cx.listener(move |_, _, _, cx| {
                                                                 let p = p_clone.clone();
                                                                 cx.spawn(async move |this, cx| {
-                                                                    if let Ok(dyn_img) = crate::backend::runtime::spawn_blocking({ let p = p.clone(); move || image::open(&p) }).await.unwrap() {
+                                                                    if let Ok(Ok(dyn_img)) = crate::backend::runtime::spawn_blocking({ let p = p.clone(); move || image::open(&p) }).await {
                                                                         let _ = this.update(cx, |view, cx| {
                                                                             view.app.on_image_selected(p, dyn_img);
                                                                             view.app.workspace_view = WorkspaceView::Standard;

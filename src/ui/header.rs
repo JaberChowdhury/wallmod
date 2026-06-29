@@ -5,7 +5,8 @@ use crate::ui::WallmodView;
 use gpui::prelude::FluentBuilder;
 use gpui::*;
 use gpui_component::{
-    button::*, h_flex, spinner::Spinner, ActiveTheme, Icon, IconName, Sizable, Selectable, StyledExt,
+    button::*, h_flex, spinner::Spinner, ActiveTheme, Icon, IconName, Selectable, Sizable,
+    StyledExt,
 };
 
 /// Renders the primary application header bar with clean vector icons and no bracketed text.
@@ -34,13 +35,31 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
             window.start_window_move();
         })
         .child(
-            h_flex().gap_2().items_center()
-                .child(Icon::new(IconName::Palette).size_5().text_color(cx.theme().primary))
-                .child(div().font_bold().text_lg().font_family("bootstrap-icons").child("wallmod"))
-                .child(div().text_xs().text_color(cx.theme().muted_foreground).child("ricer edition"))
+            h_flex()
+                .gap_2()
+                .items_center()
+                .child(
+                    Icon::new(IconName::Palette)
+                        .size_5()
+                        .text_color(cx.theme().primary),
+                )
+                .child(
+                    div()
+                        .font_bold()
+                        .text_lg()
+                        .font_family("bootstrap-icons")
+                        .child("wallmod"),
+                )
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("ricer edition"),
+                ),
         )
         .child(
-            h_flex().gap_1()
+            h_flex()
+                .gap_1()
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .child(
                     Button::new("cat_cg")
@@ -52,7 +71,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.sidebar_tab = SidebarTab::ColorGrading;
                             this.app.option_group_tab = 0;
                             cx.notify();
-                        }))
+                        })),
                 )
                 .child(
                     Button::new("cat_ps")
@@ -64,7 +83,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.sidebar_tab = SidebarTab::PhotoshopEffects;
                             this.app.option_group_tab = 0;
                             cx.notify();
-                        }))
+                        })),
                 )
                 .child(
                     Button::new("cat_eng")
@@ -76,7 +95,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.sidebar_tab = SidebarTab::DesktopEngine;
                             this.app.option_group_tab = 0;
                             cx.notify();
-                        }))
+                        })),
                 )
                 .child(
                     Button::new("cat_exp")
@@ -88,7 +107,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.sidebar_tab = SidebarTab::ExportSync;
                             this.app.option_group_tab = 0;
                             cx.notify();
-                        }))
+                        })),
                 )
                 .child(
                     Button::new("cat_ai")
@@ -100,29 +119,48 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.sidebar_tab = SidebarTab::ToolsExt;
                             this.app.option_group_tab = 0;
                             cx.notify();
-                        }))
-                )
+                        })),
+                ),
         )
         .child(
-            h_flex().gap_3().items_center()
+            h_flex()
+                .gap_3()
+                .items_center()
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .child(
-                    h_flex().gap_2().items_center()
-                        .when(is_loading, |this| this.child(Spinner::new().small().color(cx.theme().primary)))
-                        .child(div().text_xs().text_color(cx.theme().muted_foreground).child(status_str))
+                    h_flex()
+                        .gap_2()
+                        .items_center()
+                        .when(is_loading, |this| {
+                            this.child(Spinner::new().small().color(cx.theme().primary))
+                        })
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(cx.theme().muted_foreground)
+                                .child(status_str),
+                        ),
                 )
                 .child(
                     Button::new("btn_dark_toggle")
                         .label(if is_dark { "Light" } else { "Dark" })
-                        .icon(if is_dark { IconName::Sun } else { IconName::Moon })
+                        .icon(if is_dark {
+                            IconName::Sun
+                        } else {
+                            IconName::Moon
+                        })
                         .small()
                         .ghost()
                         .on_click(cx.listener(|this, _, window, cx| {
-                            let mode = if this.app.is_dark_mode { gpui_component::ThemeMode::Light } else { gpui_component::ThemeMode::Dark };
+                            let mode = if this.app.is_dark_mode {
+                                gpui_component::ThemeMode::Light
+                            } else {
+                                gpui_component::ThemeMode::Dark
+                            };
                             this.app.is_dark_mode = mode.is_dark();
                             gpui_component::Theme::change(mode, Some(window), cx);
                             cx.notify();
-                        }))
+                        })),
                 )
                 .child(div().w_px().h_4().bg(cx.theme().border))
                 .child(
@@ -132,7 +170,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .ghost()
                         .on_click(|_, window, _| {
                             window.minimize_window();
-                        })
+                        }),
                 )
                 .child(
                     Button::new("btn_win_max")
@@ -141,7 +179,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .ghost()
                         .on_click(|_, window, _| {
                             window.zoom_window();
-                        })
+                        }),
                 )
                 .child(
                     Button::new("btn_win_close")
@@ -150,7 +188,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .ghost()
                         .on_click(|_, window, _| {
                             window.remove_window();
-                        })
-                )
+                        }),
+                ),
         )
 }

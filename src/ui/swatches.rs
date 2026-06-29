@@ -2,10 +2,13 @@
 
 use crate::app::ThemeSource;
 use gpui::*;
-use gpui_component::{v_flex, h_flex, ActiveTheme, StyledExt};
+use gpui_component::{h_flex, v_flex, ActiveTheme, StyledExt};
 
 /// Renders a color swatch card representing the top shades of the selected theme palette.
-pub fn render_swatches(current_theme: &ThemeSource, cx: &mut Context<crate::ui::WallmodView>) -> impl IntoElement {
+pub fn render_swatches(
+    current_theme: &ThemeSource,
+    cx: &mut Context<crate::ui::WallmodView>,
+) -> impl IntoElement {
     let shades = current_theme.get_shades();
 
     v_flex()
@@ -17,9 +20,23 @@ pub fn render_swatches(current_theme: &ThemeSource, cx: &mut Context<crate::ui::
         .rounded_lg()
         .bg(cx.theme().secondary)
         .child(
-            h_flex().justify_between().items_center()
-                .child(div().text_xs().font_bold().text_color(cx.theme().muted_foreground).child("ACTIVE PALETTE SHADES"))
-                .child(div().text_xs().font_bold().text_color(cx.theme().primary).child(current_theme.display_name()))
+            h_flex()
+                .justify_between()
+                .items_center()
+                .child(
+                    div()
+                        .text_xs()
+                        .font_bold()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("ACTIVE PALETTE SHADES"),
+                )
+                .child(
+                    div()
+                        .text_xs()
+                        .font_bold()
+                        .text_color(cx.theme().primary)
+                        .child(current_theme.display_name()),
+                ),
         )
         .child(
             h_flex()
@@ -35,7 +52,7 @@ pub fn render_swatches(current_theme: &ThemeSource, cx: &mut Context<crate::ui::
                         .bg(color)
                         .border_1()
                         .border_color(cx.theme().border.opacity(0.3))
-                }))
+                })),
         )
 }
 
