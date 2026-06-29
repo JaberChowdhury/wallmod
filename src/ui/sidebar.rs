@@ -660,6 +660,10 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     let ram_pct = view.app.sys_ram_percent;
                     let fps = view.app.current_fps;
                     let cpu_threads = view.app.sys_cpu_threads.clone();
+                    let show_float = view.app.show_floating_stats;
+                    let f_fps = view.app.float_show_fps;
+                    let f_ram = view.app.float_show_ram;
+                    let f_cpu = view.app.float_show_cpu;
 
                     v_flex().gap_4().w_full().flex_1().overflow_y_scrollbar()
                         .child(div().h_px().w_full().bg(cx.theme().border))
@@ -685,9 +689,48 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     div().flex().flex_wrap().gap_1().w_full()
                                         .children(cpu_threads.iter().enumerate().map(|(idx, &load)| {
                                             let color = if load > 80.0 { gpui::rgb(0xef4444) } else if load > 50.0 { gpui::rgb(0xf59e0b) } else { gpui::rgb(0x22c55e) };
-                                            div().p_1().rounded_md().bg(cx.theme().background).border_1().border_color(cx.theme().border).text_xs().text_color(color).child(format!("C{}: {:.0}%", idx, load))
+                                            div().w(px(58.0)).h(px(24.0)).flex().items_center().justify_center().rounded_md().bg(cx.theme().background).border_1().border_color(cx.theme().border).text_xs().text_color(color).child(format!("C{}:{:3.0}%", idx, load))
                                         }))
                                 )
+                                .child(div().h_px().w_full().bg(cx.theme().border))
+                                .child(
+                                    h_flex().justify_between().items_center()
+                                        .child(div().text_xs().font_bold().child("Floating Stats Overlay"))
+                                        .child(Switch::new("sw_float_main").disabled(is_loading).checked(show_float).cursor_pointer().on_click(cx.listener(|this, val: &bool, _, cx| {
+                                            this.app.show_floating_stats = *val;
+                                            cx.notify();
+                                        })))
+                                )
+                                .child(if show_float {
+                                    v_flex().gap_2().pl_2().pt_1().border_l_2().border_color(cx.theme().primary)
+                                        .child(
+                                            h_flex().justify_between().items_center()
+                                                .child(div().text_xs().child("Show FPS in Overlay"))
+                                                .child(Switch::new("sw_float_fps").disabled(is_loading).checked(f_fps).cursor_pointer().on_click(cx.listener(|this, val: &bool, _, cx| {
+                                                    this.app.float_show_fps = *val;
+                                                    cx.notify();
+                                                })))
+                                        )
+                                        .child(
+                                            h_flex().justify_between().items_center()
+                                                .child(div().text_xs().child("Show RAM in Overlay"))
+                                                .child(Switch::new("sw_float_ram").disabled(is_loading).checked(f_ram).cursor_pointer().on_click(cx.listener(|this, val: &bool, _, cx| {
+                                                    this.app.float_show_ram = *val;
+                                                    cx.notify();
+                                                })))
+                                        )
+                                        .child(
+                                            h_flex().justify_between().items_center()
+                                                .child(div().text_xs().child("Show CPU in Overlay"))
+                                                .child(Switch::new("sw_float_cpu").disabled(is_loading).checked(f_cpu).cursor_pointer().on_click(cx.listener(|this, val: &bool, _, cx| {
+                                                    this.app.float_show_cpu = *val;
+                                                    cx.notify();
+                                                })))
+                                        )
+                                        .into_any_element()
+                                } else {
+                                    div().into_any_element()
+                                })
                         )
                         .child(div().h_px().w_full().bg(cx.theme().border))
                         .child(div().text_sm().font_bold().child("Application Settings"))

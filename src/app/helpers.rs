@@ -21,6 +21,9 @@ fn normalize_palette_to_16(mut colors: Vec<[u8; 3]>) -> Vec<[u8; 3]> {
 
 /// Retrieves raw RGB shades for a preset string, ensuring exactly 16 standard Base16 colors.
 pub fn get_preset_shades(name: &str) -> Vec<[u8; 3]> {
+    if name.eq_ignore_ascii_case("default") || name.eq_ignore_ascii_case("none") {
+        return Vec::new();
+    }
     let raw = match name {
         "Catppuccin Mocha" => lutgen_palettes::Palette::CatppuccinMocha.get().to_vec(),
         "Catppuccin Latte" => {

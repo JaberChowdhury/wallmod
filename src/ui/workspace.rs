@@ -549,7 +549,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                             v_flex().gap_1()
                                                 .child(div().text_lg().font_bold().child("Node-Based Theme Visualization"))
                                                 .child(div().text_sm().text_color(cx.theme().muted_foreground).child(
-                                                    if chaining_mode { "Chaining Mode Active: Themes are applied sequentially from left to right." }
+                                                    if chaining_mode { "Chaining Mode Active: Themes and effects are applied sequentially." }
                                                     else { "Explore Mode Active: Single theme exploration on original image." }
                                                 ))
                                         )
@@ -560,15 +560,122 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     cx.notify();
                                                 })))
                                                 .child(Button::new("btn_pipe_clear").disabled(is_loading).child(gpui::svg().path("close.svg").size_4().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Reset Chain").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
-                                                    let init = crate::app::state::ThemeSource::Preset("Catppuccin Mocha".to_string());
-                                                    this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
+                                                    let init = crate::app::state::ThemeSource::Preset("Default".to_string());
+                                                    this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, op: crate::app::state::PipelineOp::Theme(init.clone()), theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
                                                     this.app.current_theme = init;
+                                                    this.app.selected_preset = Some("Default".to_string());
                                                     this.trigger_async_processing(cx, "Resetting chain...");
                                                 })))
                                         )
                                 )
                                 .child(
-                                    h_flex().gap_4().items_center().w_full().overflow_x_scrollbar().pb_6()
+                                    v_flex().gap_3().w_full().p_4().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().background)
+                                        .child(div().text_xs().font_bold().text_color(cx.theme().muted_foreground).child("PIPELINE ACTIONS & REUSABILITY (SINGLE & BATCH PROCESSING)"))
+                                        .child(
+                                            div().flex().flex_wrap().gap_2().w_full()
+                                                .child(Button::new("btn_add_theme").disabled(is_loading).label("+ Theme Grade").small().primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                                                    let theme = this.app.current_theme.clone();
+                                                    this.app.theme_chain.push(crate::app::state::ThemeChainNode {
+                                                        id: next_id,
+                                                        op: crate::app::state::PipelineOp::Theme(theme.clone()),
+                                                        theme,
+                                                        enabled: true,
+                                                        bit_depth: this.app.global_bit_depth,
+                                                    });
+                                                    this.app.chaining_mode = true;
+                                                    this.trigger_async_processing(cx, "Added Theme Grade step...");
+                                                })))
+                                                .child(Button::new("btn_add_blur").disabled(is_loading).label("+ Blur Step").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                                                    let theme = this.app.current_theme.clone();
+                                                    this.app.theme_chain.push(crate::app::state::ThemeChainNode {
+                                                        id: next_id,
+                                                        op: crate::app::state::PipelineOp::Blur(10.0),
+                                                        theme,
+                                                        enabled: true,
+                                                        bit_depth: this.app.global_bit_depth,
+                                                    });
+                                                    this.app.chaining_mode = true;
+                                                    this.trigger_async_processing(cx, "Added Blur step...");
+                                                })))
+                                                .child(Button::new("btn_add_ps").disabled(is_loading).label("+ Color Adjust").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                                                    let theme = this.app.current_theme.clone();
+                                                    this.app.theme_chain.push(crate::app::state::ThemeChainNode {
+                                                        id: next_id,
+                                                        op: crate::app::state::PipelineOp::Photoshop(crate::modules::photoshop::PhotoshopParams {
+                                                            brightness: 10,
+                                                            contrast: 10.0,
+                                                            saturation: 0.2,
+                                                            hue: 0,
+                                                        }),
+                                                        theme,
+                                                        enabled: true,
+                                                        bit_depth: this.app.global_bit_depth,
+                                                    });
+                                                    this.app.chaining_mode = true;
+                                                    this.trigger_async_processing(cx, "Added Color Adjust step...");
+                                                })))
+                                                .child(Button::new("btn_add_dither").disabled(is_loading).label("+ Dither").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                                                    let theme = this.app.current_theme.clone();
+                                                    this.app.theme_chain.push(crate::app::state::ThemeChainNode {
+                                                        id: next_id,
+                                                        op: crate::app::state::PipelineOp::Dither,
+                                                        theme,
+                                                        enabled: true,
+                                                        bit_depth: this.app.global_bit_depth,
+                                                    });
+                                                    this.app.chaining_mode = true;
+                                                    this.trigger_async_processing(cx, "Added Dithering step...");
+                                                })))
+                                                .child(Button::new("btn_add_sort").disabled(is_loading).label("+ Pixel Sort").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                                                    let theme = this.app.current_theme.clone();
+                                                    this.app.theme_chain.push(crate::app::state::ThemeChainNode {
+                                                        id: next_id,
+                                                        op: crate::app::state::PipelineOp::PixelSort,
+                                                        theme,
+                                                        enabled: true,
+                                                        bit_depth: this.app.global_bit_depth,
+                                                    });
+                                                    this.app.chaining_mode = true;
+                                                    this.trigger_async_processing(cx, "Added Pixel Sort step...");
+                                                })))
+                                                .child(div().w_px().h_6().bg(cx.theme().border))
+                                                .child(Button::new("btn_export_pipe").disabled(is_loading).label("Export Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let chain_str = crate::app::state::export_pipeline_to_string(&this.app.theme_chain);
+                                                    cx.spawn(async move |this, cx| {
+                                                        if let Some(handle) = rfd::AsyncFileDialog::new().set_file_name("pipeline.wallpipe").save_file().await {
+                                                            let _ = std::fs::write(handle.path(), chain_str);
+                                                            let _ = this.update(cx, |view, cx| {
+                                                                view.app.state = crate::app::AppState::Notice("Pipeline exported successfully!".to_string());
+                                                                cx.notify();
+                                                            });
+                                                        }
+                                                    }).detach();
+                                                })))
+                                                .child(Button::new("btn_import_pipe").disabled(is_loading).label("Import Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|_this, _, _, cx| {
+                                                    cx.spawn(async move |this, cx| {
+                                                        if let Some(handle) = rfd::AsyncFileDialog::new().add_filter("Wallmod Pipeline", &["wallpipe", "json"]).pick_file().await {
+                                                            if let Ok(content) = std::fs::read_to_string(handle.path()) {
+                                                                let imported = crate::app::state::import_pipeline_from_string(&content);
+                                                                if !imported.is_empty() {
+                                                                    let _ = this.update(cx, |view, cx| {
+                                                                        view.app.theme_chain = imported;
+                                                                        view.app.chaining_mode = true;
+                                                                        view.trigger_async_processing(cx, "Imported pipeline chain loaded...");
+                                                                    });
+                                                                }
+                                                            }
+                                                        }
+                                                    }).detach();
+                                                })))
+                                        )
+                                )
+                                .child(
+                                    div().flex().flex_wrap().gap_4().items_center().w_full().pb_6()
                                         // Node 0: Original Image Source
                                         .child(
                                             v_flex().w(px(220.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().background).gap_3()
@@ -580,13 +687,13 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                         // Chain nodes
                                         .children(chain.iter().map(|node| {
                                             let nid = node.id;
-                                            let nname = node.theme.display_name();
+                                            let nname = node.op.display_name();
                                             let nenabled = node.enabled;
                                             let nbd = node.bit_depth;
-                                            let node_el = v_flex().w(px(260.0)).p_4().border_1().border_color(if nenabled { cx.theme().primary } else { cx.theme().border }).rounded_xl().bg(cx.theme().background).gap_3().opacity(if nenabled { 1.0 } else { 0.5 })
+                                            let node_el = v_flex().w(px(280.0)).p_4().border_1().border_color(if nenabled { cx.theme().primary } else { cx.theme().border }).rounded_xl().bg(cx.theme().background).gap_3().opacity(if nenabled { 1.0 } else { 0.5 })
                                                 .child(
                                                     h_flex().justify_between().items_center()
-                                                        .child(h_flex().gap_2().items_center().child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child(div().font_bold().child(format!("Node #{}: {}", nid, nname))))
+                                                        .child(h_flex().gap_2().items_center().child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child(div().font_bold().text_xs().child(format!("#{}: {}", nid, nname))))
                                                         .child(Button::new(format!("toggle_n_{}", nid)).disabled(is_loading).child(gpui::svg().path(if nenabled { "check.svg" } else { "close.svg" }).size_4().text_color(if nenabled { cx.theme().primary } else { cx.theme().muted_foreground })).small().outline().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                             if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
                                                                 n.enabled = !n.enabled;
@@ -611,10 +718,36 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         })))
                                                 )
                                                 .child(
-                                                    Button::new(format!("del_n_{}", nid)).disabled(is_loading).label("Remove Node").child(gpui::svg().path("close.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).small().outline().w_full().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
-                                                        this.app.theme_chain.retain(|x| x.id != nid);
-                                                        this.trigger_async_processing(cx, "Removing node from chain...");
-                                                    }))
+                                                    h_flex().gap_1().w_full().pt_1()
+                                                        .child(Button::new(format!("mv_l_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_3().text_color(cx.theme().primary)).label("Move Left").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
+                                                                if pos > 0 {
+                                                                    this.app.theme_chain.swap(pos, pos - 1);
+                                                                    this.trigger_async_processing(cx, "Reordering pipeline step...");
+                                                                }
+                                                            }
+                                                        })))
+                                                        .child(Button::new(format!("dup_{}", nid)).disabled(is_loading).child(gpui::svg().path("copy.svg").size_3().text_color(cx.theme().primary)).label("Duplicate").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
+                                                                let mut cloned = this.app.theme_chain[pos].clone();
+                                                                let max_id = this.app.theme_chain.iter().map(|x| x.id).max().unwrap_or(0);
+                                                                cloned.id = max_id + 1;
+                                                                this.app.theme_chain.insert(pos + 1, cloned);
+                                                                this.trigger_async_processing(cx, "Duplicating node...");
+                                                            }
+                                                        })))
+                                                        .child(Button::new(format!("mv_r_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-right.svg").size_3().text_color(cx.theme().primary)).label("Move Right").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
+                                                                if pos + 1 < this.app.theme_chain.len() {
+                                                                    this.app.theme_chain.swap(pos, pos + 1);
+                                                                    this.trigger_async_processing(cx, "Reordering pipeline step...");
+                                                                }
+                                                            }
+                                                        })))
+                                                        .child(Button::new(format!("del_n_{}", nid)).disabled(is_loading).child(gpui::svg().path("trash.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Delete").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                            this.app.theme_chain.retain(|x| x.id != nid);
+                                                            this.trigger_async_processing(cx, "Removing node from chain...");
+                                                        })))
                                                 );
                                             h_flex().gap_4().items_center().child(node_el).child(div().text_xl().font_bold().text_color(cx.theme().primary).child("➔")).into_any_element()
                                         }))

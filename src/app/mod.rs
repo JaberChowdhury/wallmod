@@ -84,6 +84,10 @@ pub struct WallmodApp {
     pub sys_last_update: std::time::Instant,
     pub frame_timestamps: std::collections::VecDeque<std::time::Instant>,
     pub current_fps: f32,
+    pub show_floating_stats: bool,
+    pub float_show_fps: bool,
+    pub float_show_ram: bool,
+    pub float_show_cpu: bool,
 }
 
 impl Default for WallmodApp {
@@ -94,7 +98,7 @@ impl Default for WallmodApp {
 
 impl WallmodApp {
     pub fn new() -> Self {
-        let initial_theme = ThemeSource::Preset("Catppuccin Mocha".to_string());
+        let initial_theme = ThemeSource::Preset("Default".to_string());
         Self {
             base_image_path: None,
             base_image_dyn: None,
@@ -106,7 +110,7 @@ impl WallmodApp {
             current_theme: initial_theme.clone(),
             state: AppState::Idle,
             custom_palette_input: String::new(),
-            selected_preset: Some("Catppuccin Mocha".to_string()),
+            selected_preset: Some("Default".to_string()),
             algorithm: RemapAlgorithm::Gaussian,
             preserve_luma: false,
             hald_level: 8,
@@ -144,6 +148,7 @@ impl WallmodApp {
             export_dir: None,
             theme_chain: vec![crate::app::state::ThemeChainNode {
                 id: 1,
+                op: crate::app::state::PipelineOp::Theme(initial_theme.clone()),
                 theme: initial_theme,
                 enabled: true,
                 bit_depth: crate::app::state::BitDepthStyle::Bit32,
@@ -156,6 +161,10 @@ impl WallmodApp {
             sys_last_update: std::time::Instant::now() - std::time::Duration::from_secs(10),
             frame_timestamps: std::collections::VecDeque::new(),
             current_fps: 60.0,
+            show_floating_stats: false,
+            float_show_fps: true,
+            float_show_ram: true,
+            float_show_cpu: true,
         }
     }
 
@@ -165,6 +174,7 @@ impl WallmodApp {
             let next_id = self.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
             self.theme_chain.push(crate::app::state::ThemeChainNode {
                 id: next_id,
+                op: crate::app::state::PipelineOp::Theme(theme.clone()),
                 theme,
                 enabled: true,
                 bit_depth: self.global_bit_depth,
@@ -172,6 +182,7 @@ impl WallmodApp {
         } else {
             self.theme_chain = vec![crate::app::state::ThemeChainNode {
                 id: 1,
+                op: crate::app::state::PipelineOp::Theme(theme.clone()),
                 theme,
                 enabled: true,
                 bit_depth: self.global_bit_depth,
@@ -321,84 +332,155 @@ impl WallmodApp {
             _ => {},
         }
 
-        if chaining_mode && !theme_chain.is_empty() {
+        let processed_dyn = if chaining_mode && !theme_chain.is_empty() {
+            let mut current_dyn = image::DynamicImage::ImageRgba8(rgba);
             for node in &theme_chain {
                 if !node.enabled {
                     continue;
                 }
-                let node_shades = node.theme.get_shades();
-                if !node_shades.is_empty() {
-                    match algorithm {
-                        RemapAlgorithm::Gaussian => {
-                            let remapper =
-                                GaussianRemapper::new(&node_shades, 96.0, 0, 1.0, preserve_luma);
-                            let hald_clut = remapper.par_generate_lut(hald_level);
-                            par_correct_image(&mut rgba, &hald_clut);
-                        },
-                        RemapAlgorithm::Shepard => {
-                            let remapper =
-                                ShepardRemapper::new(&node_shades, 16.0, 0, 1.0, preserve_luma);
-                            let hald_clut = remapper.par_generate_lut(hald_level);
-                            par_correct_image(&mut rgba, &hald_clut);
-                        },
-                        RemapAlgorithm::NearestNeighbor => {
-                            let remapper =
-                                NearestNeighborRemapper::new(&node_shades, 1.0, preserve_luma);
-                            let hald_clut = remapper.par_generate_lut(hald_level);
-                            par_correct_image(&mut rgba, &hald_clut);
-                        },
-                    }
+                match &node.op {
+                    crate::app::state::PipelineOp::Theme(theme) => {
+                        let node_shades = theme.get_shades();
+                        if !node_shades.is_empty() {
+                            let mut buf = current_dyn.to_rgba8();
+                            match algorithm {
+                                RemapAlgorithm::Gaussian => {
+                                    let remapper = GaussianRemapper::new(
+                                        &node_shades,
+                                        96.0,
+                                        0,
+                                        1.0,
+                                        preserve_luma,
+                                    );
+                                    let hald_clut = remapper.par_generate_lut(hald_level);
+                                    par_correct_image(&mut buf, &hald_clut);
+                                },
+                                RemapAlgorithm::Shepard => {
+                                    let remapper = ShepardRemapper::new(
+                                        &node_shades,
+                                        16.0,
+                                        0,
+                                        1.0,
+                                        preserve_luma,
+                                    );
+                                    let hald_clut = remapper.par_generate_lut(hald_level);
+                                    par_correct_image(&mut buf, &hald_clut);
+                                },
+                                RemapAlgorithm::NearestNeighbor => {
+                                    let remapper = NearestNeighborRemapper::new(
+                                        &node_shades,
+                                        1.0,
+                                        preserve_luma,
+                                    );
+                                    let hald_clut = remapper.par_generate_lut(hald_level);
+                                    par_correct_image(&mut buf, &hald_clut);
+                                },
+                            }
+                            current_dyn = image::DynamicImage::ImageRgba8(buf);
+                        }
+                    },
+                    crate::app::state::PipelineOp::Blur(sigma) => {
+                        if *sigma > 0.0 {
+                            let buf = current_dyn.to_rgba8();
+                            let blurred = crate::modules::blur::parallel_blur(&buf, *sigma);
+                            current_dyn = image::DynamicImage::ImageRgba8(blurred);
+                        }
+                    },
+                    crate::app::state::PipelineOp::Photoshop(p) => {
+                        if !p.is_neutral() {
+                            current_dyn = crate::modules::photoshop::apply_photoshop_sync(
+                                current_dyn,
+                                p.clone(),
+                            );
+                        }
+                    },
+                    crate::app::state::PipelineOp::Dither => {
+                        let shades = current_theme.get_shades();
+                        if !shades.is_empty() {
+                            current_dyn = crate::backend::dither::apply_floyd_steinberg(
+                                &current_dyn,
+                                &shades,
+                            );
+                        }
+                    },
+                    crate::app::state::PipelineOp::PixelSort => {
+                        current_dyn = crate::backend::pixel_sort::apply_pixel_sort(&current_dyn);
+                    },
                 }
-                crate::backend::bit_depth::apply_bit_depth(&mut rgba, node.bit_depth);
+                if node.bit_depth != crate::app::state::BitDepthStyle::Bit32 {
+                    let mut buf = current_dyn.to_rgba8();
+                    crate::backend::bit_depth::apply_bit_depth(&mut buf, node.bit_depth);
+                    current_dyn = image::DynamicImage::ImageRgba8(buf);
+                }
             }
-        } else if !shades.is_empty() {
-            match algorithm {
-                RemapAlgorithm::Gaussian => {
-                    let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
-                    let hald_clut = remapper.par_generate_lut(hald_level);
-                    par_correct_image(&mut rgba, &hald_clut);
-                },
-                RemapAlgorithm::Shepard => {
-                    let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, preserve_luma);
-                    let hald_clut = remapper.par_generate_lut(hald_level);
-                    par_correct_image(&mut rgba, &hald_clut);
-                },
-                RemapAlgorithm::NearestNeighbor => {
-                    let remapper = NearestNeighborRemapper::new(&shades, 1.0, preserve_luma);
-                    let hald_clut = remapper.par_generate_lut(hald_level);
-                    par_correct_image(&mut rgba, &hald_clut);
-                },
+            if global_bit_depth != crate::app::state::BitDepthStyle::Bit32 {
+                let mut buf = current_dyn.to_rgba8();
+                crate::backend::bit_depth::apply_bit_depth(&mut buf, global_bit_depth);
+                current_dyn = image::DynamicImage::ImageRgba8(buf);
             }
-        }
-        crate::backend::bit_depth::apply_bit_depth(&mut rgba, global_bit_depth);
+            if seam_carve_target > 0 && seam_carve_target < current_dyn.width() {
+                current_dyn = crate::backend::seam_carve::carve_width(
+                    &current_dyn,
+                    seam_carve_target,
+                    |_, _| {},
+                );
+            }
+            current_dyn
+        } else {
+            if !shades.is_empty() {
+                match algorithm {
+                    RemapAlgorithm::Gaussian => {
+                        let remapper = GaussianRemapper::new(&shades, 96.0, 0, 1.0, preserve_luma);
+                        let hald_clut = remapper.par_generate_lut(hald_level);
+                        par_correct_image(&mut rgba, &hald_clut);
+                    },
+                    RemapAlgorithm::Shepard => {
+                        let remapper = ShepardRemapper::new(&shades, 16.0, 0, 1.0, preserve_luma);
+                        let hald_clut = remapper.par_generate_lut(hald_level);
+                        par_correct_image(&mut rgba, &hald_clut);
+                    },
+                    RemapAlgorithm::NearestNeighbor => {
+                        let remapper = NearestNeighborRemapper::new(&shades, 1.0, preserve_luma);
+                        let hald_clut = remapper.par_generate_lut(hald_level);
+                        par_correct_image(&mut rgba, &hald_clut);
+                    },
+                }
+            }
+            crate::backend::bit_depth::apply_bit_depth(&mut rgba, global_bit_depth);
 
-        let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
-        if !photoshop_params.is_neutral() {
-            processed_dyn =
-                crate::modules::photoshop::apply_photoshop_sync(processed_dyn, photoshop_params);
-        }
-        if blur_sigma > 0.0 {
-            let rgba = processed_dyn.to_rgba8();
-            let blurred_rgba = crate::modules::blur::parallel_blur(&rgba, blur_sigma);
-            processed_dyn = image::DynamicImage::ImageRgba8(blurred_rgba);
-        }
-        if dither_enabled {
-            let palette_colors = current_theme.get_shades();
-            if !palette_colors.is_empty() {
-                processed_dyn =
-                    crate::backend::dither::apply_floyd_steinberg(&processed_dyn, &palette_colors);
+            let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+            if !photoshop_params.is_neutral() {
+                processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
+                    processed_dyn,
+                    photoshop_params,
+                );
             }
-        }
-        if seam_carve_target > 0 && seam_carve_target < processed_dyn.width() {
-            processed_dyn = crate::backend::seam_carve::carve_width(
-                &processed_dyn,
-                seam_carve_target,
-                |_, _| {},
-            );
-        }
-        if pixel_sort_enabled {
-            processed_dyn = crate::backend::pixel_sort::apply_pixel_sort(&processed_dyn);
-        }
+            if blur_sigma > 0.0 {
+                let rgba = processed_dyn.to_rgba8();
+                let blurred_rgba = crate::modules::blur::parallel_blur(&rgba, blur_sigma);
+                processed_dyn = image::DynamicImage::ImageRgba8(blurred_rgba);
+            }
+            if dither_enabled {
+                let palette_colors = current_theme.get_shades();
+                if !palette_colors.is_empty() {
+                    processed_dyn = crate::backend::dither::apply_floyd_steinberg(
+                        &processed_dyn,
+                        &palette_colors,
+                    );
+                }
+            }
+            if seam_carve_target > 0 && seam_carve_target < processed_dyn.width() {
+                processed_dyn = crate::backend::seam_carve::carve_width(
+                    &processed_dyn,
+                    seam_carve_target,
+                    |_, _| {},
+                );
+            }
+            if pixel_sort_enabled {
+                processed_dyn = crate::backend::pixel_sort::apply_pixel_sort(&processed_dyn);
+            }
+            processed_dyn
+        };
         let histogram = crate::modules::histogram::compute_histogram(&processed_dyn).ok();
         let wcag_contrast = crate::app::helpers::compute_wcag_contrast(&processed_dyn);
         static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =

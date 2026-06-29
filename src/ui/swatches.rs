@@ -38,16 +38,34 @@ pub fn render_swatches(
                         .child(current_theme.display_name()),
                 ),
         )
-        .child(h_flex().w_full().h_6().gap_1().children(shades.iter().take(8).map(|&rgb| {
-            let color = rgb_to_hsla(rgb[0], rgb[1], rgb[2]);
+        .child(if shades.is_empty() {
             div()
-                .flex_1()
-                .h_full()
-                .rounded_sm()
-                .bg(color)
-                .border_1()
-                .border_color(cx.theme().border.opacity(0.3))
-        })))
+                .w_full()
+                .h_6()
+                .flex()
+                .items_center()
+                .justify_center()
+                .text_xs()
+                .text_color(cx.theme().muted_foreground)
+                .child("No Theme Selected (Original Colors)")
+                .into_any_element()
+        } else {
+            h_flex()
+                .w_full()
+                .h_6()
+                .gap_1()
+                .children(shades.iter().take(8).map(|&rgb| {
+                    let color = rgb_to_hsla(rgb[0], rgb[1], rgb[2]);
+                    div()
+                        .flex_1()
+                        .h_full()
+                        .rounded_sm()
+                        .bg(color)
+                        .border_1()
+                        .border_color(cx.theme().border.opacity(0.3))
+                }))
+                .into_any_element()
+        })
         .child(
             Button::new("btn_edit_palette")
                 .child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary))

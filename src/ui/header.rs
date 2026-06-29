@@ -297,6 +297,25 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.option_group_tab = 0;
                             cx.notify();
                         })),
+                )
+                .child(
+                    Button::new("btn_toggle_float_stats")
+                        .child(gpui::svg().path("monitor.svg").size_4().text_color(
+                            if view.app.show_floating_stats {
+                                gpui::rgb(0x22c55e).into()
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
+                        .child("Floating Stats")
+                        .small()
+                        .selected(view.app.show_floating_stats)
+                        .when(view.app.show_floating_stats, |this| this.primary())
+                        .cursor_pointer()
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.app.show_floating_stats = !this.app.show_floating_stats;
+                            cx.notify();
+                        })),
                 ),
         )
 }

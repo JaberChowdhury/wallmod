@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 /// Available preset palette names from lutgen-palettes.
 pub const PRESET_NAMES: &[&str] = &[
+    "Default",
     "Catppuccin Mocha",
     "Catppuccin Latte",
     "Gruvbox Dark",
@@ -149,6 +150,11 @@ impl ThemeSource {
     }
 
     pub fn get_shades(&self) -> Vec<[u8; 3]> {
+        if let ThemeSource::Preset(name) = self {
+            if name.eq_ignore_ascii_case("default") || name.eq_ignore_ascii_case("none") {
+                return Vec::new();
+            }
+        }
         let mut shades = match self {
             ThemeSource::Preset(name) => crate::app::helpers::get_preset_shades(name),
             ThemeSource::Custom(path) => crate::app::helpers::extract_lut_shades(path),
@@ -187,14 +193,171 @@ impl BitDepthStyle {
             BitDepthStyle::Bit8 => "8-bit (VGA Posterized)",
         }
     }
+    pub fn to_code(&self) -> &'static str {
+        match self {
+            Self::Bit32 => "Bit32",
+            Self::Bit16 => "Bit16",
+            Self::Bit8 => "Bit8",
+        }
+    }
+    pub fn from_code(code: &str) -> Self {
+        match code {
+            "Bit16" => Self::Bit16,
+            "Bit8" => Self::Bit8,
+            _ => Self::Bit32,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PipelineOp {
+    Theme(ThemeSource),
+    Blur(f32),
+    Photoshop(crate::modules::photoshop::PhotoshopParams),
+    Dither,
+    PixelSort,
+}
+
+impl PipelineOp {
+    pub fn display_name(&self) -> String {
+        match self {
+            Self::Theme(t) => format!("Theme Grade: {}", t.display_name()),
+            Self::Blur(s) => format!("Blur Effect (σ={:.1})", s),
+            Self::Photoshop(p) => format!(
+                "Color Adjust (B:{}, C:{:.0}%, S:{:.1})",
+                p.brightness, p.contrast, p.saturation
+            ),
+            Self::Dither => "Floyd-Steinberg Dither".to_string(),
+            Self::PixelSort => "Luminance Pixel Sort".to_string(),
+        }
+    }
+
+    pub fn to_code(&self) -> String {
+        match self {
+            Self::Theme(ts) => match ts {
+                ThemeSource::Preset(name) => format!("theme:Preset:{}", name),
+                ThemeSource::Custom(path) => format!("theme:Custom:{}", path.to_string_lossy()),
+                ThemeSource::CustomPalette(name, _) => format!("theme:Preset:{}", name),
+            },
+            Self::Blur(sigma) => format!("blur:{}", sigma),
+            Self::Photoshop(p) => {
+                format!("photoshop:{}:{}:{}:{}", p.brightness, p.contrast, p.saturation, p.hue)
+            },
+            Self::Dither => "dither".to_string(),
+            Self::PixelSort => "pixelsort".to_string(),
+        }
+    }
+
+    pub fn from_code(code: &str) -> Option<Self> {
+        let parts: Vec<&str> = code.splitn(3, ':').collect();
+        if parts.is_empty() {
+            return None;
+        }
+        match parts[0] {
+            "theme" => {
+                if parts.len() == 3 {
+                    if parts[1] == "Preset" {
+                        return Some(Self::Theme(ThemeSource::Preset(parts[2].to_string())));
+                    } else if parts[1] == "Custom" {
+                        return Some(Self::Theme(ThemeSource::Custom(PathBuf::from(parts[2]))));
+                    }
+                }
+                None
+            },
+            "blur" => {
+                let sigma = code.split(':').nth(1)?.parse::<f32>().ok()?;
+                Some(Self::Blur(sigma))
+            },
+            "photoshop" => {
+                let p: Vec<&str> = code.split(':').collect();
+                if p.len() >= 5 {
+                    Some(Self::Photoshop(crate::modules::photoshop::PhotoshopParams {
+                        brightness: p[1].parse().unwrap_or(0),
+                        contrast: p[2].parse().unwrap_or(0.0),
+                        saturation: p[3].parse().unwrap_or(0.0),
+                        hue: p[4].parse().unwrap_or(0),
+                    }))
+                } else {
+                    None
+                }
+            },
+            "dither" => Some(Self::Dither),
+            "pixelsort" => Some(Self::PixelSort),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ThemeChainNode {
     pub id: usize,
+    pub op: PipelineOp,
     pub theme: ThemeSource,
     pub enabled: bool,
     pub bit_depth: BitDepthStyle,
+}
+
+pub fn export_pipeline_to_string(chain: &[ThemeChainNode]) -> String {
+    let mut lines = Vec::new();
+    lines.push("[\n".to_string());
+    for (i, node) in chain.iter().enumerate() {
+        let comma = if i + 1 < chain.len() {
+            ","
+        } else {
+            ""
+        };
+        lines.push(format!("  {{\n    \"id\": {},\n    \"op\": \"{}\",\n    \"enabled\": {},\n    \"bit_depth\": \"{}\"\n  }}{}\n",
+            node.id, node.op.to_code().replace('"', "\\\""), node.enabled, node.bit_depth.to_code(), comma));
+    }
+    lines.push("]\n".to_string());
+    lines.join("")
+}
+
+pub fn import_pipeline_from_string(content: &str) -> Vec<ThemeChainNode> {
+    let mut chain = Vec::new();
+    let mut current_id = 1;
+    let mut current_op = None;
+    let mut current_enabled = true;
+    let mut current_bd = BitDepthStyle::Bit32;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("\"id\":") {
+            if let Some(val) = trimmed.split(':').nth(1) {
+                current_id = val.trim().trim_matches(',').parse().unwrap_or(current_id);
+            }
+        } else if trimmed.starts_with("\"op\":") {
+            if let Some(val) = trimmed.split(':').nth(1) {
+                let code = val.trim().trim_matches(',').trim_matches('"').replace("\\\"", "\"");
+                current_op = PipelineOp::from_code(&code);
+            }
+        } else if trimmed.starts_with("\"enabled\":") {
+            if let Some(val) = trimmed.split(':').nth(1) {
+                current_enabled = val.trim().trim_matches(',') == "true";
+            }
+        } else if trimmed.starts_with("\"bit_depth\":") {
+            if let Some(val) = trimmed.split(':').nth(1) {
+                let code = val.trim().trim_matches(',').trim_matches('"');
+                current_bd = BitDepthStyle::from_code(code);
+            }
+        } else if trimmed.starts_with('}') {
+            if let Some(op) = current_op.take() {
+                let theme = match &op {
+                    PipelineOp::Theme(t) => t.clone(),
+                    _ => ThemeSource::Preset("Default".to_string()),
+                };
+                chain.push(ThemeChainNode {
+                    id: current_id,
+                    op,
+                    theme,
+                    enabled: current_enabled,
+                    bit_depth: current_bd,
+                });
+                current_id += 1;
+            }
+        }
+    }
+    chain
 }
 
 /// Application State Model.
