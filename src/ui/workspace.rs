@@ -678,22 +678,30 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                     div().flex().flex_wrap().gap_4().items_center().w_full().pb_6()
                                         // Node 0: Original Image Source
                                         .child(
-                                            v_flex().w(px(220.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().background).gap_3()
+                                            v_flex().w(px(260.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().background).gap_3()
                                                 .child(h_flex().gap_2().items_center().child(gpui::svg().path("folder.svg").size_5().text_color(cx.theme().primary)).child(div().font_bold().child("Input Source")))
                                                 .child(div().text_xs().text_color(cx.theme().muted_foreground).child("Original un-graded wallpaper image data"))
-                                                .child(div().text_xs().font_bold().p_2().bg(cx.theme().secondary).rounded_md().child(if let Some(p) = &preview_path { p.file_name().unwrap_or_default().to_string_lossy().to_string() } else { "No file".to_string() }))
+                                                .child(div().text_xs().font_bold().p_2().bg(cx.theme().secondary).rounded_md().child({
+                                                    if let Some(p) = &preview_path {
+                                                        let s = p.file_name().unwrap_or_default().to_string_lossy().to_string();
+                                                        if s.len() > 24 { format!("{}...", &s[..21]) } else { s }
+                                                    } else {
+                                                        "No file".to_string()
+                                                    }
+                                                }))
                                         )
                                         .child(div().text_xl().font_bold().text_color(cx.theme().primary).child("➔"))
                                         // Chain nodes
                                         .children(chain.iter().map(|node| {
                                             let nid = node.id;
                                             let nname = node.op.display_name();
+                                            let short_name = if nname.len() > 22 { format!("{}...", &nname[..19]) } else { nname };
                                             let nenabled = node.enabled;
                                             let nbd = node.bit_depth;
-                                            let node_el = v_flex().w(px(280.0)).p_4().border_1().border_color(if nenabled { cx.theme().primary } else { cx.theme().border }).rounded_xl().bg(cx.theme().background).gap_3().opacity(if nenabled { 1.0 } else { 0.5 })
+                                            let node_el = v_flex().w(px(320.0)).p_4().border_1().border_color(if nenabled { cx.theme().primary } else { cx.theme().border }).rounded_xl().bg(cx.theme().background).gap_3().opacity(if nenabled { 1.0 } else { 0.5 })
                                                 .child(
                                                     h_flex().justify_between().items_center()
-                                                        .child(h_flex().gap_2().items_center().child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child(div().font_bold().text_xs().child(format!("#{}: {}", nid, nname))))
+                                                        .child(h_flex().gap_2().items_center().child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child(div().font_bold().text_xs().child(format!("#{}: {}", nid, short_name))))
                                                         .child(Button::new(format!("toggle_n_{}", nid)).disabled(is_loading).child(gpui::svg().path(if nenabled { "check.svg" } else { "close.svg" }).size_4().text_color(if nenabled { cx.theme().primary } else { cx.theme().muted_foreground })).small().outline().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                             if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
                                                                 n.enabled = !n.enabled;
@@ -718,42 +726,48 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         })))
                                                 )
                                                 .child(
-                                                    h_flex().gap_1().w_full().pt_1()
-                                                        .child(Button::new(format!("mv_l_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_3().text_color(cx.theme().primary)).label("Move Left").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
-                                                            if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
-                                                                if pos > 0 {
-                                                                    this.app.theme_chain.swap(pos, pos - 1);
-                                                                    this.trigger_async_processing(cx, "Reordering pipeline step...");
-                                                                }
-                                                            }
-                                                        })))
-                                                        .child(Button::new(format!("dup_{}", nid)).disabled(is_loading).child(gpui::svg().path("copy.svg").size_3().text_color(cx.theme().primary)).label("Duplicate").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
-                                                            if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
-                                                                let mut cloned = this.app.theme_chain[pos].clone();
-                                                                let max_id = this.app.theme_chain.iter().map(|x| x.id).max().unwrap_or(0);
-                                                                cloned.id = max_id + 1;
-                                                                this.app.theme_chain.insert(pos + 1, cloned);
-                                                                this.trigger_async_processing(cx, "Duplicating node...");
-                                                            }
-                                                        })))
-                                                        .child(Button::new(format!("mv_r_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-right.svg").size_3().text_color(cx.theme().primary)).label("Move Right").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
-                                                            if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
-                                                                if pos + 1 < this.app.theme_chain.len() {
-                                                                    this.app.theme_chain.swap(pos, pos + 1);
-                                                                    this.trigger_async_processing(cx, "Reordering pipeline step...");
-                                                                }
-                                                            }
-                                                        })))
-                                                        .child(Button::new(format!("del_n_{}", nid)).disabled(is_loading).child(gpui::svg().path("trash.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Delete").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
-                                                            this.app.theme_chain.retain(|x| x.id != nid);
-                                                            this.trigger_async_processing(cx, "Removing node from chain...");
-                                                        })))
+                                                    v_flex().gap_2().w_full().pt_1()
+                                                        .child(
+                                                            h_flex().gap_2().w_full()
+                                                                .child(Button::new(format!("mv_l_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_3().text_color(cx.theme().primary)).label("Move Left").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                    if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
+                                                                        if pos > 0 {
+                                                                            this.app.theme_chain.swap(pos, pos - 1);
+                                                                            this.trigger_async_processing(cx, "Reordering pipeline step...");
+                                                                        }
+                                                                    }
+                                                                })))
+                                                                .child(Button::new(format!("mv_r_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-right.svg").size_3().text_color(cx.theme().primary)).label("Move Right").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                    if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
+                                                                        if pos + 1 < this.app.theme_chain.len() {
+                                                                            this.app.theme_chain.swap(pos, pos + 1);
+                                                                            this.trigger_async_processing(cx, "Reordering pipeline step...");
+                                                                        }
+                                                                    }
+                                                                })))
+                                                        )
+                                                        .child(
+                                                            h_flex().gap_2().w_full()
+                                                                .child(Button::new(format!("dup_{}", nid)).disabled(is_loading).child(gpui::svg().path("copy.svg").size_3().text_color(cx.theme().primary)).label("Duplicate").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                    if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
+                                                                        let mut cloned = this.app.theme_chain[pos].clone();
+                                                                        let max_id = this.app.theme_chain.iter().map(|x| x.id).max().unwrap_or(0);
+                                                                        cloned.id = max_id + 1;
+                                                                        this.app.theme_chain.insert(pos + 1, cloned);
+                                                                        this.trigger_async_processing(cx, "Duplicating node...");
+                                                                    }
+                                                                })))
+                                                                .child(Button::new(format!("del_n_{}", nid)).disabled(is_loading).child(gpui::svg().path("trash.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Delete").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                    this.app.theme_chain.retain(|x| x.id != nid);
+                                                                    this.trigger_async_processing(cx, "Removing node from chain...");
+                                                                })))
+                                                        )
                                                 );
                                             h_flex().gap_4().items_center().child(node_el).child(div().text_xl().font_bold().text_color(cx.theme().primary).child("➔")).into_any_element()
                                         }))
                                         // Final Output Node
                                         .child(
-                                            v_flex().w(px(220.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().secondary).gap_3()
+                                            v_flex().w(px(260.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().secondary).gap_3()
                                                 .child(h_flex().gap_2().items_center().child(gpui::svg().path("check.svg").size_5().text_color(cx.theme().primary)).child(div().font_bold().child("Final Output")))
                                                 .child(div().text_xs().text_color(cx.theme().muted_foreground).child(format!("Global Output Bit-Depth: {}", global_bd.display_name())))
                                                 .child(Button::new("btn_view_out").disabled(is_loading).label("View Output Visual").child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).small().primary().w_full().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
