@@ -3,12 +3,14 @@ name = "wallmod"
 version = "0.1.0"
 edition = "2021"
 authors = ["Antigravity <antigravity@deepmind.google>"]
-description = "Wallpaper Theme Changer - A production-ready desktop Linux image customization application built with Iced."
+description = "Wallpaper Theme Changer - A production-ready desktop Linux image customization application built with GPUI and gpui-component."
 
 [dependencies]
 chrono = "0.4.45"
 futures = "0.3"
-iced = { version = "0.14", features = ["image", "tokio", "canvas"] }
+gpui = { git = "https://github.com/zed-industries/zed", rev = "1d217ee39d381ac101b7cf49d3d22451ac1093fe" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "1d217ee39d381ac101b7cf49d3d22451ac1093fe", features = ["font-kit", "x11", "wayland", "runtime_shaders"] }
+gpui-component = { git = "https://github.com/longbridge/gpui-component" }
 image = { version = "0.25", features = ["png", "jpeg", "gif", "webp", "bmp", "tiff", "tga", "ico", "hdr", "exr", "qoi", "pnm", "avif"] }
 imageproc = "0.27.0"
 kmeans_colors = "0.7.1"

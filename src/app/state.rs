@@ -1,6 +1,5 @@
 //! Core state models and enumerations for wallmod.
 
-use iced::widget::image as iced_image;
 use std::path::PathBuf;
 
 /// Available preset palette names from lutgen-palettes.
@@ -132,7 +131,7 @@ impl ThemeSource {
 pub enum AppState {
     Idle,
     Loading(f32, String),
-    PreviewReady(iced_image::Handle),
+    PreviewReady(PathBuf),
     Notice(String),
     Error(String),
 }
