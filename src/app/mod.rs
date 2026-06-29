@@ -60,6 +60,9 @@ pub struct WallmodApp {
     pub dither_enabled: bool,
     pub active_tab: crate::app::state::AppTab,
     pub extracted_colors: Option<Vec<(String, f32)>>,
+    
+    // Palette Editor State
+    pub selected_color_idx: Option<usize>,
     pub histogram_data: Option<HistogramData>,
     pub daemon_enabled: bool,
     pub day_time_hour: u32,
@@ -113,6 +116,7 @@ impl WallmodApp {
             dither_enabled: false,
             active_tab: crate::app::state::AppTab::Themer,
             extracted_colors: None,
+            selected_color_idx: None,
             histogram_data: None,
             daemon_enabled: false,
             day_time_hour: 8,

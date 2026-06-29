@@ -182,6 +182,8 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                     }).collect();
                                                                     this.app.current_theme = crate::app::state::ThemeSource::CustomPalette("Extracted".to_string(), colors);
                                                                     this.app.selected_preset = None;
+                                                                    this.app.workspace_view = crate::app::state::WorkspaceView::PaletteEditor;
+                                                                    this.app.selected_color_idx = None;
                                                                     this.trigger_async_processing(cx, "Applying extracted palette...");
                                                                 }
                                                             }))
@@ -203,24 +205,38 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                 .child(div().h_px().w_full().bg(cx.theme().border))
                                 .child(
                                     if let Some(cols) = extracted_cols {
-                                        v_flex().gap_4().w_full()
-                                            .children(cols.into_iter().enumerate().map(|(_i, (hex, pct))| {
-                                                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
-                                                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
-                                                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                                                let pct_display = format!("{:.1}%", pct * 100.0);
-                                                
-                                                h_flex().gap_4().items_center().w_full()
-                                                    .child(div().w(px(70.0)).text_sm().font_bold().child(hex.clone()))
-                                                    .child(
-                                                        div().flex_1().h(px(24.0)).bg(cx.theme().secondary).rounded_full().overflow_hidden().flex().items_center()
+                                        v_flex().gap_6().w_full()
+                                            .child(
+                                                h_flex().w_full().h(px(32.0)).rounded_xl().overflow_hidden().border_1().border_color(cx.theme().border.opacity(0.3))
+                                                    .children(cols.iter().map(|(hex, pct)| {
+                                                        let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                                                        let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                                                        let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                                                        div().h_full().bg(gpui::Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 })
+                                                            .w(gpui::relative(if pct.is_nan() { 0.0 } else { pct.clamp(0.0, 1.0) }))
+                                                    }))
+                                            )
+                                            .child(
+                                                div().flex().flex_wrap().gap_4().w_full()
+                                                    .children(cols.into_iter().enumerate().map(|(_i, (hex, pct))| {
+                                                        let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                                                        let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                                                        let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                                                        let pct_display = format!("{:.1}%", pct * 100.0);
+                                                        
+                                                        v_flex().gap_2().w(px(140.0)).p_3().border_1().border_color(cx.theme().border).rounded_lg().bg(cx.theme().secondary)
                                                             .child(
-                                                                div().h_full().bg(gpui::Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 })
-                                                                    .w(gpui::relative(if pct.is_nan() { 0.0 } else { pct.clamp(0.0, 1.0) }))
+                                                                h_flex().gap_3().items_center()
+                                                                    .child(div().w(px(16.0)).h(px(16.0)).rounded_full().bg(gpui::Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 }).border_1().border_color(cx.theme().border.opacity(0.5)))
+                                                                    .child(div().text_sm().font_bold().child(hex))
                                                             )
-                                                    )
-                                                    .child(div().w(px(50.0)).text_sm().text_color(cx.theme().muted_foreground).child(pct_display))
-                                            }))
+                                                            .child(
+                                                                h_flex().justify_between()
+                                                                    .child(div().text_xs().text_color(cx.theme().muted_foreground).child(format!("{},{},{}", r, g, b)))
+                                                                    .child(div().text_xs().font_bold().text_color(cx.theme().primary).child(pct_display))
+                                                            )
+                                                    }))
+                                            )
                                             .into_any_element()
                                     } else {
                                         div().flex_1().flex().items_center().justify_center().text_color(cx.theme().muted_foreground)
@@ -229,6 +245,169 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                     }
                                 )
                                 .into_any_element()
+                        }
+                        WorkspaceView::PaletteEditor => {
+                            if let crate::app::state::ThemeSource::CustomPalette(ref name, ref colors) = current_theme {
+                                let colors_clone = colors.clone();
+                                let selected_idx = view.app.selected_color_idx;
+                                
+                                v_flex().gap_4().size_full().p_6()
+                                    .child(
+                                        h_flex().justify_between().items_center()
+                                            .child(div().text_xl().font_bold().child(format!("Edit Palette: {}", name)))
+                                            .child(
+                                                Button::new("btn_apply_edited_palette").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).label("Apply Theme")
+                                                    .primary()
+                                                    .cursor_pointer()
+                                                    .on_click(cx.listener(|this, _, _, cx| {
+                                                        this.trigger_async_processing(cx, "Applying edited palette...");
+                                                    }))
+                                            )
+                                    )
+                                    .child(div().h_px().w_full().bg(cx.theme().border))
+                                    .child(
+                                        h_flex().gap_6().w_full().flex_1()
+                                            .child(
+                                                div().flex_1().flex().flex_wrap().gap_2().content_start()
+                                                    .children(colors_clone.into_iter().enumerate().map(|(i, rgb)| {
+                                                        let r = rgb[0] as f32 / 255.0;
+                                                        let g = rgb[1] as f32 / 255.0;
+                                                        let b = rgb[2] as f32 / 255.0;
+                                                        let is_selected = selected_idx == Some(i);
+                                                        
+                                                        div().id(("palette_color", i)).w(px(48.0)).h(px(48.0)).rounded_md().border_2()
+                                                            .border_color(if is_selected { cx.theme().primary } else { cx.theme().border })
+                                                            .bg(gpui::Rgba { r, g, b, a: 1.0 })
+                                                            .cursor_pointer()
+                                                            .on_click(cx.listener(move |view, _, _, cx| {
+                                                                view.app.selected_color_idx = Some(i);
+                                                                
+                                                                if let crate::app::state::ThemeSource::CustomPalette(_, ref colors) = view.app.current_theme {
+                                                                    if let Some(c) = colors.get(i) {
+                                                                        let r_slider = cx.new(|_| gpui_component::slider::SliderState::new().min(0.0).max(255.0).step(1.0).default_value(c[0] as f32));
+                                                                        let g_slider = cx.new(|_| gpui_component::slider::SliderState::new().min(0.0).max(255.0).step(1.0).default_value(c[1] as f32));
+                                                                        let b_slider = cx.new(|_| gpui_component::slider::SliderState::new().min(0.0).max(255.0).step(1.0).default_value(c[2] as f32));
+
+                                                                        view.subscriptions.push(cx.subscribe(&r_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| match event {
+                                                                            gpui_component::slider::SliderEvent::Change(val) => {
+                                                                                if let Some(idx) = this.app.selected_color_idx {
+                                                                                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                                                                                        if let Some(c) = colors.get_mut(idx) { c[0] = val.start() as u8; }
+                                                                                    }
+                                                                                }
+                                                                                cx.notify();
+                                                                            }
+                                                                            _ => {}
+                                                                        }));
+                                                                        view.subscriptions.push(cx.subscribe(&g_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| match event {
+                                                                            gpui_component::slider::SliderEvent::Change(val) => {
+                                                                                if let Some(idx) = this.app.selected_color_idx {
+                                                                                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                                                                                        if let Some(c) = colors.get_mut(idx) { c[1] = val.start() as u8; }
+                                                                                    }
+                                                                                }
+                                                                                cx.notify();
+                                                                            }
+                                                                            _ => {}
+                                                                        }));
+                                                                        view.subscriptions.push(cx.subscribe(&b_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| match event {
+                                                                            gpui_component::slider::SliderEvent::Change(val) => {
+                                                                                if let Some(idx) = this.app.selected_color_idx {
+                                                                                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                                                                                        if let Some(c) = colors.get_mut(idx) { c[2] = val.start() as u8; }
+                                                                                    }
+                                                                                }
+                                                                                cx.notify();
+                                                                            }
+                                                                            _ => {}
+                                                                        }));
+
+                                                                        view.palette_r_slider = r_slider;
+                                                                        view.palette_g_slider = g_slider;
+                                                                        view.palette_b_slider = b_slider;
+                                                                    }
+                                                                }
+                                                                cx.notify();
+                                                            }))
+                                                    }))
+                                                    .child(
+                                                        h_flex().id("btn_add_color").w(px(48.0)).h(px(48.0)).rounded_md().border_2().border_color(cx.theme().border).border_dashed()
+                                                            .justify_center().items_center()
+                                                            .child(gpui::svg().path("plus.svg").size_6().text_color(cx.theme().muted_foreground))
+                                                            .cursor_pointer()
+                                                            .on_click(cx.listener(|view, _, _, cx| {
+                                                                if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = view.app.current_theme {
+                                                                    colors.push([128, 128, 128]);
+                                                                    cx.notify();
+                                                                }
+                                                            }))
+                                                    )
+                                            )
+                                            .child(
+                                                if let Some(idx) = selected_idx {
+                                                    if let Some(rgb) = current_theme.as_custom_palette().and_then(|c| c.1.get(idx).copied()) {
+                                                        let hex = format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]);
+                                                        v_flex().w(px(250.0)).gap_4().p_4().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
+                                                            .child(
+                                                                h_flex().justify_between().items_center()
+                                                                    .child(div().text_lg().font_bold().child("Modify Color"))
+                                                                    .child(
+                                                                        div().id("btn_delete_color").w(px(32.0)).h(px(32.0)).rounded_md().flex().justify_center().items_center()
+                                                                            .hover(|this| this.bg(cx.theme().border))
+                                                                            .child(gpui::svg().path("trash.svg").size_4().text_color(gpui::rgb(0xff5555)))
+                                                                            .cursor_pointer()
+                                                                            .on_click(cx.listener(move |view, _, _, cx| {
+                                                                                if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = view.app.current_theme {
+                                                                                    if colors.len() > 1 {
+                                                                                        colors.remove(idx);
+                                                                                        view.app.selected_color_idx = None;
+                                                                                        cx.notify();
+                                                                                    } else {
+                                                                                        view.app.state = crate::app::AppState::Error("Cannot delete the last color.".to_string());
+                                                                                        cx.notify();
+                                                                                    }
+                                                                                }
+                                                                            }))
+                                                                    )
+                                                            )
+                                                            .child(
+                                                                h_flex().gap_3().items_center()
+                                                                    .child(div().w(px(40.0)).h(px(40.0)).rounded_md().bg(gpui::Rgba { r: rgb[0] as f32/255.0, g: rgb[1] as f32/255.0, b: rgb[2] as f32/255.0, a: 1.0 }).border_1().border_color(cx.theme().border))
+                                                                    .child(div().text_base().font_bold().child(hex))
+                                                            )
+                                                            .child(div().h_px().w_full().bg(cx.theme().border))
+                                                            .child(
+                                                                v_flex().gap_1()
+                                                                    .child(h_flex().justify_between().child(div().text_sm().font_bold().text_color(gpui::rgb(0xff5555)).child("Red")).child(div().text_sm().child(format!("{}", rgb[0]))))
+                                                                    .child(gpui_component::slider::Slider::new(&view.palette_r_slider))
+                                                            )
+                                                            .child(
+                                                                v_flex().gap_1()
+                                                                    .child(h_flex().justify_between().child(div().text_sm().font_bold().text_color(gpui::rgb(0x55ff55)).child("Green")).child(div().text_sm().child(format!("{}", rgb[1]))))
+                                                                    .child(gpui_component::slider::Slider::new(&view.palette_g_slider))
+                                                            )
+                                                            .child(
+                                                                v_flex().gap_1()
+                                                                    .child(h_flex().justify_between().child(div().text_sm().font_bold().text_color(gpui::rgb(0x5555ff)).child("Blue")).child(div().text_sm().child(format!("{}", rgb[2]))))
+                                                                    .child(gpui_component::slider::Slider::new(&view.palette_b_slider))
+                                                            )
+                                                            .into_any_element()
+                                                    } else {
+                                                        div().into_any_element()
+                                                    }
+                                                } else {
+                                                    v_flex().w(px(250.0)).p_4().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary).items_center().justify_center()
+                                                        .child(div().text_sm().text_color(cx.theme().muted_foreground).text_center().child("Click a color block to modify it."))
+                                                        .into_any_element()
+                                                }
+                                            )
+                                    )
+                                    .into_any_element()
+                            } else {
+                                v_flex().gap_4().size_full().p_6().items_center().justify_center()
+                                    .child(div().text_lg().text_color(cx.theme().muted_foreground).child("Please select a Custom Palette or extract colors first."))
+                                    .into_any_element()
+                            }
                         }
                         WorkspaceView::Albums => {
                             v_flex().gap_4().size_full()

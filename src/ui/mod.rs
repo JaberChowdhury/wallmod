@@ -19,7 +19,10 @@ pub struct WallmodView {
     pub contrast_slider: Entity<SliderState>,
     pub saturation_slider: Entity<SliderState>,
     pub hue_slider: Entity<SliderState>,
-    _subscriptions: Vec<Subscription>,
+    pub palette_r_slider: Entity<SliderState>,
+    pub palette_g_slider: Entity<SliderState>,
+    pub palette_b_slider: Entity<SliderState>,
+    pub subscriptions: Vec<Subscription>,
 }
 
 impl WallmodView {
@@ -117,6 +120,44 @@ impl WallmodView {
             }
         }));
 
+        let palette_r_slider = cx.new(|_| SliderState::new().min(0.0).max(255.0).step(1.0).default_value(128.0));
+        let palette_g_slider = cx.new(|_| SliderState::new().min(0.0).max(255.0).step(1.0).default_value(128.0));
+        let palette_b_slider = cx.new(|_| SliderState::new().min(0.0).max(255.0).step(1.0).default_value(128.0));
+
+        subscriptions.push(cx.subscribe(&palette_r_slider, |this, _, event: &SliderEvent, cx| match event {
+            SliderEvent::Change(val) => {
+                if let Some(idx) = this.app.selected_color_idx {
+                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                        if let Some(c) = colors.get_mut(idx) { c[0] = val.start() as u8; }
+                    }
+                }
+                cx.notify();
+            }
+            _ => {}
+        }));
+        subscriptions.push(cx.subscribe(&palette_g_slider, |this, _, event: &SliderEvent, cx| match event {
+            SliderEvent::Change(val) => {
+                if let Some(idx) = this.app.selected_color_idx {
+                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                        if let Some(c) = colors.get_mut(idx) { c[1] = val.start() as u8; }
+                    }
+                }
+                cx.notify();
+            }
+            _ => {}
+        }));
+        subscriptions.push(cx.subscribe(&palette_b_slider, |this, _, event: &SliderEvent, cx| match event {
+            SliderEvent::Change(val) => {
+                if let Some(idx) = this.app.selected_color_idx {
+                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                        if let Some(c) = colors.get_mut(idx) { c[2] = val.start() as u8; }
+                    }
+                }
+                cx.notify();
+            }
+            _ => {}
+        }));
+
         Self {
             app: WallmodApp::new(),
             blur_slider,
@@ -124,7 +165,10 @@ impl WallmodView {
             contrast_slider,
             saturation_slider,
             hue_slider,
-            _subscriptions: subscriptions,
+            palette_r_slider,
+            palette_g_slider,
+            palette_b_slider,
+            subscriptions,
         }
     }
 

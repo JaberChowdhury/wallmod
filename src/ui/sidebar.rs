@@ -494,6 +494,52 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                         .child(div().p_3().border_1().border_color(cx.theme().border).rounded_md().bg(cx.theme().secondary).text_xs().child("Tesseract quote and text extraction pipeline is queued in Category H roadmap."))
                         .into_any_element()
                 }
+                SidebarTab::Settings => {
+                    let dither = view.app.dither_enabled;
+                    let level = view.app.hald_level;
+                    v_flex().gap_4().w_full().flex_1().overflow_y_scrollbar()
+                        .child(div().h_px().w_full().bg(cx.theme().border))
+                        .child(div().text_sm().font_bold().child("Application Settings"))
+                        .child(
+                            h_flex().items_center().justify_between()
+                                .child(div().text_sm().child("Enable Dithering"))
+                                .child(Switch::new("sw_dither").disabled(is_loading).checked(dither).cursor_pointer().on_click(cx.listener(|this, val: &bool, _, cx| {
+                                    this.app.dither_enabled = *val;
+                                    cx.notify();
+                                })))
+                        )
+                        .child(
+                            h_flex().items_center().justify_between()
+                                .child(div().text_sm().child("HALD CLUT Level (Quality vs Speed)"))
+                                .child(
+                                    Button::new("btn_hald_level")
+                                        .label(format!("Level {}", level))
+                                        .dropdown_menu({
+                                            let ve = view_entity.clone();
+                                            move |mut menu, window, _| {
+                                                for l in [4, 8, 12, 16] {
+                                                    let ve = ve.clone();
+                                                    menu = menu.item(PopupMenuItem::new(format!("Level {}", l)).on_click(window.listener_for(&ve, move |this, _, _, cx| {
+                                                        this.app.hald_level = l;
+                                                        cx.notify();
+                                                    })));
+                                                }
+                                                menu
+                                            }
+                                        })
+                                )
+                        )
+                        .child(
+                            Button::new("btn_clear_cache").disabled(is_loading).label("Clear Temp Files")
+                                .child(gpui::svg().path("trash.svg").size_4().text_color(gpui::rgb(0xff5555)))
+                                .w_full()
+                                .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                    this.app.state = crate::app::AppState::Notice("Cache cleared".to_string());
+                                    cx.notify();
+                                }))
+                        )
+                        .into_any_element()
+                }
             }
         )
 }

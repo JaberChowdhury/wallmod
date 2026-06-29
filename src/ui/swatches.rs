@@ -2,7 +2,7 @@
 
 use crate::app::ThemeSource;
 use gpui::*;
-use gpui_component::{h_flex, v_flex, ActiveTheme, StyledExt};
+use gpui_component::{h_flex, v_flex, ActiveTheme, StyledExt, button::Button, Sizable};
 
 /// Renders a color swatch card representing the top shades of the selected theme palette.
 pub fn render_swatches(
@@ -48,6 +48,30 @@ pub fn render_swatches(
                 .border_1()
                 .border_color(cx.theme().border.opacity(0.3))
         })))
+        .child(
+            Button::new("btn_edit_palette")
+                .label("Edit Palette...")
+                .child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary))
+                .w_full()
+                .small()
+                .cursor_pointer()
+                .on_click(cx.listener(|view, _, _, cx| {
+                    if let ThemeSource::CustomPalette(_, _) = view.app.current_theme {
+                        // Already a custom palette
+                    } else {
+                        // Convert to custom palette
+                        let shades = view.app.current_theme.get_shades();
+                        view.app.current_theme = ThemeSource::CustomPalette(
+                            format!("Custom {}", view.app.current_theme.display_name()),
+                            shades,
+                        );
+                        view.app.selected_preset = None;
+                    }
+                    view.app.workspace_view = crate::app::WorkspaceView::PaletteEditor;
+                    view.app.selected_color_idx = None;
+                    cx.notify();
+                }))
+        )
 }
 
 /// Helper to convert 8-bit RGB to GPUI Hsla color.

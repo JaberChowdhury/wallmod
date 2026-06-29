@@ -83,6 +83,7 @@ pub enum WorkspaceView {
     SplitDiff,
     Telemetry,
     ExtractColor,
+    PaletteEditor,
     Albums,
 }
 
@@ -92,6 +93,7 @@ impl WorkspaceView {
         WorkspaceView::SplitDiff,
         WorkspaceView::Telemetry,
         WorkspaceView::ExtractColor,
+        WorkspaceView::PaletteEditor,
         WorkspaceView::Albums,
     ];
 }
@@ -103,6 +105,7 @@ impl std::fmt::Display for WorkspaceView {
             WorkspaceView::SplitDiff => write!(f, "Split Diff"),
             WorkspaceView::Telemetry => write!(f, "Dashboard Info"),
             WorkspaceView::ExtractColor => write!(f, "Extract Color"),
+            WorkspaceView::PaletteEditor => write!(f, "Edit Palette"),
             WorkspaceView::Albums => write!(f, "Album Gallery"),
         }
     }
@@ -132,6 +135,13 @@ impl ThemeSource {
                 path.file_name().unwrap_or_default().to_string_lossy().to_string()
             },
             ThemeSource::CustomPalette(name, _) => format!("Custom: {}", name),
+        }
+    }
+
+    pub fn as_custom_palette(&self) -> Option<(String, Vec<[u8; 3]>)> {
+        match self {
+            ThemeSource::CustomPalette(name, colors) => Some((name.clone(), colors.clone())),
+            _ => None,
         }
     }
 
@@ -176,6 +186,7 @@ pub enum SidebarTab {
     DesktopEngine,
     ExportSync,
     ToolsExt,
+    Settings,
 }
 
 impl SidebarTab {
@@ -185,6 +196,7 @@ impl SidebarTab {
         SidebarTab::DesktopEngine,
         SidebarTab::ExportSync,
         SidebarTab::ToolsExt,
+        SidebarTab::Settings,
     ];
 }
 
@@ -196,6 +208,7 @@ impl std::fmt::Display for SidebarTab {
             SidebarTab::DesktopEngine => write!(f, "Wallpaper Engine"),
             SidebarTab::ExportSync => write!(f, "Export & Sync"),
             SidebarTab::ToolsExt => write!(f, "AI & Tools"),
+            SidebarTab::Settings => write!(f, "Settings"),
         }
     }
 }

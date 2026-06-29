@@ -266,6 +266,21 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             this.app.option_group_tab = 0;
                             cx.notify();
                         })),
-                ),
+                )
+                .child(
+                    Button::new("cat_settings")
+                        .disabled(is_loading)
+                        .label("Settings")
+                        .child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary))
+                        .small()
+                        .cursor_pointer()
+                        .selected(sidebar_tab == SidebarTab::Settings)
+                        .when(sidebar_tab == SidebarTab::Settings, |this| this.primary())
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.app.sidebar_tab = SidebarTab::Settings;
+                            this.app.option_group_tab = 0;
+                            cx.notify();
+                        })),
+                )
         )
 }
