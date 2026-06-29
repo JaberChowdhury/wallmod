@@ -294,7 +294,14 @@ impl WallmodView {
         let theme_chain = self.app.theme_chain.clone();
         let chaining_mode = self.app.chaining_mode;
         let global_bit_depth = self.app.global_bit_depth;
-        let base_image_dyn = self.app.base_image_dyn.clone().unwrap();
+        let base_image_dyn = match self.app.base_image_dyn.clone() {
+            Some(img) => img,
+            None => {
+                self.app.state = crate::app::AppState::Idle;
+                cx.notify();
+                return;
+            }
+        };
         let algorithm = self.app.algorithm;
         let preserve_luma = self.app.preserve_luma;
         let hald_level = self.app.hald_level;

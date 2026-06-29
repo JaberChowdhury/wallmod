@@ -212,7 +212,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 .child(
                     Button::new("cat_cg")
                         .child(
-                            gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary),
+                            gpui::svg().path("palette.svg").size_4().text_color(
+                                if sidebar_tab == SidebarTab::ColorGrading {
+                                    cx.theme().secondary
+                                } else {
+                                    cx.theme().primary
+                                }
+                            ),
                         )
                         .child("Color Grading")
                         .small()
@@ -231,7 +237,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             gpui::svg()
                                 .path("settings.svg")
                                 .size_4()
-                                .text_color(cx.theme().primary),
+                                .text_color(
+                                    if sidebar_tab == SidebarTab::PhotoshopEffects {
+                                        cx.theme().secondary
+                                    } else {
+                                        cx.theme().primary
+                                    }
+                                ),
                         )
                         .child("Adjust & Effects")
                         .small()
@@ -250,7 +262,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             gpui::svg()
                                 .path("panel-left.svg")
                                 .size_4()
-                                .text_color(cx.theme().primary),
+                                .text_color(
+                                    if sidebar_tab == SidebarTab::DesktopEngine {
+                                        cx.theme().secondary
+                                    } else {
+                                        cx.theme().primary
+                                    }
+                                ),
                         )
                         .child("Wallpaper Engine")
                         .small()
@@ -266,7 +284,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 .child(
                     Button::new("cat_exp")
                         .child(
-                            gpui::svg().path("replace.svg").size_4().text_color(cx.theme().primary),
+                            gpui::svg().path("replace.svg").size_4().text_color(
+                                if sidebar_tab == SidebarTab::ExportSync {
+                                    cx.theme().secondary
+                                } else {
+                                    cx.theme().primary
+                                }
+                            ),
                         )
                         .child("Export & Sync")
                         .small()
@@ -282,7 +306,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 .child(
                     Button::new("cat_ai")
                         .child(
-                            gpui::svg().path("search.svg").size_4().text_color(cx.theme().primary),
+                            gpui::svg().path("search.svg").size_4().text_color(
+                                if sidebar_tab == SidebarTab::ToolsExt {
+                                    cx.theme().secondary
+                                } else {
+                                    cx.theme().primary
+                                }
+                            ),
                         )
                         .child("AI & Tools")
                         .small()
@@ -301,7 +331,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                             gpui::svg()
                                 .path("settings.svg")
                                 .size_4()
-                                .text_color(cx.theme().primary),
+                                .text_color(
+                                    if sidebar_tab == SidebarTab::Settings {
+                                        cx.theme().secondary
+                                    } else {
+                                        cx.theme().primary
+                                    }
+                                ),
                         )
                         .child("Settings")
                         .small()
@@ -317,7 +353,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 .child(
                     Button::new("cat_favs")
                         .child(
-                            gpui::svg().path("heart.svg").size_4().text_color(cx.theme().primary),
+                            gpui::svg().path("heart.svg").size_4().text_color(
+                                if sidebar_tab == SidebarTab::FavoriteColors {
+                                    cx.theme().secondary
+                                } else {
+                                    cx.theme().primary
+                                }
+                            ),
                         )
                         .child("Favorite Colors")
                         .small()
@@ -332,9 +374,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 )
                 .child(
                     Button::new("btn_toggle_float_stats")
-                        .child(gpui::svg().path("monitor.svg").size_4().text_color(
+                        .child(gpui::svg().path("duck.svg").size_4().text_color(
                             if view.app.show_floating_stats {
-                                gpui::rgb(0x22c55e).into()
+                                cx.theme().secondary
                             } else {
                                 cx.theme().primary
                             },

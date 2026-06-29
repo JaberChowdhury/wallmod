@@ -5,6 +5,7 @@ use crate::app::{
 };
 use crate::ui::swatches::render_swatches;
 use crate::ui::WallmodView;
+use gpui::prelude::FluentBuilder;
 use gpui::*;
 use gpui_component::{
     button::*,
@@ -64,8 +65,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_cg_0").child(gpui::svg().path("folder-open.svg").size_4().text_color(cx.theme().primary)).child("Sources & Presets").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_cg_1").child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).child("Remap Engine").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_cg_0").child(gpui::svg().path("folder-open.svg").size_4().text_color(if sub_tab == 0 { cx.theme().secondary } else { cx.theme().primary })).child("Sources & Presets").small().flex_1().selected(sub_tab == 0).when(sub_tab == 0, |this| this.primary()).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_cg_1").child(gpui::svg().path("settings.svg").size_4().text_color(if sub_tab == 1 { cx.theme().secondary } else { cx.theme().primary })).child("Remap Engine").small().flex_1().selected(sub_tab == 1).when(sub_tab == 1, |this| this.primary()).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
@@ -257,55 +258,35 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_ps_0").child(gpui::svg().path("settings.svg").size_4().text_color(cx.theme().primary)).child("Basic Adjust").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_ps_1").child(gpui::svg().path("palette.svg").size_4().text_color(cx.theme().primary)).child("Color & Blur").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_ps_0").child(gpui::svg().path("settings.svg").size_4().text_color(if sub_tab == 0 { cx.theme().secondary } else { cx.theme().primary })).child("Basic Adjust").small().flex_1().selected(sub_tab == 0).when(sub_tab == 0, |this| this.primary()).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_ps_1").child(gpui::svg().path("palette.svg").size_4().text_color(if sub_tab == 1 { cx.theme().secondary } else { cx.theme().primary })).child("Color & Blur").small().flex_1().selected(sub_tab == 1).when(sub_tab == 1, |this| this.primary()).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
                                 v_flex().gap_3().w_full()
                                     .child(div().text_sm().font_bold().child("Brightness & Contrast"))
                                     .child(
-                                        h_flex().items_center().justify_between()
+                                        v_flex().gap_2().pt_1()
                                             .child(div().text_sm().child(format!("Brightness: {}", ps.brightness)))
-                                            .child(
-                                                h_flex().gap_1()
-                                                    .child(Button::new("ps_b_m20").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).child("-20").small().selected(ps.brightness == -20).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = -20; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
-                                                    .child(Button::new("ps_b_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("0").small().selected(ps.brightness == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 0; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
-                                                    .child(Button::new("ps_b_p20").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("+20").small().selected(ps.brightness == 20).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.brightness = 20; this.trigger_async_processing(cx, "Adjusting brightness..."); })))
-                                            )
+                                            .child(Slider::new(&view.brightness_slider).disabled(is_loading))
                                     )
                                     .child(
-                                        h_flex().items_center().justify_between()
+                                        v_flex().gap_2().pt_1()
                                             .child(div().text_sm().child(format!("Contrast: {:.0}", ps.contrast)))
-                                            .child(
-                                                h_flex().gap_1()
-                                                    .child(Button::new("ps_c_m20").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).child("-20").small().selected(ps.contrast == -20.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = -20.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
-                                                    .child(Button::new("ps_c_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("0").small().selected(ps.contrast == 0.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 0.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
-                                                    .child(Button::new("ps_c_p20").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("+20").small().selected(ps.contrast == 20.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.contrast = 20.0; this.trigger_async_processing(cx, "Adjusting contrast..."); })))
-                                            )
+                                            .child(Slider::new(&view.contrast_slider).disabled(is_loading))
                                     )
                             } else {
                                 v_flex().gap_3().w_full()
                                     .child(div().text_sm().font_bold().child("Color & Effects"))
                                     .child(
-                                        h_flex().items_center().justify_between()
-                                            .child(div().text_sm().child(format!("Saturation: {:.1}", ps.saturation)))
-                                            .child(
-                                                h_flex().gap_1()
-                                                    .child(Button::new("ps_s_m1").disabled(is_loading).child(gpui::svg().path("minus.svg").size_4().text_color(cx.theme().primary)).child("Desat").small().selected(ps.saturation == -1.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = -1.0; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
-                                                    .child(Button::new("ps_s_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("Norm").small().selected(ps.saturation == 0.0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.0; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
-                                                    .child(Button::new("ps_s_p05").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("Vivid").small().selected(ps.saturation == 0.5).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.saturation = 0.5; this.trigger_async_processing(cx, "Adjusting saturation..."); })))
-                                            )
+                                        v_flex().gap_2().pt_1()
+                                            .child(div().text_sm().child(format!("Saturation: {:.2}", ps.saturation)))
+                                            .child(Slider::new(&view.saturation_slider).disabled(is_loading))
                                     )
                                     .child(
-                                        h_flex().items_center().justify_between()
+                                        v_flex().gap_2().pt_1()
                                             .child(div().text_sm().child(format!("Hue Shift: {}°", ps.hue)))
-                                            .child(
-                                                h_flex().gap_1()
-                                                    .child(Button::new("ps_h_0").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).child("0°").small().selected(ps.hue == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 0; this.trigger_async_processing(cx, "Shifting hue..."); })))
-                                                    .child(Button::new("ps_h_90").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("90°").small().selected(ps.hue == 90).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 90; this.trigger_async_processing(cx, "Shifting hue..."); })))
-                                                    .child(Button::new("ps_h_180").disabled(is_loading).child(gpui::svg().path("plus.svg").size_4().text_color(cx.theme().primary)).child("180°").small().selected(ps.hue == 180).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.photoshop_params.hue = 180; this.trigger_async_processing(cx, "Shifting hue..."); })))
-                                            )
+                                            .child(Slider::new(&view.hue_slider).disabled(is_loading))
                                     )
                                     .child(
                                         v_flex().gap_2().pt_1()
@@ -357,8 +338,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
                             h_flex().gap_1().w_full().p_1().bg(cx.theme().secondary).rounded_md()
-                                .child(Button::new("sub_eng_0").child(gpui::svg().path("panel-left.svg").size_4().text_color(cx.theme().primary)).child("Backend & Display").small().flex_1().selected(sub_tab == 0).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
-                                .child(Button::new("sub_eng_1").child(gpui::svg().path("calendar.svg").size_4().text_color(cx.theme().primary)).child("Transitions & Daemon").small().flex_1().selected(sub_tab == 1).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
+                                .child(Button::new("sub_eng_0").child(gpui::svg().path("panel-left.svg").size_4().text_color(if sub_tab == 0 { cx.theme().secondary } else { cx.theme().primary })).child("Backend & Display").small().flex_1().selected(sub_tab == 0).when(sub_tab == 0, |this| this.primary()).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 0; cx.notify(); })))
+                                .child(Button::new("sub_eng_1").child(gpui::svg().path("calendar.svg").size_4().text_color(if sub_tab == 1 { cx.theme().secondary } else { cx.theme().primary })).child("Transitions & Daemon").small().flex_1().selected(sub_tab == 1).when(sub_tab == 1, |this| this.primary()).cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.option_group_tab = 1; cx.notify(); })))
                         )
                         .child(
                             if sub_tab == 0 {
