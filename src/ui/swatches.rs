@@ -67,6 +67,44 @@ pub fn render_swatches(
                 .into_any_element()
         })
         .child(
+            h_flex()
+                .gap_1()
+                .w_full()
+                .child(
+                    Button::new("btn_copy_raw")
+                        .child("Copy Raw")
+                        .small()
+                        .outline()
+                        .flex_1()
+                        .cursor_pointer()
+                        .on_click(cx.listener(|view, _, _, cx| {
+                            view.copy_palette_to_clipboard(cx, "raw");
+                        })),
+                )
+                .child(
+                    Button::new("btn_copy_json")
+                        .child("Copy JSON")
+                        .small()
+                        .outline()
+                        .flex_1()
+                        .cursor_pointer()
+                        .on_click(cx.listener(|view, _, _, cx| {
+                            view.copy_palette_to_clipboard(cx, "json");
+                        })),
+                )
+                .child(
+                    Button::new("btn_copy_obj")
+                        .child("Copy Object")
+                        .small()
+                        .outline()
+                        .flex_1()
+                        .cursor_pointer()
+                        .on_click(cx.listener(|view, _, _, cx| {
+                            view.copy_palette_to_clipboard(cx, "object");
+                        })),
+                ),
+        )
+        .child(
             Button::new("btn_edit_palette")
                 .child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary))
                 .child("Edit Palette...")

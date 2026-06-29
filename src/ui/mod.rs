@@ -215,6 +215,27 @@ impl WallmodView {
         }
     }
 
+    pub fn copy_palette_to_clipboard(&mut self, cx: &mut Context<Self>, format: &str) {
+        let shades = self.app.current_theme.get_shades();
+        if shades.is_empty() {
+            self.app.state = crate::app::AppState::Notice("No palette shades available to copy.".to_string());
+            cx.notify();
+            return;
+        }
+        let hex_shades: Vec<String> = shades.iter().map(|rgb| format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2])).collect();
+        let formatted = match format {
+            "json" => format!("[\n  {}\n]", hex_shades.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",\n  ")),
+            "object" => {
+                let entries: Vec<String> = hex_shades.iter().enumerate().map(|(i, s)| format!("  \"color_{}\": \"{}\"", i + 1, s)).collect();
+                format!("{{\n{}\n}}", entries.join(",\n"))
+            }
+            _ => hex_shades.join(", "),
+        };
+        cx.write_to_clipboard(gpui::ClipboardItem::new_string(formatted.clone()));
+        self.app.state = crate::app::AppState::Notice(format!("Copied {} format to clipboard!", format.to_uppercase()));
+        cx.notify();
+    }
+
     pub fn trigger_async_processing(&mut self, cx: &mut Context<Self>, msg: &str) {
         self.app.state = crate::app::AppState::Loading(0.5, msg.to_string());
         cx.notify();
@@ -323,9 +344,6 @@ fn render_floating_stats(
     } else {
         app.sys_cpu_threads.iter().sum::<f32>() / app.sys_cpu_threads.len() as f32
     };
-    let any_high = app.sys_ram_percent > 80.0
-        || avg_cpu > 80.0
-        || app.sys_cpu_threads.iter().any(|&t| t > 80.0);
 
     let mut items = Vec::new();
     if app.float_show_fps {
@@ -346,11 +364,6 @@ fn render_floating_stats(
         );
     }
     if app.float_show_ram {
-        let ram_col = if app.sys_ram_percent > 80.0 {
-            gpui::rgb(0xffffff).into()
-        } else {
-            cx.theme().primary
-        };
         items.push(
             h_flex()
                 .justify_between()
@@ -361,20 +374,13 @@ fn render_floating_stats(
                     div()
                         .text_xs()
                         .font_bold()
-                        .text_color(ram_col)
+                        .text_color(cx.theme().primary)
                         .child(format!("{:.1}%", app.sys_ram_percent)),
                 )
                 .into_any_element(),
         );
     }
     if app.float_show_cpu {
-        let color = if avg_cpu > 80.0 {
-            gpui::rgb(0xffffff)
-        } else if avg_cpu > 50.0 {
-            gpui::rgb(0xf59e0b)
-        } else {
-            gpui::rgb(0x22c55e)
-        };
         items.push(
             h_flex()
                 .justify_between()
@@ -382,7 +388,7 @@ fn render_floating_stats(
                 .items_center()
                 .child(div().text_xs().text_color(cx.theme().muted_foreground).child("CPU (Avg)"))
                 .child(
-                    div().text_xs().font_bold().text_color(color).child(format!("{:.0}%", avg_cpu)),
+                    div().text_xs().font_bold().text_color(cx.theme().primary).child(format!("{:.0}%", avg_cpu)),
                 )
                 .into_any_element(),
         );
@@ -397,29 +403,6 @@ fn render_floating_stats(
         );
     }
 
-    let bg_color = if any_high {
-        gpui::Rgba {
-            r: 0.85,
-            g: 0.15,
-            b: 0.15,
-            a: 0.65,
-        }
-        .into()
-    } else {
-        cx.theme().secondary.opacity(0.60)
-    };
-    let border_color = if any_high {
-        gpui::Rgba {
-            r: 0.95,
-            g: 0.30,
-            b: 0.30,
-            a: 0.80,
-        }
-        .into()
-    } else {
-        cx.theme().border.opacity(0.4)
-    };
-
     div()
         .absolute()
         .bottom_6()
@@ -430,9 +413,9 @@ fn render_floating_stats(
         .flex_col()
         .min_w(px(130.0))
         .rounded_xl()
-        .bg(bg_color)
+        .bg(cx.theme().secondary.opacity(0.80))
         .border_1()
-        .border_color(border_color)
+        .border_color(cx.theme().border.opacity(0.4))
         .shadow_2xl()
         .child(
             h_flex()

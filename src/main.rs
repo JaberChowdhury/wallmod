@@ -52,6 +52,7 @@ fn main() {
 
     gpui_platform::application().with_assets(assets).run(move |cx| {
         gpui_component::init(cx);
+        gpui_component::Theme::change(gpui_component::ThemeMode::Dark, None, cx);
 
         let font_bytes = include_bytes!("../fonts/Iceberg-Regular.ttf");
         let _ = cx.text_system().add_fonts(vec![Cow::Borrowed(font_bytes)]);

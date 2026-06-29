@@ -263,15 +263,21 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
 
                                 v_flex().gap_4().size_full().p_6()
                                     .child(
-                                        h_flex().justify_between().items_center()
+                                        h_flex().justify_between().items_center().flex_wrap().gap_2()
                                             .child(div().text_xl().font_bold().child(format!("Edit Palette: {}", name)))
                                             .child(
-                                                Button::new("btn_apply_edited_palette").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).child("Apply Theme")
-                                                    .primary()
-                                                    .cursor_pointer()
-                                                    .on_click(cx.listener(|this, _, _, cx| {
-                                                        this.trigger_async_processing(cx, "Applying edited palette...");
-                                                    }))
+                                                h_flex().gap_2()
+                                                    .child(Button::new("pe_copy_raw").child("Copy Raw").small().outline().cursor_pointer().on_click(cx.listener(|view, _, _, cx| { view.copy_palette_to_clipboard(cx, "raw"); })))
+                                                    .child(Button::new("pe_copy_json").child("Copy JSON").small().outline().cursor_pointer().on_click(cx.listener(|view, _, _, cx| { view.copy_palette_to_clipboard(cx, "json"); })))
+                                                    .child(Button::new("pe_copy_obj").child("Copy Object").small().outline().cursor_pointer().on_click(cx.listener(|view, _, _, cx| { view.copy_palette_to_clipboard(cx, "object"); })))
+                                                    .child(
+                                                        Button::new("btn_apply_edited_palette").disabled(is_loading).child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).child("Apply Theme")
+                                                            .primary()
+                                                            .cursor_pointer()
+                                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                                this.trigger_async_processing(cx, "Applying edited palette...");
+                                                            }))
+                                                    )
                                             )
                                     )
                                     .child(div().h_px().w_full().bg(cx.theme().border))
