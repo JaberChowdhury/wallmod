@@ -2,9 +2,22 @@
 
 use std::path::PathBuf;
 
-/// Retrieves raw RGB shades for a preset string.
+fn normalize_palette_to_16(colors: Vec<[u8; 3]>) -> Vec<[u8; 3]> {
+    if colors.is_empty() {
+        return vec![[128, 128, 128]; 16];
+    }
+    if colors.len() == 16 {
+        return colors;
+    }
+    (0..16).map(|i| {
+        let idx = (i * colors.len()) / 16;
+        colors[idx.min(colors.len() - 1)]
+    }).collect()
+}
+
+/// Retrieves raw RGB shades for a preset string, ensuring exactly 16 standard Base16 colors.
 pub fn get_preset_shades(name: &str) -> Vec<[u8; 3]> {
-    match name {
+    let raw = match name {
         "Catppuccin Mocha" => lutgen_palettes::Palette::CatppuccinMocha.get().to_vec(),
         "Catppuccin Latte" => vec![[220, 138, 120], [221, 120, 120], [234, 118, 203], [136, 57, 239], [30, 102, 245]],
         "Gruvbox Dark" => lutgen_palettes::Palette::GruvboxDark.get().to_vec(),
@@ -25,7 +38,8 @@ pub fn get_preset_shades(name: &str) -> Vec<[u8; 3]> {
         "Vintage Sepia" => vec![[43, 29, 20], [112, 66, 20], [230, 194, 143]],
         "Retro 4-Color" => vec![[15, 56, 15], [48, 98, 48], [139, 172, 15], [155, 188, 15]],
         _ => vec![[137, 180, 250], [243, 139, 168], [166, 227, 161], [249, 226, 175]],
-    }
+    };
+    normalize_palette_to_16(raw)
 }
 
 /// Extracts representative RGB shades from custom .cube or .png LUT files.

@@ -12,7 +12,7 @@ This checklist tracks the status of all unified features collected across our so
 
 ## Category B: Color Grading & Palette Engine (`lutgen-rs`)
 
-- [x] **Preset Palette Catalog**: Instant selection from curated palettes (Catppuccin, Nord, Gruvbox, Tokyo Night, Synthwave, Cyberpunk, Vintage Sepia, Retro 4-Color, etc.).
+- [x] **Preset Palette Catalog**: Instant selection from curated palettes (Catppuccin, Nord, Gruvbox Dark, Tokyo Night, Synthwave, Cyberpunk, Vintage Sepia, Retro 4-Color, etc.) normalized to exactly 16 standard shades.
 - [x] **Custom Hex Palette Builder**: Real-time hex string input (`#89b4fa, #f38ba8`) converted to RGB triplets. Note: Core iced library does not provide a native visual color picker, but the text box enables precise theme syncing.
 - [x] **Multi-Algorithm Color Interpolation**: Switchable Gaussian, Shepard RBF, and Nearest Neighbor remapping algorithms.
 - [x] **Luminance / Luma Preservation**: Boolean toggle preventing crushed shadows or blown highlights during color shift.
@@ -23,7 +23,8 @@ This checklist tracks the status of all unified features collected across our so
 ## Category C: Telemetry, Inspection & Analytics (`imagineer`)
 
 - [x] **Top Bar Tab Navigation**: Relocated view switching from sidebar dropdown into top-level tabs above workspace preview.
-- [x] **Interactive Split-Screen Diff Slider**: Mouse-controlled before/after visual inspection overlay.
+- [x] **Interactive Split-Screen Diff Slider**: Mouse-controlled before/after visual inspection overlay with interactive percentage buttons (`10%`, `30%`, `50%`, `70%`, `90%`).
+- [x] **Animated Loading Dot Overlay**: Stylized top-bar pulsating spinner indicator active during asynchronous image decoding and heavy color grading pipelines.
 - [x] **Deep Image Metadata Inspector**: Readouts of dimensions, aspect ratio, filename, and processing status.
 - [x] **WCAG Accessibility Contrast Auditing**: Live computation of legibility contrast ratios against white/black labels.
 - [x] **Live Processing Preview**: Continuous preview rendering while asynchronous theme calculation runs in background.

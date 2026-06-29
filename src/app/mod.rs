@@ -55,6 +55,7 @@ pub struct WallmodApp {
     pub night_theme: String,
     pub photoshop_params: crate::modules::photoshop::PhotoshopParams,
     pub option_group_tab: usize,
+    pub split_diff_ratio: f32,
 }
 
 impl Default for WallmodApp {
@@ -106,6 +107,7 @@ impl WallmodApp {
             night_theme: "Tokyo Night".to_string(),
             photoshop_params: crate::modules::photoshop::PhotoshopParams::default(),
             option_group_tab: 0,
+            split_diff_ratio: 0.5,
         }
     }
 

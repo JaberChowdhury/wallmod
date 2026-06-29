@@ -1,15 +1,18 @@
 //! Categorized left sidebar navigation component.
 
 use crate::app::{
-    RemapAlgorithm, SidebarTab, WallpaperBackend,
-    PRESET_NAMES, SWWW_TRANSITIONS, TARGET_DISPLAYS,
+    RemapAlgorithm, SidebarTab, WallpaperBackend, PRESET_NAMES, SWWW_TRANSITIONS, TARGET_DISPLAYS,
 };
-use crate::ui::WallmodView;
 use crate::ui::swatches::render_swatches;
+use crate::ui::WallmodView;
 use gpui::*;
 use gpui_component::{
-    button::*, switch::*, scroll::ScrollableElement, menu::{DropdownMenu as _, PopupMenuItem},
-    v_flex, h_flex, ActiveTheme, IconName, Sizable, Selectable, StyledExt,
+    button::*,
+    h_flex,
+    menu::{DropdownMenu as _, PopupMenuItem},
+    scroll::ScrollableElement,
+    switch::*,
+    v_flex, ActiveTheme, IconName, Selectable, Sizable, StyledExt,
 };
 use std::path::PathBuf;
 
@@ -120,11 +123,22 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                             }))
                                                         );
                                                     }
-                                                    menu
-                                                }
-                                            })
-                                    )
-                            } else {
+                                                                    menu
+                                                                }
+                                                            })
+                                                    )
+                                                    .child(
+                                                        Button::new("btn_apply_theme_main")
+                                                            .label("Apply Theme & Process")
+                                                            .icon(IconName::Check)
+                                                            .primary()
+                                                            .w_full()
+                                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                                let _ = this.app.run_processing();
+                                                                cx.notify();
+                                                            }))
+                                                    )
+                                            } else {
                                 v_flex().gap_3().w_full()
                                     .child(div().text_sm().font_bold().child("Remap Algorithm"))
                                     .child(
