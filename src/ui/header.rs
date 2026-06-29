@@ -17,7 +17,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
     let is_loading = matches!(view.app.state, crate::app::AppState::Loading(_, _));
     let status_str = match &view.app.state {
         crate::app::AppState::Idle => "Ready".to_string(),
-        crate::app::AppState::Loading(p, s) => format!("{} ({:.0}%)", s, p * 100.0),
+        crate::app::AppState::Loading(_, s) => s.clone(),
         crate::app::AppState::PreviewReady(_) => "Preview Updated".to_string(),
         crate::app::AppState::Notice(s) => s.clone(),
         crate::app::AppState::Error(e) => format!("Error: {}", e),
@@ -67,7 +67,23 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                         .text_xs()
                                         .text_color(cx.theme().muted_foreground)
                                         .child(status_str),
-                                ),
+                                )
+                                .when(is_loading, |this| {
+                                    let p = if let crate::app::AppState::Loading(p, _) =
+                                        &view.app.state
+                                    {
+                                        *p
+                                    } else {
+                                        0.0
+                                    };
+                                    this.child(
+                                        div().w(px(100.0)).flex().items_center().child(
+                                            gpui_component::progress::Progress::new("hdr_prog")
+                                                .value(p * 100.0)
+                                                .loading(true),
+                                        ),
+                                    )
+                                }),
                         )
                         .child(
                             Button::new("btn_dark_toggle")
@@ -294,6 +310,22 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .when(sidebar_tab == SidebarTab::Settings, |this| this.primary())
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::Settings;
+                            this.app.option_group_tab = 0;
+                            cx.notify();
+                        })),
+                )
+                .child(
+                    Button::new("cat_favs")
+                        .child(
+                            gpui::svg().path("heart.svg").size_4().text_color(cx.theme().primary),
+                        )
+                        .child("Favorite Colors")
+                        .small()
+                        .cursor_pointer()
+                        .selected(sidebar_tab == SidebarTab::FavoriteColors)
+                        .when(sidebar_tab == SidebarTab::FavoriteColors, |this| this.primary())
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.app.sidebar_tab = SidebarTab::FavoriteColors;
                             this.app.option_group_tab = 0;
                             cx.notify();
                         })),

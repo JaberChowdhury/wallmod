@@ -22,6 +22,9 @@ By uniting the capabilities of `wallrust`, `lutgen-rs`, and `imagineer` into a s
   - **Hue Rotation**: Shift color angles across the spectrum (`0°`, `90°`, `180°`).
 
 ### 🖼️ Advanced Image Processing & Effects
+- **Node-Based Visual Pipeline**: Chain multiple effects (Theme, Blur, Color Adjust, Pixel Sort, Dither) sequentially using an interactive node graph pipeline interface.
+- **Retro Effects**: Apply 8-bit (VGA Posterized) or 16-bit (High Color) bit-depth reduction algorithms that perfectly respect active color palettes.
+- **Tailwind-like Color Extraction Analytics**: Generates full 11-shade color scales (50 to 950) from dominant extracted k-means colors.
 - **Content-Aware Scaling (Seam Carving)**: Resize images without stretching subjects using Sobel gradient energy calculation and dynamic programming path removal.
 - **Algorithmic Dithering**: Apply Floyd-Steinberg error diffusion for retro aesthetics and banding reduction.
 - **Non-blocking Blur**: High-quality asynchronous Gaussian blurs processed via multi-threaded Rayon worker pools.
@@ -36,6 +39,7 @@ By uniting the capabilities of `wallrust`, `lutgen-rs`, and `imagineer` into a s
 - **Wayland Hardware Acceleration**: Control `swww` transition animations (Wipe, Wave, Grow, Outer, Random) and target specific monitors (`DP-1`, `HDMI-A-1`, `eDP-1`).
 - **Time-of-Day Automated Scheduler**: A background daemon that shifts your wallpaper between day/night themes based on your system clock.
 - **Terminal Synchronization**: One-click export and syncing of generated color palettes to Alacritty (`~/.config/alacritty`) and Kitty (`~/.config/kitty`).
+- **App Icon Exporter**: Automatically generates and applies fully themed system and desktop GTK icons (Linux Ricer Edition) directly into `~/.icons/wallmod-theme`.
 
 ---
 

@@ -30,7 +30,7 @@ pub async fn set_wallpaper_async(
                 swww_args.push("--outputs");
                 swww_args.push(&display);
             }
-            Command::new("swww").args(&swww_args).status().map_or(false, |s| s.success())
+            Command::new("swww").args(&swww_args).status().is_ok_and(|s| s.success())
         };
 
         let run_swaybg = || {
@@ -38,21 +38,21 @@ pub async fn set_wallpaper_async(
             Command::new("swaymsg")
                 .args(["output", target, "bg", &path_str, "fill"])
                 .status()
-                .map_or(false, |s| s.success())
+                .is_ok_and(|s| s.success())
         };
 
         let run_feh = || {
             Command::new("feh")
                 .args(["--bg-fill", &path_str])
                 .status()
-                .map_or(false, |s| s.success())
+                .is_ok_and(|s| s.success())
         };
 
         let run_gsettings = || {
             if Command::new("gsettings")
                 .args(["set", "org.gnome.desktop.background", "picture-uri", &format!("file://{}", path_str)])
                 .status()
-                .map_or(false, |s| s.success())
+                .is_ok_and(|s| s.success())
             {
                 let _ = Command::new("gsettings")
                     .args(["set", "org.gnome.desktop.background", "picture-uri-dark", &format!("file://{}", path_str)])
@@ -113,7 +113,7 @@ pub async fn set_wallpaper_async(
         if Command::new("qdbus")
             .args(["org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell.evaluateScript", &kde_script])
             .status()
-            .map_or(false, |s| s.success())
+            .is_ok_and(|s| s.success())
         {
             return Ok(path.clone());
         }

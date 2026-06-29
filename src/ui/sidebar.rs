@@ -15,7 +15,6 @@ use gpui_component::{
     switch::*,
     v_flex, ActiveTheme, Disableable, Selectable, Sizable, StyledExt,
 };
-use std::path::PathBuf;
 
 /// Renders the active category sidebar controls cleanly separated without crowding.
 pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> impl IntoElement {
@@ -60,6 +59,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
         .child(div().h_px().w_full().bg(cx.theme().border))
         .child(
             match sidebar_tab {
+                SidebarTab::FavoriteColors => { div().child("Favorite Colors").into_any_element() },
                 SidebarTab::ColorGrading => {
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
                         .child(
@@ -529,7 +529,20 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 .w_full()
                                 .cursor_pointer().on_click(cx.listener(|this, _, _, _| {
                                     if let Ok(home) = std::env::var("HOME") {
-                                        let _ = this.app.export_terminal_scheme(&PathBuf::from(home));
+                                        let _ = this.app.export_terminal_scheme(&std::path::PathBuf::from(&home));
+                                    }
+                                }))
+                        )
+                        .child(
+                            Button::new("btn_exp_icons").disabled(is_loading)
+                                .child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary))
+                                .child("Export App Icons (Linux Ricer)")
+                                .w_full()
+                                .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                    if let Ok(home) = std::env::var("HOME") {
+                                        let _ = this.app.export_icon_theme(&std::path::PathBuf::from(&home));
+                                        this.app.state = crate::app::AppState::Notice("Icon theme generated in ~/.icons/wallmod-theme".to_string());
+                                        cx.notify();
                                     }
                                 }))
                         )
@@ -592,7 +605,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 .w_full()
                                 .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                     let theme = this.app.current_theme.clone();
-                                    let params = this.app.photoshop_params.clone();
+                                    let params = this.app.photoshop_params;
                                     let blur = this.app.blur_sigma;
                                     let dither = this.app.dither_enabled;
                                     let seam = this.app.seam_carve_target;
@@ -623,7 +636,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                         if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
                                                             if ["png", "jpg", "jpeg", "webp"].contains(&ext.as_str()) {
                                                                 if let Ok(img) = crate::app::helpers::open_image(&path) {
-                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params.clone(), blur, dither, seam, psort, chain.clone(), cmode, bitdepth, alg, luma, hald) {
+                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params, blur, dither, seam, psort, chain.clone(), cmode, bitdepth, alg, luma, hald) {
                                                                         if let Some(name) = path.file_name() {
                                                                             let _ = processed.save(target_dir.join(name));
                                                                         }

@@ -24,9 +24,12 @@ pub fn apply_bit_depth(rgba: &mut RgbaImage, style: BitDepthStyle) {
             },
             BitDepthStyle::Bit8 => {
                 // 3-3-2 RGB Retro VGA posterized quantization (3 bits Red, 3 bits Green, 2 bits Blue)
-                px[0] = (r & 0xE0) | (r >> 3) | (r >> 6);
-                px[1] = (g & 0xE0) | (g >> 3) | (g >> 6);
-                px[2] = (b & 0xC0) | (b >> 2) | (b >> 4) | (b >> 6);
+                let rv = r & 0xE0;
+                let gv = g & 0xE0;
+                let bv = b & 0xC0;
+                px[0] = rv | (rv >> 3) | (rv >> 6);
+                px[1] = gv | (gv >> 3) | (gv >> 6);
+                px[2] = bv | (bv >> 2) | (bv >> 4) | (bv >> 6);
             },
             BitDepthStyle::Bit32 => {},
         }

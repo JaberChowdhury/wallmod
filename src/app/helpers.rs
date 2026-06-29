@@ -180,7 +180,7 @@ pub fn compute_wcag_contrast(img: &image::DynamicImage) -> f32 {
     let mut total_lum = 0.0;
     let mut count = 0.0;
     for (i, p) in rgba.pixels().enumerate() {
-        if i as u32 % step == 0 {
+        if (i as u32).is_multiple_of(step) {
             let r = p[0] as f32 / 255.0;
             let g = p[1] as f32 / 255.0;
             let b = p[2] as f32 / 255.0;

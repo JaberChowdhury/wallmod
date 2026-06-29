@@ -122,7 +122,7 @@ fn remove_vertical_seam(img: &mut RgbaImage, seam: &[u32], width: u32, height: u
     for y in 0..height {
         let sx = seam[y as usize];
         for x in sx..(width - 1) {
-            let px = img.get_pixel(x + 1, y).clone();
+            let px = *img.get_pixel(x + 1, y);
             img.put_pixel(x, y, px);
         }
     }

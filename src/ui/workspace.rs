@@ -11,7 +11,11 @@ use gpui_component::{
 };
 
 /// Renders the central workspace preview, split diff overlay, dashboard info, or album gallery.
-pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> impl IntoElement {
+pub fn render_workspace(
+    view: &mut WallmodView,
+    window: &mut Window,
+    cx: &mut Context<WallmodView>,
+) -> impl IntoElement {
     let is_loading = view.app.state.is_loading();
     let loading_msg = if let crate::app::AppState::Loading(_, ref s) = view.app.state {
         s.clone()
@@ -228,7 +232,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                             )
                                             .child(
                                                 div().flex().flex_wrap().gap_4().w_full()
-                                                    .children(cols.into_iter().enumerate().map(|(_i, (hex, pct))| {
+                                                    .children(cols.clone().into_iter().map(|(hex, pct)| {
                                                         let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
                                                         let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
                                                         let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
@@ -246,6 +250,34 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                     .child(div().text_xs().font_bold().text_color(cx.theme().primary).child(pct_display))
                                                             )
                                                     }))
+                                            )
+                                            .child(div().w_full().h_px().bg(cx.theme().border))
+                                            .child(div().text_sm().font_bold().child("Generated Shades (Tailwind-like)"))
+                                            .child(
+                                                v_flex().gap_4().w_full().children(cols.clone().into_iter().map(|(hex, _pct)| {
+                                                    let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                                                    let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                                                    let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                                                    
+                                                    let shades = generate_tailwind_shades(r, g, b);
+                                                    
+                                                    v_flex().gap_2().w_full()
+                                                        .child(div().text_xs().font_bold().text_color(cx.theme().muted_foreground).child(hex.clone()))
+                                                        .child(
+                                                            h_flex().gap_1().w_full().h(px(40.0)).rounded_lg().overflow_hidden().border_1().border_color(cx.theme().border)
+                                                                .children(shades.into_iter().map(|(label, rgb)| {
+                                                                    let hex_shade = format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]);
+                                                                    v_flex().flex_1().h_full().bg(gpui::Rgba { r: rgb[0] as f32 / 255.0, g: rgb[1] as f32 / 255.0, b: rgb[2] as f32 / 255.0, a: 1.0 })
+                                                                        .justify_center().items_center()
+                                                                        .child(div().text_xs().font_bold().text_color(
+                                                                            if rgb[0] as u32 + rgb[1] as u32 + rgb[2] as u32 > 382 { gpui::Rgba { r: 0.1, g: 0.1, b: 0.1, a: 1.0 } } else { gpui::Rgba { r: 0.9, g: 0.9, b: 0.9, a: 1.0 } }
+                                                                        ).child(label))
+                                                                        .child(div().text_xs().text_color(
+                                                                            if rgb[0] as u32 + rgb[1] as u32 + rgb[2] as u32 > 382 { gpui::Rgba { r: 0.3, g: 0.3, b: 0.3, a: 1.0 } } else { gpui::Rgba { r: 0.7, g: 0.7, b: 0.7, a: 1.0 } }
+                                                                        ).child(hex_shade))
+                                                                }))
+                                                        )
+                                                }))
                                             )
                                             .into_any_element()
                                     } else {
@@ -296,7 +328,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                             .bg(gpui::Rgba { r, g, b, a: 1.0 })
                                                             .cursor_pointer()
                                                             .on_click(cx.listener(move |view, _, _, cx| {
-                                                                view.app.selected_color_idx = Some(i);
+                                                                view.app.selected_color_idx = Some(i); view.app.needs_hex_sync = true; view.app.needs_slider_sync = true;
 
                                                                 if let crate::app::state::ThemeSource::CustomPalette(_, ref colors) = view.app.current_theme {
                                                                     if let Some(c) = colors.get(i) {
@@ -304,38 +336,29 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                         let g_slider = cx.new(|_| gpui_component::slider::SliderState::new().min(0.0).max(255.0).step(1.0).default_value(c[1] as f32));
                                                                         let b_slider = cx.new(|_| gpui_component::slider::SliderState::new().min(0.0).max(255.0).step(1.0).default_value(c[2] as f32));
 
-                                                                        view.subscriptions.push(cx.subscribe(&r_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| match event {
-                                                                            gpui_component::slider::SliderEvent::Change(val) => {
-                                                                                if let Some(idx) = this.app.selected_color_idx {
-                                                                                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
-                                                                                        if let Some(c) = colors.get_mut(idx) { c[0] = val.start() as u8; }
-                                                                                    }
+                                                                        view.subscriptions.push(cx.subscribe(&r_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| if let gpui_component::slider::SliderEvent::Change(val) = event {
+                                                                            if let Some(idx) = this.app.selected_color_idx {
+                                                                                if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                                                                                    if let Some(c) = colors.get_mut(idx) { c[0] = val.start() as u8; }
                                                                                 }
-                                                                                cx.notify();
                                                                             }
-                                                                            _ => {}
+                                                                            cx.notify();
                                                                         }));
-                                                                        view.subscriptions.push(cx.subscribe(&g_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| match event {
-                                                                            gpui_component::slider::SliderEvent::Change(val) => {
-                                                                                if let Some(idx) = this.app.selected_color_idx {
-                                                                                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
-                                                                                        if let Some(c) = colors.get_mut(idx) { c[1] = val.start() as u8; }
-                                                                                    }
+                                                                        view.subscriptions.push(cx.subscribe(&g_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| if let gpui_component::slider::SliderEvent::Change(val) = event {
+                                                                            if let Some(idx) = this.app.selected_color_idx {
+                                                                                if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                                                                                    if let Some(c) = colors.get_mut(idx) { c[1] = val.start() as u8; }
                                                                                 }
-                                                                                cx.notify();
                                                                             }
-                                                                            _ => {}
+                                                                            cx.notify();
                                                                         }));
-                                                                        view.subscriptions.push(cx.subscribe(&b_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| match event {
-                                                                            gpui_component::slider::SliderEvent::Change(val) => {
-                                                                                if let Some(idx) = this.app.selected_color_idx {
-                                                                                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
-                                                                                        if let Some(c) = colors.get_mut(idx) { c[2] = val.start() as u8; }
-                                                                                    }
+                                                                        view.subscriptions.push(cx.subscribe(&b_slider, |this, _, event: &gpui_component::slider::SliderEvent, cx| if let gpui_component::slider::SliderEvent::Change(val) = event {
+                                                                            if let Some(idx) = this.app.selected_color_idx {
+                                                                                if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) = this.app.current_theme {
+                                                                                    if let Some(c) = colors.get_mut(idx) { c[2] = val.start() as u8; }
                                                                                 }
-                                                                                cx.notify();
                                                                             }
-                                                                            _ => {}
+                                                                            cx.notify();
                                                                         }));
 
                                                                         view.palette_r_slider = r_slider;
@@ -363,6 +386,18 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                 if let Some(idx) = selected_idx {
                                                     if let Some(rgb) = current_theme.as_custom_palette().and_then(|c| c.1.get(idx).copied()) {
                                                         let hex = format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]);
+                                                        if view.app.needs_hex_sync {
+                                                            view.palette_hex_input.update(cx, |input, cx| {
+                                                                input.set_value(hex.clone(), window, cx);
+                                                            });
+                                                            view.app.needs_hex_sync = false;
+                                                        }
+                                                        if view.app.needs_slider_sync {
+                                                            view.palette_r_slider.update(cx, |s, cx| s.set_value(rgb[0] as f32, window, cx));
+                                                            view.palette_g_slider.update(cx, |s, cx| s.set_value(rgb[1] as f32, window, cx));
+                                                            view.palette_b_slider.update(cx, |s, cx| s.set_value(rgb[2] as f32, window, cx));
+                                                            view.app.needs_slider_sync = false;
+                                                        }
                                                         v_flex().w(px(250.0)).gap_4().p_4().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
                                                             .child(
                                                                 h_flex().justify_between().items_center()
@@ -389,7 +424,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                             .child(
                                                                 h_flex().gap_3().items_center()
                                                                     .child(div().w(px(40.0)).h(px(40.0)).rounded_md().bg(gpui::Rgba { r: rgb[0] as f32/255.0, g: rgb[1] as f32/255.0, b: rgb[2] as f32/255.0, a: 1.0 }).border_1().border_color(cx.theme().border))
-                                                                    .child(div().text_base().font_bold().child(hex))
+                                                                    .child(gpui_component::input::Input::new(&view.palette_hex_input))
                                                             )
                                                             .child(div().h_px().w_full().bg(cx.theme().border))
                                                             .child(
@@ -449,7 +484,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                         })))
                                 )
                                 .child(
-                                    if let Some(_) = selected_album {
+                                    if selected_album.is_some() {
                                         if album_images.is_empty() {
                                             div().p_8().text_center().text_color(cx.theme().muted_foreground).child("No images found in this album folder.").into_any_element()
                                         } else {
@@ -562,7 +597,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                         )
                                         .child(
                                             h_flex().gap_2().flex_wrap()
-                                                .child(Button::new("btn_apply_pipeline").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).label("▶ Apply Pipeline").small().primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_apply_pipeline").disabled(is_loading).child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).tooltip("▶ Apply Pipeline").small().primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     this.trigger_async_processing(cx, "Applying node pipeline...");
                                                 })))
                                                 .child(Button::new("btn_toggle_auto_apply").disabled(is_loading).label(if auto_apply { "⚡ Auto-Apply: ON" } else { "⚡ Auto-Apply: OFF" }).small().outline().selected(auto_apply).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
@@ -577,7 +612,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     this.app.chaining_mode = !this.app.chaining_mode;
                                                     cx.notify();
                                                 })))
-                                                .child(Button::new("btn_pipe_clear").disabled(is_loading).child(gpui::svg().path("close.svg").size_4().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Reset Chain").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_pipe_clear").disabled(is_loading).child(gpui::svg().path("close.svg").size_4().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).tooltip("Reset Chain").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let init = crate::app::state::ThemeSource::Preset("Default".to_string());
                                                     this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, op: crate::app::state::PipelineOp::Theme(init.clone()), theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
                                                     this.app.current_theme = init;
@@ -591,7 +626,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                         .child(div().text_xs().font_bold().text_color(cx.theme().muted_foreground).child("PIPELINE ACTIONS & REUSABILITY (SINGLE & BATCH PROCESSING)"))
                                         .child(
                                             div().flex().flex_wrap().gap_2().w_full()
-                                                .child(Button::new("btn_add_theme").disabled(is_loading).label("+ Theme Grade").small().primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_add_theme").disabled(is_loading).child("+ Theme Grade").small().primary().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
                                                     let theme = this.app.current_theme.clone();
                                                     this.app.theme_chain.push(crate::app::state::ThemeChainNode {
@@ -604,7 +639,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     this.app.chaining_mode = true;
                                                     this.trigger_node_processing(cx, "Added Theme Grade step...");
                                                 })))
-                                                .child(Button::new("btn_add_blur").disabled(is_loading).label("+ Blur Step").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_add_blur").disabled(is_loading).child("+ Blur Step").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
                                                     let theme = this.app.current_theme.clone();
                                                     this.app.theme_chain.push(crate::app::state::ThemeChainNode {
@@ -617,7 +652,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     this.app.chaining_mode = true;
                                                     this.trigger_node_processing(cx, "Added Blur step...");
                                                 })))
-                                                .child(Button::new("btn_add_ps").disabled(is_loading).label("+ Color Adjust").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_add_ps").disabled(is_loading).child("+ Color Adjust").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
                                                     let theme = this.app.current_theme.clone();
                                                     this.app.theme_chain.push(crate::app::state::ThemeChainNode {
@@ -635,7 +670,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     this.app.chaining_mode = true;
                                                     this.trigger_node_processing(cx, "Added Color Adjust step...");
                                                 })))
-                                                .child(Button::new("btn_add_dither").disabled(is_loading).label("+ Dither").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_add_dither").disabled(is_loading).child("+ Dither").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
                                                     let theme = this.app.current_theme.clone();
                                                     this.app.theme_chain.push(crate::app::state::ThemeChainNode {
@@ -648,7 +683,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     this.app.chaining_mode = true;
                                                     this.trigger_node_processing(cx, "Added Dithering step...");
                                                 })))
-                                                .child(Button::new("btn_add_sort").disabled(is_loading).label("+ Pixel Sort").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_add_sort").disabled(is_loading).child("+ Pixel Sort").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
                                                     let theme = this.app.current_theme.clone();
                                                     this.app.theme_chain.push(crate::app::state::ThemeChainNode {
@@ -662,7 +697,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     this.trigger_node_processing(cx, "Added Pixel Sort step...");
                                                 })))
                                                 .child(div().w_px().h_6().bg(cx.theme().border))
-                                                .child(Button::new("btn_export_pipe").disabled(is_loading).label("Export Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_export_pipe").disabled(is_loading).tooltip("Export Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let chain_str = crate::app::state::export_pipeline_to_string(&this.app.theme_chain);
                                                     cx.spawn(async move |this, cx| {
                                                         if let Some(handle) = rfd::AsyncFileDialog::new().set_file_name("pipeline.wallpipe").save_file().await {
@@ -674,7 +709,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         }
                                                     }).detach();
                                                 })))
-                                                .child(Button::new("btn_import_pipe").disabled(is_loading).label("Import Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|_this, _, _, cx| {
+                                                .child(Button::new("btn_import_pipe").disabled(is_loading).tooltip("Import Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|_this, _, _, cx| {
                                                     cx.spawn(async move |this, cx| {
                                                         if let Some(handle) = rfd::AsyncFileDialog::new().add_filter("Wallmod Pipeline", &["wallpipe", "json"]).pick_file().await {
                                                             if let Ok(content) = std::fs::read_to_string(handle.path()) {
@@ -747,7 +782,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                     v_flex().gap_2().w_full().pt_1()
                                                         .child(
                                                             h_flex().gap_2().w_full()
-                                                                .child(Button::new(format!("mv_l_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_3().text_color(cx.theme().primary)).label("Move Left").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                .child(Button::new(format!("mv_l_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-left.svg").size_3().text_color(cx.theme().primary)).tooltip("Move Left").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                                     if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
                                                                         if pos > 0 {
                                                                             this.app.theme_chain.swap(pos, pos - 1);
@@ -755,7 +790,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                         }
                                                                     }
                                                                 })))
-                                                                .child(Button::new(format!("mv_r_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-right.svg").size_3().text_color(cx.theme().primary)).label("Move Right").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                .child(Button::new(format!("mv_r_{}", nid)).disabled(is_loading).child(gpui::svg().path("arrow-right.svg").size_3().text_color(cx.theme().primary)).tooltip("Move Right").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                                     if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
                                                                         if pos + 1 < this.app.theme_chain.len() {
                                                                             this.app.theme_chain.swap(pos, pos + 1);
@@ -766,7 +801,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                         )
                                                         .child(
                                                             h_flex().gap_2().w_full()
-                                                                .child(Button::new(format!("dup_{}", nid)).disabled(is_loading).child(gpui::svg().path("copy.svg").size_3().text_color(cx.theme().primary)).label("Duplicate").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                .child(Button::new(format!("dup_{}", nid)).disabled(is_loading).child(gpui::svg().path("copy.svg").size_3().text_color(cx.theme().primary)).tooltip("Duplicate").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                                     if let Some(pos) = this.app.theme_chain.iter().position(|x| x.id == nid) {
                                                                         let mut cloned = this.app.theme_chain[pos].clone();
                                                                         let max_id = this.app.theme_chain.iter().map(|x| x.id).max().unwrap_or(0);
@@ -775,7 +810,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                                                         this.trigger_node_processing(cx, "Duplicating node...");
                                                                     }
                                                                 })))
-                                                                .child(Button::new(format!("del_n_{}", nid)).disabled(is_loading).child(gpui::svg().path("trash.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).label("Delete").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
+                                                                .child(Button::new(format!("del_n_{}", nid)).disabled(is_loading).child(gpui::svg().path("trash.svg").size_3().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).tooltip("Delete").small().outline().flex_1().cursor_pointer().on_click(cx.listener(move |this, _, _, cx| {
                                                                     this.app.theme_chain.retain(|x| x.id != nid);
                                                                     this.trigger_node_processing(cx, "Removing node from chain...");
                                                                 })))
@@ -788,7 +823,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                             v_flex().w(px(260.0)).p_4().border_2().border_color(cx.theme().primary).rounded_xl().bg(cx.theme().secondary).gap_3()
                                                 .child(h_flex().gap_2().items_center().child(gpui::svg().path("check.svg").size_5().text_color(cx.theme().primary)).child(div().font_bold().child("Final Output")))
                                                 .child(div().text_xs().text_color(cx.theme().muted_foreground).child(format!("Global Output Bit-Depth: {}", global_bd.display_name())))
-                                                .child(Button::new("btn_view_out").disabled(is_loading).label("View Output Visual").child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).small().primary().w_full().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                .child(Button::new("btn_view_out").disabled(is_loading).tooltip("View Output Visual").child(gpui::svg().path("check.svg").size_4().text_color(cx.theme().primary)).small().primary().w_full().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
                                                     cx.notify();
                                                 })))
@@ -863,9 +898,7 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                     )
                     .into_any_element()
             )
-        } else if let Some(err) = error_msg {
-            Some(
-                v_flex()
+        } else { error_msg.map(|err| v_flex()
                     .absolute()
                     .inset_0()
                     .bg(gpui::Rgba { r: 0.0, g: 0.0, b: 0.0, a: 0.85 })
@@ -899,9 +932,31 @@ pub fn render_workspace(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
                                     }))
                             )
                     )
-                    .into_any_element()
-            )
-        } else {
-            None
-        })
+                    .into_any_element()) })
+}
+
+fn generate_tailwind_shades(r: u8, g: u8, b: u8) -> Vec<(&'static str, [u8; 3])> {
+    let mix = |c1: [u8; 3], c2: [u8; 3], weight: f32| -> [u8; 3] {
+        [
+            (c1[0] as f32 * weight + c2[0] as f32 * (1.0 - weight)) as u8,
+            (c1[1] as f32 * weight + c2[1] as f32 * (1.0 - weight)) as u8,
+            (c1[2] as f32 * weight + c2[2] as f32 * (1.0 - weight)) as u8,
+        ]
+    };
+    let w = [255, 255, 255];
+    let k = [0, 0, 0];
+    let base = [r, g, b];
+    vec![
+        ("50", mix(w, base, 0.95)),
+        ("100", mix(w, base, 0.9)),
+        ("200", mix(w, base, 0.75)),
+        ("300", mix(w, base, 0.6)),
+        ("400", mix(w, base, 0.3)),
+        ("500", base),
+        ("600", mix(k, base, 0.25)),
+        ("700", mix(k, base, 0.45)),
+        ("800", mix(k, base, 0.65)),
+        ("900", mix(k, base, 0.8)),
+        ("950", mix(k, base, 0.9)),
+    ]
 }

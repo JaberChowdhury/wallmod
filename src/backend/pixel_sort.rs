@@ -28,7 +28,7 @@ pub fn apply_pixel_sort(img: &DynamicImage) -> DynamicImage {
                 end += 1;
             }
             // Sort segment by luminance
-            row[start..end].sort_by_key(|p| luma(p));
+            row[start..end].sort_by_key(luma);
             start = end + 1;
         }
     });

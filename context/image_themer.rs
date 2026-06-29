@@ -13,7 +13,7 @@ impl ImageThemer {
 
         for (x, y, pixel) in img.pixels() {
             let Rgba([r, g, b, a]) = pixel;
-            
+
             // Extract standard luma for mapping
             let luma = (0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32) as u8;
 
@@ -32,7 +32,7 @@ impl ImageThemer {
                     } else {
                         Rgba([0, 255, 255, a])
                     }
-                }
+                },
                 "Cyberpunk" => {
                     // Dark Matrix: #0D0E15 (13, 14, 21)
                     // Acid Green: #39FF14 (57, 255, 20)
@@ -47,12 +47,12 @@ impl ImageThemer {
                     } else {
                         Rgba([252, 226, 5, a])
                     }
-                }
+                },
                 "Vintage Sepia" | "Sepia" => {
                     // Darkest Brown: #2B1D14 (43, 29, 20)
                     // Mid-tone Brown: #704214 (112, 66, 20)
                     // Paper: #E6C28F (230, 194, 143)
-                    
+
                     // Simple tinting based on luma interpolation
                     let f_luma = luma as f32 / 255.0;
                     if f_luma < 0.33 {
@@ -62,7 +62,7 @@ impl ImageThemer {
                     } else {
                         Rgba([230, 194, 143, a])
                     }
-                }
+                },
                 "Nord" => {
                     // Polar Night: #2E3440 (46, 52, 64)
                     // Snow Storm: #D8DEE9 (216, 222, 233)
@@ -74,7 +74,7 @@ impl ImageThemer {
                     } else {
                         Rgba([216, 222, 233, a])
                     }
-                }
+                },
                 "Retro 4-Color" | "8-bit" => {
                     // Darkest: #0F380F (15, 56, 15)
                     // Dark: #306230 (48, 98, 48)
@@ -89,13 +89,13 @@ impl ImageThemer {
                     } else {
                         Rgba([155, 188, 15, a])
                     }
-                }
+                },
                 _ => {
                     // Default Grayscale fallback
                     Rgba([luma, luma, luma, a])
-                }
+                },
             };
-            
+
             output.put_pixel(x, y, new_pixel);
         }
 

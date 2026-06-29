@@ -379,6 +379,7 @@ impl AppState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SidebarTab {
     ColorGrading,
+    FavoriteColors,
     PhotoshopEffects,
     DesktopEngine,
     ExportSync,
@@ -389,6 +390,7 @@ pub enum SidebarTab {
 impl SidebarTab {
     pub const ALL: &[SidebarTab] = &[
         SidebarTab::ColorGrading,
+        SidebarTab::FavoriteColors,
         SidebarTab::PhotoshopEffects,
         SidebarTab::DesktopEngine,
         SidebarTab::ExportSync,
@@ -401,6 +403,7 @@ impl std::fmt::Display for SidebarTab {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SidebarTab::ColorGrading => write!(f, "Color Grading"),
+            SidebarTab::FavoriteColors => write!(f, "Favorite Colors"),
             SidebarTab::PhotoshopEffects => write!(f, "Adjust & Effects"),
             SidebarTab::DesktopEngine => write!(f, "Wallpaper Engine"),
             SidebarTab::ExportSync => write!(f, "Export & Sync"),

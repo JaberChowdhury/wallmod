@@ -14,4 +14,4 @@ Linux desktop ricing enthusiasts ("ricers") demand immediate, pixel-perfect visu
 
 WallMod Studio solves this by providing a native GUI built on **[Iced 0.14](https://github.com/iced-rs/iced)** powered by asynchronous multi-threaded image processing via **Tokio**. It allows users to fuzzy-search themes, inspect 16-color ANSI terminal matrices, fine-tune mathematical grading parameters, and preview how generated palettes interact with simulated tiling window managers—all at a smooth 60 FPS.
 
-<!--agy --conversation=ce63a408-038d-45b1-9587-39a41cc08ba0-->
+<!--agy --conversation=bef77d4a-f56f-49ef-b152-36d4d1a188b2-->

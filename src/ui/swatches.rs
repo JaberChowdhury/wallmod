@@ -2,7 +2,9 @@
 
 use crate::app::ThemeSource;
 use gpui::*;
-use gpui_component::{button::Button, h_flex, v_flex, ActiveTheme, Sizable, StyledExt};
+use gpui_component::{
+    button::Button, h_flex, menu::DropdownMenu, v_flex, ActiveTheme, Sizable, StyledExt,
+};
 
 /// Renders a color swatch card representing the top shades of the selected theme palette.
 pub fn render_swatches(
@@ -67,42 +69,64 @@ pub fn render_swatches(
                 .into_any_element()
         })
         .child(
-            h_flex()
-                .gap_1()
-                .w_full()
-                .child(
-                    Button::new("btn_copy_raw")
-                        .child("Copy Raw")
-                        .small()
-                        .outline()
-                        .flex_1()
-                        .cursor_pointer()
-                        .on_click(cx.listener(|view, _, _, cx| {
-                            view.copy_palette_to_clipboard(cx, "raw");
-                        })),
-                )
-                .child(
-                    Button::new("btn_copy_json")
-                        .child("Copy JSON")
-                        .small()
-                        .outline()
-                        .flex_1()
-                        .cursor_pointer()
-                        .on_click(cx.listener(|view, _, _, cx| {
-                            view.copy_palette_to_clipboard(cx, "json");
-                        })),
-                )
-                .child(
-                    Button::new("btn_copy_obj")
-                        .child("Copy Object")
-                        .small()
-                        .outline()
-                        .flex_1()
-                        .cursor_pointer()
-                        .on_click(cx.listener(|view, _, _, cx| {
-                            view.copy_palette_to_clipboard(cx, "object");
-                        })),
-                ),
+            h_flex().gap_1().w_full().child(
+                Button::new("btn_copy_dropdown")
+                    .label("Copy as...")
+                    .small()
+                    .outline()
+                    .flex_1()
+                    .dropdown_caret(true)
+                    .dropdown_menu({
+                        let shades = current_theme.get_shades();
+                        let hex_shades: Vec<String> = shades
+                            .iter()
+                            .map(|rgb| format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]))
+                            .collect();
+                        move |menu, _, _| {
+                            let hex_shades = hex_shades.clone();
+                            menu.item(
+                                gpui_component::menu::PopupMenuItem::new("Raw (Hex)").on_click({
+                                    let hex_shades = hex_shades.clone();
+                                    move |_, _, cx| {
+                                        cx.write_to_clipboard(gpui::ClipboardItem::new_string(
+                                            hex_shades.join(", "),
+                                        ));
+                                    }
+                                }),
+                            )
+                            .item(gpui_component::menu::PopupMenuItem::new("JSON").on_click({
+                                let hex_shades = hex_shades.clone();
+                                move |_, _, cx| {
+                                    let entries = hex_shades
+                                        .iter()
+                                        .map(|s| format!("\"{}\"", s))
+                                        .collect::<Vec<_>>()
+                                        .join(",\n  ");
+                                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(
+                                        format!("[\n  {}\n]", entries),
+                                    ));
+                                }
+                            }))
+                            .item(
+                                gpui_component::menu::PopupMenuItem::new("Object").on_click({
+                                    let hex_shades = hex_shades.clone();
+                                    move |_, _, cx| {
+                                        let entries: Vec<String> = hex_shades
+                                            .iter()
+                                            .enumerate()
+                                            .map(|(i, s)| {
+                                                format!("  \"color_{}\": \"{}\"", i + 1, s)
+                                            })
+                                            .collect();
+                                        cx.write_to_clipboard(gpui::ClipboardItem::new_string(
+                                            format!("{{\n{}\n}}", entries.join(",\n")),
+                                        ));
+                                    }
+                                }),
+                            )
+                        }
+                    }),
+            ),
         )
         .child(
             Button::new("btn_edit_palette")

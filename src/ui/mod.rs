@@ -22,11 +22,12 @@ pub struct WallmodView {
     pub palette_r_slider: Entity<SliderState>,
     pub palette_g_slider: Entity<SliderState>,
     pub palette_b_slider: Entity<SliderState>,
+    pub palette_hex_input: Entity<gpui_component::input::InputState>,
     pub subscriptions: Vec<Subscription>,
 }
 
 impl WallmodView {
-    pub fn new(cx: &mut Context<Self>) -> Self {
+    pub fn new(window: &mut gpui::Window, cx: &mut Context<Self>) -> Self {
         let blur_slider =
             cx.new(|_| SliderState::new().min(0.0).max(50.0).step(0.5).default_value(0.0));
         let brightness_slider =
@@ -115,65 +116,58 @@ impl WallmodView {
             cx.new(|_| SliderState::new().min(0.0).max(255.0).step(1.0).default_value(128.0));
 
         subscriptions.push(cx.subscribe(&palette_r_slider, |this, _, event: &SliderEvent, cx| {
-            match event {
-                SliderEvent::Change(val) => {
-                    if let Some(idx) = this.app.selected_color_idx {
-                        if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
-                            this.app.current_theme
-                        {
-                            if let Some(c) = colors.get_mut(idx) {
-                                c[0] = val.start() as u8;
-                            }
+            if let SliderEvent::Change(val) = event {
+                if let Some(idx) = this.app.selected_color_idx {
+                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
+                        this.app.current_theme
+                    {
+                        if let Some(c) = colors.get_mut(idx) {
+                            c[0] = val.start() as u8;
                         }
                     }
-                    cx.notify();
-                },
-                _ => {},
+                }
+                this.app.needs_hex_sync = true;
+                cx.notify();
             }
         }));
         subscriptions.push(cx.subscribe(&palette_g_slider, |this, _, event: &SliderEvent, cx| {
-            match event {
-                SliderEvent::Change(val) => {
-                    if let Some(idx) = this.app.selected_color_idx {
-                        if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
-                            this.app.current_theme
-                        {
-                            if let Some(c) = colors.get_mut(idx) {
-                                c[1] = val.start() as u8;
-                            }
+            if let SliderEvent::Change(val) = event {
+                if let Some(idx) = this.app.selected_color_idx {
+                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
+                        this.app.current_theme
+                    {
+                        if let Some(c) = colors.get_mut(idx) {
+                            c[1] = val.start() as u8;
                         }
                     }
-                    cx.notify();
-                },
-                _ => {},
+                }
+                this.app.needs_hex_sync = true;
+                cx.notify();
             }
         }));
         subscriptions.push(cx.subscribe(&palette_b_slider, |this, _, event: &SliderEvent, cx| {
-            match event {
-                SliderEvent::Change(val) => {
-                    if let Some(idx) = this.app.selected_color_idx {
-                        if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
-                            this.app.current_theme
-                        {
-                            if let Some(c) = colors.get_mut(idx) {
-                                c[2] = val.start() as u8;
-                            }
+            if let SliderEvent::Change(val) = event {
+                if let Some(idx) = this.app.selected_color_idx {
+                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
+                        this.app.current_theme
+                    {
+                        if let Some(c) = colors.get_mut(idx) {
+                            c[2] = val.start() as u8;
                         }
                     }
-                    cx.notify();
-                },
-                _ => {},
+                }
+                this.app.needs_hex_sync = true;
+                cx.notify();
             }
         }));
 
         cx.spawn(async move |this, cx| loop {
             cx.background_executor().timer(std::time::Duration::from_secs(60)).await;
             let _ = this.update(cx, |view, cx| {
-                if view.app.daemon_enabled {
-                    if view.app.check_daemon_tick() {
+                if view.app.daemon_enabled
+                    && view.app.check_daemon_tick() {
                         view.trigger_async_processing(cx, "Automated time-of-day theme shift...");
                     }
-                }
             });
         })
         .detach();
@@ -189,6 +183,41 @@ impl WallmodView {
         })
         .detach();
 
+        let palette_hex_input = cx
+            .new(|cx| gpui_component::input::InputState::new(window, cx).default_value("#1A1A1A"));
+
+        subscriptions.push(cx.subscribe(
+            &palette_hex_input,
+            |this, _, event: &gpui_component::input::InputEvent, cx| {
+                if let gpui_component::input::InputEvent::Change = event {
+                    let text = this.palette_hex_input.read(cx).text().to_string();
+                    if text.len() == 7 && text.starts_with('#') {
+                        if let (Ok(r), Ok(g), Ok(b)) = (
+                            u8::from_str_radix(&text[1..3], 16),
+                            u8::from_str_radix(&text[3..5], 16),
+                            u8::from_str_radix(&text[5..7], 16),
+                        ) {
+                            if let Some(idx) = this.app.selected_color_idx {
+                                if let crate::app::state::ThemeSource::CustomPalette(
+                                    _,
+                                    ref mut colors,
+                                ) = this.app.current_theme
+                                {
+                                    if let Some(c) = colors.get_mut(idx) {
+                                        c[0] = r;
+                                        c[1] = g;
+                                        c[2] = b;
+                                    }
+                                }
+                            }
+                            this.app.needs_slider_sync = true;
+                        }
+                    }
+                    cx.notify();
+                }
+            },
+        ));
+
         Self {
             app: WallmodApp::new(),
             blur_slider,
@@ -199,6 +228,7 @@ impl WallmodView {
             palette_r_slider,
             palette_g_slider,
             palette_b_slider,
+            palette_hex_input,
             subscriptions,
         }
     }
@@ -218,21 +248,35 @@ impl WallmodView {
     pub fn copy_palette_to_clipboard(&mut self, cx: &mut Context<Self>, format: &str) {
         let shades = self.app.current_theme.get_shades();
         if shades.is_empty() {
-            self.app.state = crate::app::AppState::Notice("No palette shades available to copy.".to_string());
+            self.app.state =
+                crate::app::AppState::Notice("No palette shades available to copy.".to_string());
             cx.notify();
             return;
         }
-        let hex_shades: Vec<String> = shades.iter().map(|rgb| format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2])).collect();
+        let hex_shades: Vec<String> = shades
+            .iter()
+            .map(|rgb| format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]))
+            .collect();
         let formatted = match format {
-            "json" => format!("[\n  {}\n]", hex_shades.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",\n  ")),
+            "json" => format!(
+                "[\n  {}\n]",
+                hex_shades.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",\n  ")
+            ),
             "object" => {
-                let entries: Vec<String> = hex_shades.iter().enumerate().map(|(i, s)| format!("  \"color_{}\": \"{}\"", i + 1, s)).collect();
+                let entries: Vec<String> = hex_shades
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| format!("  \"color_{}\": \"{}\"", i + 1, s))
+                    .collect();
                 format!("{{\n{}\n}}", entries.join(",\n"))
-            }
+            },
             _ => hex_shades.join(", "),
         };
         cx.write_to_clipboard(gpui::ClipboardItem::new_string(formatted.clone()));
-        self.app.state = crate::app::AppState::Notice(format!("Copied {} format to clipboard!", format.to_uppercase()));
+        self.app.state = crate::app::AppState::Notice(format!(
+            "Copied {} format to clipboard!",
+            format.to_uppercase()
+        ));
         cx.notify();
     }
 
@@ -240,9 +284,9 @@ impl WallmodView {
         self.app.state = crate::app::AppState::Loading(0.5, msg.to_string());
         cx.notify();
 
-        let base_image_dyn = self.app.base_image_dyn.clone();
+        let _base_image_dyn = self.app.base_image_dyn.clone();
         let current_theme = self.app.current_theme.clone();
-        let photoshop_params = self.app.photoshop_params.clone();
+        let photoshop_params = self.app.photoshop_params;
         let blur_sigma = self.app.blur_sigma;
         let dither_enabled = self.app.dither_enabled;
         let seam_carve_target = self.app.seam_carve_target;
@@ -250,7 +294,8 @@ impl WallmodView {
         let theme_chain = self.app.theme_chain.clone();
         let chaining_mode = self.app.chaining_mode;
         let global_bit_depth = self.app.global_bit_depth;
-        let algorithm = self.app.algorithm.clone();
+        let base_image_dyn = self.app.base_image_dyn.clone().unwrap();
+        let algorithm = self.app.algorithm;
         let preserve_luma = self.app.preserve_luma;
         let hald_level = self.app.hald_level;
 
@@ -261,7 +306,7 @@ impl WallmodView {
                 .background_executor()
                 .spawn(async move {
                     crate::app::WallmodApp::process_image_sync(
-                        base_image_dyn,
+                        Some(base_image_dyn.clone()),
                         current_theme,
                         photoshop_params,
                         blur_sigma,
@@ -306,6 +351,7 @@ impl WallmodView {
         cx.notify();
 
         let base_image_dyn = self.app.base_image_dyn.clone().unwrap();
+        let algorithm = self.app.algorithm;
 
         cx.spawn(async move |this, cx| {
             cx.background_executor().timer(std::time::Duration::from_millis(100)).await;
@@ -313,7 +359,11 @@ impl WallmodView {
             let result = cx
                 .background_executor()
                 .spawn(async move {
-                    crate::modules::extractor::extract_dominant_colors(&base_image_dyn, 8)
+                    crate::modules::extractor::extract_dominant_colors(
+                        &base_image_dyn,
+                        8,
+                        algorithm as usize,
+                    )
                 })
                 .await;
 
@@ -388,7 +438,11 @@ fn render_floating_stats(
                 .items_center()
                 .child(div().text_xs().text_color(cx.theme().muted_foreground).child("CPU (Avg)"))
                 .child(
-                    div().text_xs().font_bold().text_color(cx.theme().primary).child(format!("{:.0}%", avg_cpu)),
+                    div()
+                        .text_xs()
+                        .font_bold()
+                        .text_color(cx.theme().primary)
+                        .child(format!("{:.0}%", avg_cpu)),
                 )
                 .into_any_element(),
         );
@@ -438,7 +492,7 @@ fn render_floating_stats(
 }
 
 impl Render for WallmodView {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.app.record_frame();
         div()
             .size_full()
@@ -455,7 +509,7 @@ impl Render for WallmodView {
                             .w_full()
                             .overflow_hidden()
                             .child(sidebar::render_sidebar(self, cx))
-                            .child(workspace::render_workspace(self, cx)),
+                            .child(workspace::render_workspace(self, window, cx)),
                     ),
             )
             .children(if self.app.show_floating_stats {
@@ -463,5 +517,60 @@ impl Render for WallmodView {
             } else {
                 None
             })
+    }
+}
+
+impl WallmodView {
+    pub fn open_image_from_path(&mut self, path: std::path::PathBuf, cx: &mut Context<Self>) {
+        cx.spawn(async move |this, cx| {
+            let path_clone = path.clone();
+            let res = crate::backend::runtime::spawn_blocking(move || {
+                crate::app::helpers::open_image(&path_clone)
+            })
+            .await;
+            match res {
+                Ok(Ok(dyn_img)) => {
+                    let _ = this.update(cx, |view, cx| {
+                        view.app.on_image_selected(path, dyn_img);
+                        view.trigger_async_processing(cx, "Applying theme...");
+                    });
+                },
+                Ok(Err(e)) => {
+                    let _ = this.update(cx, |view, _cx| {
+                        view.app.state =
+                            crate::app::AppState::Error(format!("Failed to decode image: {}", e));
+                    });
+                },
+                Err(e) => {
+                    let _ = this.update(cx, |view, _cx| {
+                        view.app.state =
+                            crate::app::AppState::Error(format!("Thread panicked: {}", e));
+                    });
+                },
+            }
+        })
+        .detach();
+    }
+
+    pub fn open_image_dialog(&mut self, cx: &mut Context<Self>) {
+        cx.spawn(async move |this, cx| {
+            if let Some(file) = rfd::AsyncFileDialog::new()
+                .add_filter(
+                    "Image",
+                    &[
+                        "png", "jpg", "jpeg", "webp", "avif", "bmp", "tiff", "tga", "gif", "ico",
+                        "hdr", "exr", "qoi", "pnm",
+                    ],
+                )
+                .pick_file()
+                .await
+            {
+                let path = file.path().to_path_buf();
+                let _ = this.update(cx, |view, cx| {
+                    view.open_image_from_path(path, cx);
+                });
+            }
+        })
+        .detach();
     }
 }

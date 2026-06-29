@@ -75,7 +75,7 @@ fn main() {
 
         cx.spawn(async move |cx| {
             cx.open_window(window_options, |window, cx| {
-                let view = cx.new(|cx| WallmodView::new(cx));
+                let view = cx.new(|cx| WallmodView::new(window, cx));
                 cx.new(|cx| Root::new(view, window, cx))
             })
             .expect("Failed to open window");

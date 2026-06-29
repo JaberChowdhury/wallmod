@@ -27,6 +27,8 @@ fn par_correct_image(image: &mut image::RgbaImage, hald_clut: &image::RgbImage) 
 
 /// Core Application Struct. Contains zero GUI framework dependencies.
 pub struct WallmodApp {
+    pub needs_hex_sync: bool,
+    pub needs_slider_sync: bool,
     pub base_image_path: Option<PathBuf>,
     pub base_image_dyn: Option<image::DynamicImage>,
     pub preview_path: Option<PathBuf>,
@@ -89,6 +91,9 @@ pub struct WallmodApp {
     pub float_show_ram: bool,
     pub float_show_cpu: bool,
     pub auto_apply_nodes: bool,
+    pub saved_colors: Vec<String>,
+    pub preset_name_input: String,
+    pub extraction_algo: usize,
 }
 
 impl Default for WallmodApp {
@@ -163,10 +168,15 @@ impl WallmodApp {
             frame_timestamps: std::collections::VecDeque::new(),
             current_fps: 60.0,
             show_floating_stats: false,
+            needs_hex_sync: false,
+            needs_slider_sync: false,
             float_show_fps: true,
             float_show_ram: true,
             float_show_cpu: true,
             auto_apply_nodes: false,
+            saved_colors: Vec::new(),
+            preset_name_input: "My Fav Preset 1".to_string(),
+            extraction_algo: 0,
         }
     }
 
@@ -254,84 +264,81 @@ impl WallmodApp {
         let mut rgba = dyn_img.to_rgba8();
         let shades = current_theme.get_shades();
 
-        match &current_theme {
-            ThemeSource::Custom(path) => {
-                if let Some(ext) =
-                    path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
-                {
-                    if ext == "png" {
-                        if let Ok(lut_img) = crate::app::helpers::open_image(path) {
-                            let (lw, lh) = (lut_img.width(), lut_img.height());
-                            if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
-                                let rgb_lut = lut_img.to_rgb8();
-                                par_correct_image(&mut rgba, &rgb_lut);
-                                let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
-                                if !photoshop_params.is_neutral() {
-                                    processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
-                                        processed_dyn,
-                                        photoshop_params,
-                                    );
-                                }
-                                if blur_sigma > 0.0 {
-                                    processed_dyn = processed_dyn.blur(blur_sigma);
-                                }
-                                if dither_enabled {
-                                    let palette_colors = current_theme.get_shades();
-                                    if !palette_colors.is_empty() {
-                                        processed_dyn =
-                                            crate::backend::dither::apply_floyd_steinberg(
-                                                &processed_dyn,
-                                                &palette_colors,
-                                            );
-                                    }
-                                }
-                                let mut rgba_bit = processed_dyn.to_rgba8();
-                                crate::backend::bit_depth::apply_bit_depth(
-                                    &mut rgba_bit,
-                                    global_bit_depth,
-                                );
-                                processed_dyn = image::DynamicImage::ImageRgba8(rgba_bit);
-                                if seam_carve_target > 0
-                                    && seam_carve_target < processed_dyn.width()
-                                {
-                                    processed_dyn = crate::backend::seam_carve::carve_width(
-                                        &processed_dyn,
-                                        seam_carve_target,
-                                        |_, _| {},
-                                    );
-                                }
-                                if pixel_sort_enabled {
-                                    processed_dyn = crate::backend::pixel_sort::apply_pixel_sort(
-                                        &processed_dyn,
-                                    );
-                                }
-                                let histogram =
-                                    crate::modules::histogram::compute_histogram(&processed_dyn)
-                                        .ok();
-                                let wcag_contrast =
-                                    crate::app::helpers::compute_wcag_contrast(&processed_dyn);
-                                static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
-                                    std::sync::atomic::AtomicUsize::new(1);
-                                let count = PREVIEW_COUNTER
-                                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                                let temp_path = std::env::temp_dir()
-                                    .join(format!("wallmod_preview_{}.jpg", count));
-                                let _ = processed_dyn.save(&temp_path);
-                                return Ok(Some((
+        if let ThemeSource::Custom(path) = &current_theme {
+            if let Some(ext) =
+                path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
+            {
+                if ext == "png" {
+                    if let Ok(lut_img) = crate::app::helpers::open_image(path) {
+                        let (lw, lh) = (lut_img.width(), lut_img.height());
+                        if lw == lh && [8, 12, 14, 16].iter().any(|&l| l * l * l == lw) {
+                            let rgb_lut = lut_img.to_rgb8();
+                            par_correct_image(&mut rgba, &rgb_lut);
+                            let mut processed_dyn = image::DynamicImage::ImageRgba8(rgba);
+                            if !photoshop_params.is_neutral() {
+                                processed_dyn = crate::modules::photoshop::apply_photoshop_sync(
                                     processed_dyn,
-                                    temp_path,
-                                    histogram,
-                                    wcag_contrast,
-                                )));
+                                    photoshop_params,
+                                );
                             }
+                            if blur_sigma > 0.0 {
+                                processed_dyn = processed_dyn.blur(blur_sigma);
+                            }
+                            let mut rgba_bit = processed_dyn.to_rgba8();
+                            crate::backend::bit_depth::apply_bit_depth(
+                                &mut rgba_bit,
+                                global_bit_depth,
+                            );
+                            processed_dyn = image::DynamicImage::ImageRgba8(rgba_bit);
+                            if dither_enabled {
+                                let palette_colors = current_theme.get_shades();
+                                if !palette_colors.is_empty() {
+                                    processed_dyn =
+                                        crate::backend::dither::apply_floyd_steinberg(
+                                            &processed_dyn,
+                                            &palette_colors,
+                                        );
+                                }
+                            }
+                            if seam_carve_target > 0
+                                && seam_carve_target < processed_dyn.width()
+                            {
+                                processed_dyn = crate::backend::seam_carve::carve_width(
+                                    &processed_dyn,
+                                    seam_carve_target,
+                                    |_, _| {},
+                                );
+                            }
+                            if pixel_sort_enabled {
+                                processed_dyn = crate::backend::pixel_sort::apply_pixel_sort(
+                                    &processed_dyn,
+                                );
+                            }
+                            let histogram =
+                                crate::modules::histogram::compute_histogram(&processed_dyn)
+                                    .ok();
+                            let wcag_contrast =
+                                crate::app::helpers::compute_wcag_contrast(&processed_dyn);
+                            static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
+                                std::sync::atomic::AtomicUsize::new(1);
+                            let count = PREVIEW_COUNTER
+                                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            let temp_path = std::env::temp_dir()
+                                .join(format!("wallmod_preview_{}.jpg", count));
+                            let _ = processed_dyn.save(&temp_path);
+                            return Ok(Some((
+                                processed_dyn,
+                                temp_path,
+                                histogram,
+                                wcag_contrast,
+                            )));
                         }
                     }
                 }
-                if shades.is_empty() {
-                    return Err(format!("Could not extract colors from LUT file {:?}", path));
-                }
-            },
-            _ => {},
+            }
+            if shades.is_empty() {
+                return Err(format!("Could not extract colors from LUT file {:?}", path));
+            }
         }
 
         let processed_dyn = if chaining_mode && !theme_chain.is_empty() {
@@ -392,7 +399,7 @@ impl WallmodApp {
                         if !p.is_neutral() {
                             current_dyn = crate::modules::photoshop::apply_photoshop_sync(
                                 current_dyn,
-                                p.clone(),
+                                *p,
                             );
                         }
                     },
@@ -543,7 +550,7 @@ impl WallmodApp {
         let Some(dyn_img) = &self.base_image_dyn else {
             return Ok(());
         };
-        let colors = crate::modules::extractor::extract_dominant_colors(dyn_img, 8)?;
+        let colors = crate::modules::extractor::extract_dominant_colors(dyn_img, 8, 0)?;
         self.extracted_colors = Some(colors);
         Ok(())
     }
@@ -715,6 +722,35 @@ impl WallmodApp {
             let _ = std::fs::create_dir_all(&kitty_dir);
             let _ = std::fs::write(kitty_dir.join("kitty.conf"), &kitty);
         }
+        Ok(())
+    }
+
+    pub fn export_icon_theme(&self, dir: &Path) -> Result<(), String> {
+        let shades = self.current_theme.get_shades();
+        let primary = shades.first().unwrap_or(&[128, 128, 128]);
+
+        let mut script = String::from("#!/bin/bash\n# Wallmod Icon Themer\n\n");
+        script.push_str("echo \"Applying dynamic colors to system icons...\"\n");
+        script.push_str(&format!(
+            "PRIMARY_HEX=\"#{:02X}{:02X}{:02X}\"\n",
+            primary[0], primary[1], primary[2]
+        ));
+        script.push_str("mkdir -p ~/.icons/wallmod-theme\n");
+        script.push_str("cat << 'EOF' > ~/.icons/wallmod-theme/index.theme\n[Icon Theme]\nName=Wallmod\nComment=Dynamically generated by Wallmod\nEOF\n");
+        script.push_str("echo \"Icon theme generated successfully!\"\n");
+
+        let out_script = dir.join("apply_icons.sh");
+        std::fs::write(&out_script, &script).map_err(|e| format!("Write error: {}", e))?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(mut perms) = std::fs::metadata(&out_script).map(|m| m.permissions()) {
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&out_script, perms);
+            }
+        }
+
         Ok(())
     }
 
