@@ -64,8 +64,8 @@ This checklist tracks the status of all unified features collected across our so
 ## Category H: Future Roadmap & Next-Gen Capabilities
 
 - [x] **AI Image Upscaling**: Real-time neural upscaling (Real-ESRGAN/ONNX runtime integration) for low-res wallpapers. (not now)
-- [] **Video & Live Wallpaper Engine**: Support for animated webm/mp4 wallpapers via mpvpaper or swww video integration.(not now)
+- [ ] **Video & Live Wallpaper Engine**: Support for animated webm/mp4 wallpapers via mpvpaper or swww video integration.(not now)
 - [x] **OCR Wallpaper Text Extraction**: Extract quote or code snippets from desktop wallpapers using Tesseract OCR.(not now)
-- [ ] **Custom Shader Pipeline**: Support user-provided WebGPU / GLSL fragment shaders for live background post-processing.( with 10+ preset )
+- [x] **Custom Shader Pipeline**: Support user-provided WebGPU / GLSL fragment shaders for live background post-processing.( with 10+ preset )
   - *Note: We are currently implementing Option B (WGPU Compute Pipeline for static image processing). In the future, we plan to implement Option C (a separate native winit/wgpu window running in a child process) for true 60fps live animated shader backgrounds.*
 - [x] **8bit ,16bit, 32bit etc**: Support all of these style
