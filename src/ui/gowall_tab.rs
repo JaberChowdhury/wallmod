@@ -78,7 +78,8 @@ pub fn render_gowall_tab(
                 .child(sidebar_tool_button(view, cx, "Remove Background", GowallTool::ReplaceColor))
                 .child(sidebar_tool_button(view, cx, "Pixel Art", GowallTool::PixelArt))
                 .child(sidebar_tool_button(view, cx, "Extract Palette", GowallTool::Extract))
-                .child(sidebar_tool_button(view, cx, "Resize Image", GowallTool::Resize)),
+                .child(sidebar_tool_button(view, cx, "Resize Image", GowallTool::Resize))
+                .child(sidebar_tool_button(view, cx, "Daily Wallpaper", GowallTool::Daily)),
         )
         .child(
             v_flex()
@@ -134,6 +135,7 @@ fn render_tool_header(view: &mut WallmodView, _cx: &mut Context<WallmodView>) ->
             GowallTool::ReplaceColor => "Background Removal",
             GowallTool::Extract => "Extract Color Palette",
             GowallTool::Resize => "Resize Image",
+            GowallTool::Daily => "Daily Wallpaper",
         },
     ))
 }
@@ -195,7 +197,8 @@ fn render_tool_panel(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
         .border_1()
         .border_color(cx.theme().border);
 
-    if view.app.base_image_path.is_none() {
+    if view.app.base_image_path.is_none() && view.app.gowall_state.current_tool != GowallTool::Daily
+    {
         return panel
             .child(
                 div().text_color(cx.theme().muted_foreground).child("Please load an image first."),
@@ -213,6 +216,7 @@ fn render_tool_panel(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
         GowallTool::ReplaceColor => render_bg_remove_panel(view, cx, panel).into_any_element(),
         GowallTool::Extract => render_extract_panel(view, cx, panel).into_any_element(),
         GowallTool::Resize => render_resize_panel(view, cx, panel).into_any_element(),
+        GowallTool::Daily => render_daily_panel(view, cx, panel).into_any_element(),
     }
 }
 
@@ -402,13 +406,27 @@ fn render_ocr_panel(
         ))
         .child(
             v_flex()
-                .w_full()
-                .h(px(200.0))
-                .bg(cx.theme().secondary)
-                .rounded_md()
-                .p_2()
-                .overflow_y_scrollbar()
-                .child(div().child(view.app.gowall_state.extracted_text.clone())),
+                .gap_2()
+                .child(
+                    v_flex()
+                        .w_full()
+                        .h(px(200.0))
+                        .bg(cx.theme().secondary)
+                        .rounded_md()
+                        .p_2()
+                        .overflow_y_scrollbar()
+                        .child(div().child(view.app.gowall_state.extracted_text.clone())),
+                )
+                .child(
+                    Button::new("btn_copy_ocr")
+                        .child("Copy to Clipboard")
+                        .outline()
+                        .w_full()
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            let text = this.app.gowall_state.extracted_text.clone();
+                            cx.write_to_clipboard(gpui::ClipboardItem::new_string(text));
+                        })),
+                ),
         )
 }
 
@@ -566,4 +584,58 @@ fn render_resize_panel(
                     }
                 })),
         )
+}
+
+fn render_daily_panel(
+    _view: &mut WallmodView,
+    cx: &mut Context<WallmodView>,
+    panel: gpui::Div,
+) -> impl IntoElement {
+    panel.child(div().font_bold().child("Daily Wallpaper:")).child(
+        Button::new("btn_fetch_daily")
+            .child("Fetch Wallpaper of the Day")
+            .primary()
+            .w_full()
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.app.gowall_state.is_processing = true;
+                cx.notify();
+                cx.spawn(async move |this, cx| {
+                    let url_res = crate::backend::gowall_cli::run_gowall_command(vec![
+                        "daily-url".to_string()
+                    ])
+                    .await;
+
+                    if let Ok(url_path) = url_res {
+                        let url_str = url_path.to_string_lossy().to_string();
+                        if !url_str.is_empty() {
+                            let out_path = std::env::temp_dir().join("wallmod_daily.jpg");
+                            let out_path_clone = out_path.clone();
+                            let download_res = crate::backend::runtime::spawn_blocking(move || {
+                                std::process::Command::new("curl")
+                                    .arg("-sL")
+                                    .arg("-o")
+                                    .arg(&out_path_clone)
+                                    .arg(&url_str)
+                                    .status()
+                            })
+                            .await;
+
+                            if let Ok(Ok(status)) = download_res {
+                                if status.success() {
+                                    let _ = this.update(cx, |view, cx| {
+                                        view.open_image_from_path(out_path.clone(), cx);
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    let _ = this.update(cx, |view, cx| {
+                        view.app.gowall_state.is_processing = false;
+                        cx.notify();
+                    });
+                })
+                .detach();
+            })),
+    )
 }

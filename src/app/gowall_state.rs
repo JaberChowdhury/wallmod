@@ -17,6 +17,7 @@ pub enum GowallTool {
     ReplaceColor,
     Extract,
     Resize,
+    Daily,
 }
 
 impl GowallState {

@@ -141,6 +141,19 @@ func initConfig() {
 	defer utils.Spinner.Stop()
 }
 
+var dailyUrlCmd = &cobra.Command{
+	Use:   "daily-url",
+	Short: "Prints the daily wallpaper URL",
+	Run: func(cmd *cobra.Command, args []string) {
+		url, err := api.GetWallpaperOfTheDay()
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		fmt.Print(url)
+	},
+}
+
 var rootCmd = &cobra.Command{
 	Use:               "gowall",
 	Short:             "A tool to convert an img's color shceme ",
@@ -178,6 +191,15 @@ var rootCmd = &cobra.Command{
 			return
 
 		default:
+			if len(args) > 0 && args[0] == "daily-url" {
+				url, err := api.GetWallpaperOfTheDay()
+				if err != nil {
+					fmt.Println("Error:", err)
+					return
+				}
+				fmt.Print(url)
+				return
+			}
 			_ = cmd.Usage()
 		}
 	},
@@ -201,4 +223,5 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "show gowall version")
 	rootCmd.Flags().BoolVarP(&wallOfTheDayFlag, "wall", "w", false, "fetches the wallpaper of the day!")
+	rootCmd.AddCommand(dailyUrlCmd)
 }
