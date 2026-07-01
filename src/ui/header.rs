@@ -308,109 +308,135 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         })),
                 )
                 .child(
-                    Button::new("cat_exp")
-                        .child(gpui::svg().path("replace.svg").size_4().text_color(
-                            if sidebar_tab == SidebarTab::ExportSync {
-                                cx.theme().secondary
-                            } else {
-                                cx.theme().primary
-                            },
-                        ))
-                        .child("Export & Sync")
-                        .small()
-                        .cursor_pointer()
-                        .selected(sidebar_tab == SidebarTab::ExportSync)
-                        .when(sidebar_tab == SidebarTab::ExportSync, |this| this.primary())
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.app.sidebar_tab = SidebarTab::ExportSync;
-                            this.app.option_group_tab = 0;
-                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
-                            cx.notify();
-                        })),
-                )
-                .child(
-                    Button::new("cat_ai")
-                        .child(gpui::svg().path("search.svg").size_4().text_color(
-                            if sidebar_tab == SidebarTab::ToolsExt {
-                                cx.theme().secondary
-                            } else {
-                                cx.theme().primary
-                            },
-                        ))
-                        .child("AI & Tools")
-                        .small()
-                        .cursor_pointer()
-                        .selected(sidebar_tab == SidebarTab::ToolsExt)
-                        .when(sidebar_tab == SidebarTab::ToolsExt, |this| this.primary())
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.app.sidebar_tab = SidebarTab::ToolsExt;
-                            this.app.option_group_tab = 0;
-                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
-                            cx.notify();
-                        })),
-                )
-                .child(
-                    Button::new("cat_settings")
-                        .child(gpui::svg().path("settings.svg").size_4().text_color(
-                            if sidebar_tab == SidebarTab::Settings {
-                                cx.theme().secondary
-                            } else {
-                                cx.theme().primary
-                            },
-                        ))
-                        .child("Settings")
-                        .small()
-                        .cursor_pointer()
-                        .selected(sidebar_tab == SidebarTab::Settings)
-                        .when(sidebar_tab == SidebarTab::Settings, |this| this.primary())
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.app.sidebar_tab = SidebarTab::Settings;
-                            this.app.option_group_tab = 0;
-                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
-                            cx.notify();
-                        })),
-                )
-                .child(
-                    Button::new("cat_favs")
-                        .child(gpui::svg().path("heart.svg").size_4().text_color(
-                            if sidebar_tab == SidebarTab::FavoriteColors {
-                                cx.theme().secondary
-                            } else {
-                                cx.theme().primary
-                            },
-                        ))
-                        .child("Favorite Colors")
-                        .small()
-                        .cursor_pointer()
-                        .selected(sidebar_tab == SidebarTab::FavoriteColors)
-                        .when(sidebar_tab == SidebarTab::FavoriteColors, |this| {
-                            this.primary()
+                    div()
+                        .relative()
+                        .child(
+                            Button::new("btn_more_dropdown")
+                                .child(gpui::svg().path("menu.svg").size_4().text_color(cx.theme().primary))
+                                .child("More Tools")
+                                .small()
+                                .cursor_pointer()
+                                .selected(view.app.show_header_dropdown)
+                                .when(view.app.show_header_dropdown, |this| this.primary())
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.app.show_header_dropdown = !this.app.show_header_dropdown;
+                                    cx.notify();
+                                })),
+                        )
+                        .when(view.app.show_header_dropdown, |this| {
+                            this.child(
+                                v_flex()
+                                    .absolute()
+                                    .top(px(32.0))
+                                    .right(px(0.0))
+                                    .w(px(200.0))
+                                    .bg(cx.theme().background)
+                                    .border_1()
+                                    .border_color(cx.theme().border)
+                                    .rounded_md()
+                                    .shadow_sm()
+                                    .p_1()
+                                    .gap_1()
+                                    .child(
+                                        Button::new("cat_code_render")
+                                            .child(gpui::svg().path("code.svg").size_4().text_color(
+                                                if sidebar_tab == SidebarTab::CodeRender { cx.theme().secondary } else { cx.theme().primary }
+                                            ))
+                                            .child("Code Render")
+                                            .w_full()
+                                            .justify_start()
+                                            .small()
+                                            .cursor_pointer()
+                                            .selected(sidebar_tab == SidebarTab::CodeRender)
+                                            .when(sidebar_tab == SidebarTab::CodeRender, |b| b.primary())
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                this.app.sidebar_tab = SidebarTab::CodeRender;
+                                                this.app.option_group_tab = 0;
+                                                this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                                                this.app.show_header_dropdown = false;
+                                                cx.notify();
+                                            })),
+                                    )
+                                    .child(
+                                        Button::new("btn_toggle_float_stats")
+                                            .child(gpui::svg().path("duck.svg").size_4().text_color(
+                                                if view.app.show_floating_stats { cx.theme().secondary } else { cx.theme().primary }
+                                            ))
+                                            .child("Floating Stats")
+                                            .w_full()
+                                            .justify_start()
+                                            .small()
+                                            .selected(view.app.show_floating_stats)
+                                            .when(view.app.show_floating_stats, |b| b.primary())
+                                            .cursor_pointer()
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                this.app.show_floating_stats = !this.app.show_floating_stats;
+                                                this.app.show_header_dropdown = false;
+                                                cx.notify();
+                                            })),
+                                    )
+                                    .child(
+                                        Button::new("cat_exp")
+                                            .child(gpui::svg().path("replace.svg").size_4().text_color(
+                                                if sidebar_tab == SidebarTab::ExportSync { cx.theme().secondary } else { cx.theme().primary }
+                                            ))
+                                            .child("Export & Sync")
+                                            .w_full()
+                                            .justify_start()
+                                            .small()
+                                            .cursor_pointer()
+                                            .selected(sidebar_tab == SidebarTab::ExportSync)
+                                            .when(sidebar_tab == SidebarTab::ExportSync, |b| b.primary())
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                this.app.sidebar_tab = SidebarTab::ExportSync;
+                                                this.app.option_group_tab = 0;
+                                                this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                                                this.app.show_header_dropdown = false;
+                                                cx.notify();
+                                            })),
+                                    )
+                                    .child(
+                                        Button::new("cat_ai")
+                                            .child(gpui::svg().path("search.svg").size_4().text_color(
+                                                if sidebar_tab == SidebarTab::ToolsExt { cx.theme().secondary } else { cx.theme().primary }
+                                            ))
+                                            .child("AI & Tools")
+                                            .w_full()
+                                            .justify_start()
+                                            .small()
+                                            .cursor_pointer()
+                                            .selected(sidebar_tab == SidebarTab::ToolsExt)
+                                            .when(sidebar_tab == SidebarTab::ToolsExt, |b| b.primary())
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                this.app.sidebar_tab = SidebarTab::ToolsExt;
+                                                this.app.option_group_tab = 0;
+                                                this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                                                this.app.show_header_dropdown = false;
+                                                cx.notify();
+                                            })),
+                                    )
+                                    .child(
+                                        Button::new("cat_settings")
+                                            .child(gpui::svg().path("settings.svg").size_4().text_color(
+                                                if sidebar_tab == SidebarTab::Settings { cx.theme().secondary } else { cx.theme().primary }
+                                            ))
+                                            .child("Settings")
+                                            .w_full()
+                                            .justify_start()
+                                            .small()
+                                            .cursor_pointer()
+                                            .selected(sidebar_tab == SidebarTab::Settings)
+                                            .when(sidebar_tab == SidebarTab::Settings, |b| b.primary())
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                this.app.sidebar_tab = SidebarTab::Settings;
+                                                this.app.option_group_tab = 0;
+                                                this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                                                this.app.show_header_dropdown = false;
+                                                cx.notify();
+                                            })),
+                                    )
+                            )
                         })
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.app.sidebar_tab = SidebarTab::FavoriteColors;
-                            this.app.option_group_tab = 0;
-                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
-                            cx.notify();
-                        })),
                 )
-                .child(
-                    Button::new("btn_toggle_float_stats")
-                        .child(gpui::svg().path("duck.svg").size_4().text_color(
-                            if view.app.show_floating_stats {
-                                cx.theme().secondary
-                            } else {
-                                cx.theme().primary
-                            },
-                        ))
-                        .child("Floating Stats")
-                        .small()
-                        .selected(view.app.show_floating_stats)
-                        .when(view.app.show_floating_stats, |this| this.primary())
-                        .cursor_pointer()
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.app.show_floating_stats = !this.app.show_floating_stats;
-                            cx.notify();
-                        })),
-                ),
         )
 }

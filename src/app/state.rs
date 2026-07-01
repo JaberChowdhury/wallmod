@@ -485,6 +485,7 @@ pub enum SidebarTab {
     ExportSync,
     ToolsExt,
     Settings,
+    CodeRender,
 }
 
 impl SidebarTab {
@@ -509,6 +510,7 @@ impl std::fmt::Display for SidebarTab {
             SidebarTab::ExportSync => write!(f, "Export & Sync"),
             SidebarTab::ToolsExt => write!(f, "AI & Tools"),
             SidebarTab::Settings => write!(f, "Settings"),
+            SidebarTab::CodeRender => write!(f, "Code Render"),
         }
     }
 }

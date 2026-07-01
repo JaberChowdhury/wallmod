@@ -60,6 +60,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
         .child(div().h_px().w_full().bg(cx.theme().border))
         .child(
             match sidebar_tab {
+                SidebarTab::CodeRender => { div().child("Code Render (Coming soon)").into_any_element() },
                 SidebarTab::FavoriteColors => { div().child("Favorite Colors").into_any_element() },
                 SidebarTab::ColorGrading => {
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
