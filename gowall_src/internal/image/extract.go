@@ -1,0 +1,33 @@
+package image
+
+import (
+	"fmt"
+	"image"
+	"image/color"
+
+	cpkg "github.com/Achno/gowall/internal/backends/color"
+	"github.com/Achno/gowall/internal/backends/colorthief"
+	types "github.com/Achno/gowall/internal/types"
+)
+
+type ExtractProcessor struct {
+	NumOfColors int
+}
+
+func (e *ExtractProcessor) Process(img image.Image, theme string, format string) (image.Image, types.ImageMetadata, error) {
+	clr, err := colorthief.GetPalette(img, e.NumOfColors)
+	if err != nil {
+		return nil, types.ImageMetadata{}, err
+	}
+
+	for _, c := range clr {
+		rgba, ok := c.(color.RGBA)
+
+		if !ok {
+			return nil, types.ImageMetadata{}, fmt.Errorf("while RGB casting")
+		}
+		fmt.Println(cpkg.RGBtoHex(rgba))
+	}
+
+	return nil, types.ImageMetadata{}, nil
+}

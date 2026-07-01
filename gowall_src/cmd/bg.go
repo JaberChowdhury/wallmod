@@ -1,0 +1,155 @@
+/*
+Copyright © 2024 Achno <EMAIL ADDRESS>
+*/
+package cmd
+
+import (
+	"fmt"
+	"image/color"
+
+	"github.com/Achno/gowall/config"
+	cpkg "github.com/Achno/gowall/internal/backends/color"
+	"github.com/Achno/gowall/internal/image"
+	imageio "github.com/Achno/gowall/internal/image_io"
+	"github.com/Achno/gowall/internal/logger"
+	"github.com/Achno/gowall/utils"
+	"github.com/spf13/cobra"
+)
+
+func BuildBgCmd() *cobra.Command {
+	methods := image.GetBgStrategyNames()
+
+	cmd := &cobra.Command{
+		Use:   "bg [INPUT]",
+		Short: "Removes the background of the image",
+		Long:  `Removes the background of an image. You can modify the options to achieve better results`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return ValidateParseBgCmd(cmd, shared, args)
+		},
+		Run: RunBgCmd,
+	}
+
+	flags := cmd.Flags()
+	var (
+		method      string
+		maxIter     int
+		convergence float64
+		sampleRate  float64
+		numRoutines int
+		bgColor     string
+	)
+
+	flags.StringVarP(&method, "method", "m", "u2net", "Background removal method. Available methods: "+fmt.Sprint(methods))
+	flags.IntVarP(&maxIter, "iterations", "i", 100, "Maximum iterations for background removal")
+	flags.IntVarP(&numRoutines, "routines", "r", 4, "Number of goroutines to use")
+	flags.Float64VarP(&convergence, "conv", "c", 0.001, "Convergence threshold")
+	flags.Float64VarP(&sampleRate, "sRate", "s", 0.5, "Sample rate")
+	flags.StringVar(&bgColor, "bg-color", "transparent", "Background color to place behind the cutout. Use 'transparent' to keep alpha")
+
+	cmd.RegisterFlagCompletionFunc("method", bgMethodCompletion)
+
+	addGlobalFlags(cmd)
+
+	return cmd
+}
+
+func RunBgCmd(cmd *cobra.Command, args []string) {
+	// Force png as the output for transparency for now
+	//TODO : figure out why jpeg,webp are not preserving transparency
+	shared.Format = "png"
+	imageOps, err := imageio.DetermineImageOperations(shared, args, cmd)
+	utils.HandleError(err, "Error")
+
+	method, err := cmd.Flags().GetString("method")
+	utils.HandleError(err, "Error")
+	maxIter, err := cmd.Flags().GetInt("iterations")
+	utils.HandleError(err, "Error")
+	numRoutines, err := cmd.Flags().GetInt("routines")
+	utils.HandleError(err, "Error")
+	convergence, err := cmd.Flags().GetFloat64("conv")
+	utils.HandleError(err, "Error")
+	sampleRate, err := cmd.Flags().GetFloat64("sRate")
+	utils.HandleError(err, "Error")
+
+	bgColor, err := cmd.Flags().GetString("bg-color")
+	utils.HandleError(err, "Error")
+	var clr color.Color
+	if bgColor != "transparent" {
+		hex, err := cpkg.ParseColorToHex(bgColor)
+		utils.HandleError(err, "Error")
+		clr, err = cpkg.HexToRGBA(hex)
+		utils.HandleError(err, "Error")
+	}
+
+	logger.Print("Removing background...")
+
+	strategy, cleanup, err := image.GetBgStrategy(method, maxIter, convergence, sampleRate, numRoutines)
+	utils.HandleError(err, "Error")
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	processor := image.NewBackgroundProcessor(strategy, clr)
+
+	processedImages, err := image.ProcessImgs(processor, imageOps, image.ProcessOptions{
+		Theme:      "",
+		OnComplete: nil,
+	})
+	utils.HandleError(err, "Error")
+
+	if err != nil {
+		logger.Error(err, "The following images had errors while processing")
+	}
+
+	openImageInViewer(cmd, shared, args, processedImages[0])
+}
+
+func ValidateParseBgCmd(cmd *cobra.Command, flags config.GlobalSubCommandFlags, args []string) error {
+	if err := validateInput(flags, args); err != nil {
+		return err
+	}
+
+	method, err := cmd.Flags().GetString("method")
+	if err != nil {
+		return err
+	}
+
+	if !image.IsValidBgStrategy(method) {
+		return fmt.Errorf("invalid background removal method %q", method)
+	}
+
+	if !imageio.IsStdoutOutput(flags, args) {
+		switch method {
+		case "bria-rmbg":
+			var prompt string
+			if isInputBatch(flags) {
+				prompt = fmt.Sprintf(
+					`%s ◈ Buddy are you sure you want to run --dir or --batch with bria-rmbg? Dont be surprised when your CPU spikes to 100%% and your screen freezes in the next 3 seconds when you select 'y'.I recommend just using it on one image at a time, because i doubt have enough memory for this, except if you have 32GB or 5/16GB %s`,
+					utils.BlueColor,
+					utils.ResetColor,
+				)
+			} else {
+				prompt = fmt.Sprintf(
+					`%s ◈ Buddy are you sure you have like 7GB of ram free to do this or will your system freeze? If you are feeling dangerous press 'y' %s`,
+					utils.BlueColor,
+					utils.ResetColor,
+				)
+			}
+
+			if !utils.Confirm(prompt) {
+				return fmt.Errorf("background removal declined by user")
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func bgMethodCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return image.GetBgStrategyNames(), cobra.ShellCompDirectiveNoFileComp
+}
+
+func init() {
+	rootCmd.AddCommand(BuildBgCmd())
+}

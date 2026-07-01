@@ -2,6 +2,7 @@
 
 pub mod helpers;
 pub mod state;
+pub mod gowall_state;
 
 pub use state::*;
 

@@ -6,6 +6,7 @@ pub mod histogram;
 pub mod sidebar;
 pub mod swatches;
 pub mod workspace;
+pub mod gowall_tab;
 
 use crate::app::WallmodApp;
 use gpui::*;

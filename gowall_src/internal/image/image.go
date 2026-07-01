@@ -1,0 +1,259 @@
+package image
+
+import (
+	"errors"
+	"fmt"
+	"image"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+	"sync"
+	"sync/atomic"
+
+	"github.com/Achno/gowall/config"
+	imageio "github.com/Achno/gowall/internal/image_io"
+	"github.com/Achno/gowall/internal/logger"
+	types "github.com/Achno/gowall/internal/types"
+	"github.com/Achno/gowall/terminal"
+	"github.com/Achno/gowall/utils"
+	_ "github.com/gen2brain/avif"
+	_ "golang.org/x/image/webp"
+)
+
+// ImageProcessor accepts a single input and processes it into a single output (e.g., png, jpg)
+type ImageProcessor interface {
+	Process(image.Image, string, string) (image.Image, types.ImageMetadata, error)
+}
+
+// MultiImageProcessor accepts multiple inputs and processes them into a single output (e.g.,gif)
+type MultiImageProcessor interface {
+	Composite([]image.Image, string, string) (image.Image, types.ImageMetadata, error)
+}
+
+// NoOpImageProcessor  implements ImageProcessor but does nothing.
+// Its used to just to convert images from one format to another without altering them.
+//
+//	Example from "img.webp" --> "img.png"
+type NoOpImageProcessor struct{}
+
+// Implement the Process method
+func (p *NoOpImageProcessor) Process(img image.Image, options string, format string) (image.Image, types.ImageMetadata, error) {
+	// Simply return the image without any modifications
+	return img, types.ImageMetadata{}, nil
+}
+
+// OpenGifInViewer currently supports GIF preview only in Kitty via `kitty icat`.
+func OpenGifInViewer(filePath string) error {
+	if !config.GowallConfig.EnableImagePreviewing {
+		return nil
+	}
+
+	if !terminal.IsKittyTerminalRunning() {
+		return fmt.Errorf("gif preview is only supported in kitty terminal via `kitty icat`")
+	}
+
+	cmd := exec.Command("kitty", "icat", filePath)
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
+}
+
+// Opens the image on the default viewing application of every operating system.
+// or in the terminal for kitty,wezterm,ghostty and konsole
+func OpenImageInViewer(filePath string) error {
+	if !config.GowallConfig.EnableImagePreviewing {
+		return nil
+	}
+	var cmd *exec.Cmd
+
+	if config.GowallConfig.ImagePreviewBackend == "chafa" {
+		if ok := terminal.HasChafa(); !ok {
+			return fmt.Errorf("you specified `chafa` in ImagePreviewBackend but gowall could not find chafa in your $PATH,ensure chafa is installed")
+		}
+
+		cmd = exec.Command("chafa", filePath)
+		cmd.Stdout = os.Stdout
+
+		return cmd.Run()
+	}
+
+	if terminal.IsKittyTerminalRunning() {
+		cmd = exec.Command("kitty", "icat", filePath)
+		cmd.Stdout = os.Stdout
+
+		return cmd.Run()
+	}
+
+	isKonsoleOrGhostty := terminal.IsKonsoleTerminalRunning() || terminal.IsGhosttyTerminalRunning()
+
+	if isKonsoleOrGhostty && terminal.HasIcat() && !config.GowallConfig.InlineImagePreview {
+		cmd = exec.Command("kitty", "icat", filePath)
+		cmd.Stdout = os.Stdout
+
+		return cmd.Run()
+	}
+
+	if isKonsoleOrGhostty && config.GowallConfig.InlineImagePreview {
+		return terminal.RenderKittyImg(filePath)
+	}
+
+	if terminal.IsWeztermTerminalRunning() {
+		cmd = exec.Command("wezterm", "imgcat", filePath)
+		cmd.Stdout = os.Stdout
+
+		return cmd.Run()
+	}
+
+	switch runtime.GOOS {
+
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", filePath)
+	case "darwin":
+		cmd = exec.Command("open", filePath)
+	case "linux", "freebsd", "openbsd":
+		cmd = exec.Command("xdg-open", filePath)
+
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+
+	return cmd.Start()
+}
+
+// CompletionFunc is called after each image is processed and saved
+type CompletionFunc func(outputPath string, remaining int)
+
+// ProcessOptions contains options for ProcessImgs
+type ProcessOptions struct {
+	Theme      string
+	OnComplete CompletionFunc // nil = default behavior
+}
+
+// Processes the image depending on a processor that impliments the "ImageProcessor" interface.
+func ProcessImgs(processor ImageProcessor, imageOps []imageio.ImageIO, opts ProcessOptions) ([]string, error) {
+	var wg sync.WaitGroup
+	remaining := int32(len(imageOps))
+	errChan := make(chan error, len(imageOps))
+	var processedImagesFilePaths []string
+
+	// Load the image
+	for index, imageOp := range imageOps {
+		wg.Add(1)
+		go func(i int, imgProcessor ImageProcessor, currentImgOp imageio.ImageIO) {
+			defer wg.Done()
+			theme := opts.Theme
+			img, err := imageio.LoadImage(currentImgOp.ImageInput)
+			if err != nil {
+				errChan <- fmt.Errorf("while loading image: %w", err)
+				return
+			}
+			// optionally specify a temporary theme via json file in runtime
+			if strings.HasSuffix(theme, ".json") {
+				theme, err = LoadThemeFromJson(theme)
+				if err != nil {
+					errChan <- fmt.Errorf("file %s : %w", currentImgOp.ImageInput, err)
+					return
+				}
+			}
+			// Process the image
+			newImg, metadata, err := imgProcessor.Process(img, theme, currentImgOp.Format)
+			if err != nil {
+				errChan <- fmt.Errorf("while processing image: %w", err)
+				return
+			}
+
+			// Save the image
+			err = imageio.SaveImage(newImg, currentImgOp.ImageOutput, currentImgOp.Format, metadata)
+			if err != nil {
+				errChan <- fmt.Errorf("while saving image: %w in %s", err, currentImgOp.ImageOutput)
+				return
+			}
+			remainingCount := atomic.AddInt32(&remaining, -1)
+			if opts.OnComplete != nil {
+				opts.OnComplete(currentImgOp.ImageOutput.String(), int(remainingCount))
+			} else {
+				// Default completion message
+				logger.Printf("::: Image completed & saved in %s, %d Images left :::\n", currentImgOp.ImageOutput.String(), remainingCount)
+			}
+			processedImagesFilePaths = append(processedImagesFilePaths, currentImgOp.ImageOutput.String())
+		}(index, processor, imageOp)
+	}
+	wg.Wait()
+	close(errChan)
+
+	if len(errChan) > 0 {
+		// return <-errChan
+		var errs []error
+
+		for err := range errChan {
+			errs = append(errs, err)
+		}
+
+		return processedImagesFilePaths, errors.New(utils.FormatErrors(errs))
+	}
+	return processedImagesFilePaths, nil
+}
+
+// MultiCompletionFunc is called after multi-image processing is complete
+type MultiCompletionFunc func(outputPath string, numInputs int)
+
+// MultiProcessOptions contains options for MultiProcessImgs
+type MultiProcessOptions struct {
+	Theme      string
+	OnComplete MultiCompletionFunc // nil = default behavior
+}
+
+// MultiProcessImgs loads multiple images, processes them together via Composite, and saves single output (N:1)
+func MultiProcessImgs(processor MultiImageProcessor, imageOps []imageio.ImageIO, opts MultiProcessOptions) (string, error) {
+
+	var wg sync.WaitGroup
+	images := make([]image.Image, len(imageOps))
+	errChan := make(chan error, len(imageOps))
+
+	for i, imageOp := range imageOps {
+		wg.Add(1)
+		go func(index int, currentImgOp imageio.ImageIO) {
+			defer wg.Done()
+			img, err := imageio.LoadImage(currentImgOp.ImageInput)
+			if err != nil {
+				errChan <- fmt.Errorf("while loading image %s: %w", currentImgOp.ImageInput.String(), err)
+				return
+			}
+			images[index] = img
+		}(i, imageOp)
+	}
+	wg.Wait()
+	close(errChan)
+
+	// Check for loading errors
+	if len(errChan) > 0 {
+		var errs []error
+		for err := range errChan {
+			errs = append(errs, err)
+		}
+		return "", errors.New(utils.FormatErrors(errs))
+	}
+
+	// All imageOps have the same output and format for multi-input commands
+	output := imageOps[0].ImageOutput
+	format := imageOps[0].Format
+
+	resultImg, metadata, err := processor.Composite(images, opts.Theme, format)
+	if err != nil {
+		return "", fmt.Errorf("while compositing images: %w", err)
+	}
+
+	err = imageio.SaveImage(resultImg, output, format, metadata)
+	if err != nil {
+		return "", fmt.Errorf("while saving image: %w", err)
+	}
+
+	if opts.OnComplete != nil {
+		opts.OnComplete(output.String(), len(images))
+	} else {
+		// Default completion message
+		logger.Printf("::: Multi-image processing completed & saved in %s :::\n", output.String())
+	}
+	return output.String(), nil
+}

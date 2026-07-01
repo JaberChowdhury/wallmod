@@ -87,6 +87,7 @@ pub enum WorkspaceView {
     ExtractColor,
     PaletteEditor,
     Albums,
+    Gowall,
 }
 
 impl WorkspaceView {
@@ -98,6 +99,7 @@ impl WorkspaceView {
         WorkspaceView::ExtractColor,
         WorkspaceView::PaletteEditor,
         WorkspaceView::Albums,
+        WorkspaceView::Gowall,
     ];
 }
 
@@ -111,6 +113,7 @@ impl std::fmt::Display for WorkspaceView {
             WorkspaceView::ExtractColor => write!(f, "Extract Color"),
             WorkspaceView::PaletteEditor => write!(f, "Edit Palette"),
             WorkspaceView::Albums => write!(f, "Album Gallery"),
+            WorkspaceView::Gowall => write!(f, "Gowall GUI"),
         }
     }
 }

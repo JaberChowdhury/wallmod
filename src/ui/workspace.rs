@@ -81,6 +81,11 @@ pub fn render_workspace(
                         .selected(workspace_view == WorkspaceView::Albums)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Albums; cx.notify(); }))
                 )
+                .child(
+                    Button::new("wv_gowall").child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).child("Gowall GUI").small()
+                        .selected(workspace_view == WorkspaceView::Gowall)
+                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Gowall; cx.notify(); }))
+                )
         )
         .child(
             v_flex().flex_1().w_full().p_6().items_center().justify_center().overflow_y_scrollbar()
@@ -830,6 +835,9 @@ pub fn render_workspace(
                                         )
                                 )
                                 .into_any_element()
+                        }
+                        WorkspaceView::Gowall => {
+                            crate::ui::gowall_tab::render_gowall_tab(view, cx).into_any_element()
                         }
                     }
                 )
