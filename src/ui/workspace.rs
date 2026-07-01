@@ -6,8 +6,11 @@ use crate::ui::swatches::render_swatches;
 use crate::ui::WallmodView;
 use gpui::*;
 use gpui_component::{
-    button::*, h_flex, scroll::ScrollableElement, v_flex, ActiveTheme, Disableable, Selectable,
-    Sizable, StyledExt,
+    button::*,
+    h_flex,
+    menu::{DropdownMenu as _, PopupMenuItem},
+    scroll::ScrollableElement,
+    v_flex, ActiveTheme, Disableable, Selectable, Sizable, StyledExt,
 };
 
 /// Renders the central workspace preview, split diff overlay, dashboard info, or album gallery.
@@ -80,11 +83,6 @@ pub fn render_workspace(
                     Button::new("wv_gal").child(gpui::svg().path("folder.svg").size_4().text_color(cx.theme().primary)).child("Album Gallery").small()
                         .selected(workspace_view == WorkspaceView::Albums)
                         .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Albums; cx.notify(); }))
-                )
-                .child(
-                    Button::new("wv_gowall").child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary)).child("Gowall GUI").small()
-                        .selected(workspace_view == WorkspaceView::Gowall)
-                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| { this.app.workspace_view = WorkspaceView::Gowall; cx.notify(); }))
                 )
         )
         .child(
@@ -619,7 +617,7 @@ pub fn render_workspace(
                                                 })))
                                                 .child(Button::new("btn_pipe_clear").disabled(is_loading).child(gpui::svg().path("close.svg").size_4().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).tooltip("Reset Chain").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let init = crate::app::state::ThemeSource::Preset("Default".to_string());
-                                                    this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, op: crate::app::state::PipelineOp::Theme(init.clone()), theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
+                                                    this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, op: crate::app::state::PipelineOp::Theme(init.clone(), 1.0), theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
                                                     this.app.current_theme = init;
                                                     this.app.selected_preset = Some("Default".to_string());
                                                     this.trigger_node_processing(cx, "Resetting chain...");
@@ -636,7 +634,7 @@ pub fn render_workspace(
                                                     let theme = this.app.current_theme.clone();
                                                     this.app.theme_chain.push(crate::app::state::ThemeChainNode {
                                                         id: next_id,
-                                                        op: crate::app::state::PipelineOp::Theme(theme.clone()),
+                                                        op: crate::app::state::PipelineOp::Theme(theme.clone(), 1.0),
                                                         theme,
                                                         enabled: true,
                                                         bit_depth: this.app.global_bit_depth,
@@ -700,6 +698,19 @@ pub fn render_workspace(
                                                     });
                                                     this.app.chaining_mode = true;
                                                     this.trigger_node_processing(cx, "Added Pixel Sort step...");
+                                                })))
+                                                .child(Button::new("btn_add_gowall").disabled(is_loading).child("+ Gowall (Invert)").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                                                    let theme = this.app.current_theme.clone();
+                                                    this.app.theme_chain.push(crate::app::state::ThemeChainNode {
+                                                        id: next_id,
+                                                        op: crate::app::state::PipelineOp::Gowall(crate::app::gowall_state::GowallTool::Effects, "invert".to_string()),
+                                                        theme,
+                                                        enabled: true,
+                                                        bit_depth: this.app.global_bit_depth,
+                                                    });
+                                                    this.app.chaining_mode = true;
+                                                    this.trigger_node_processing(cx, "Added Gowall step...");
                                                 })))
                                                 .child(div().w_px().h_6().bg(cx.theme().border))
                                                 .child(Button::new("btn_export_pipe").disabled(is_loading).tooltip("Export Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
@@ -782,6 +793,161 @@ pub fn render_workspace(
                                                             if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) { n.bit_depth = crate::app::state::BitDepthStyle::Bit8; }
                                                             this.trigger_node_processing(cx, "Updating node bit depth...");
                                                         })))
+                                                )
+
+                                                .child(
+                                                    match &node.op {
+                                                        crate::app::state::PipelineOp::Theme(_, op) => {
+                                                            h_flex().gap_2().items_center().justify_between()
+                                                                .child(div().text_xs().child(format!("Opacity: {:.0}%", op * 100.0)))
+                                                                .child(h_flex().gap_1()
+                                                                    .child(Button::new(format!("thm_sub_{}", nid)).child("-").small().outline().on_click(cx.listener(move |this, _, _, cx| {
+                                                                        if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                            if let crate::app::state::PipelineOp::Theme(_, o) = &mut n.op { *o = (*o - 0.1).max(0.0); }
+                                                                        }
+                                                                        this.trigger_node_processing(cx, "Tweaking opacity...");
+                                                                    })))
+                                                                    .child(Button::new(format!("thm_add_{}", nid)).child("+").small().outline().on_click(cx.listener(move |this, _, _, cx| {
+                                                                        if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                            if let crate::app::state::PipelineOp::Theme(_, o) = &mut n.op { *o = (*o + 0.1).min(1.0); }
+                                                                        }
+                                                                        this.trigger_node_processing(cx, "Tweaking opacity...");
+                                                                    })))
+                                                                ).into_any_element()
+                                                        },
+                                                        crate::app::state::PipelineOp::Blur(sigma) => {
+                                                            h_flex().gap_2().items_center().justify_between()
+                                                                .child(div().text_xs().child(format!("Blur (Sigma): {:.1}", sigma)))
+                                                                .child(h_flex().gap_1()
+                                                                    .child(Button::new(format!("blr_sub_{}", nid)).child("-").small().outline().on_click(cx.listener(move |this, _, _, cx| {
+                                                                        if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                            if let crate::app::state::PipelineOp::Blur(s) = &mut n.op { *s = (*s - 1.0).max(0.0); }
+                                                                        }
+                                                                        this.trigger_node_processing(cx, "Tweaking blur...");
+                                                                    })))
+                                                                    .child(Button::new(format!("blr_add_{}", nid)).child("+").small().outline().on_click(cx.listener(move |this, _, _, cx| {
+                                                                        if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                            if let crate::app::state::PipelineOp::Blur(s) = &mut n.op { *s = *s + 1.0; }
+                                                                        }
+                                                                        this.trigger_node_processing(cx, "Tweaking blur...");
+                                                                    })))
+                                                                ).into_any_element()
+                                                        },
+                                                        crate::app::state::PipelineOp::Photoshop(p) => {
+                                                            h_flex().gap_2().items_center().justify_between()
+                                                                .child(div().text_xs().child(format!("B: {}, C: {:.0}%", p.brightness, p.contrast)))
+                                                                .child(h_flex().gap_1()
+                                                                    .child(Button::new(format!("ps_sub_{}", nid)).child("-").small().outline().on_click(cx.listener(move |this, _, _, cx| {
+                                                                        if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                            if let crate::app::state::PipelineOp::Photoshop(p) = &mut n.op { p.brightness -= 1; }
+                                                                        }
+                                                                        this.trigger_node_processing(cx, "Tweaking PS...");
+                                                                    })))
+                                                                    .child(Button::new(format!("ps_add_{}", nid)).child("+").small().outline().on_click(cx.listener(move |this, _, _, cx| {
+                                                                        if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                            if let crate::app::state::PipelineOp::Photoshop(p) = &mut n.op { p.brightness += 1; }
+                                                                        }
+                                                                        this.trigger_node_processing(cx, "Tweaking PS...");
+                                                                    })))
+                                                                ).into_any_element()
+                                                        },
+                                                        crate::app::state::PipelineOp::Gowall(tool, param) => {
+                                                            let ve = cx.entity().clone();
+                                                            let param_clone = param.clone();
+                                                            let tool_clone = *tool;
+                                                            let is_recolor = *tool == crate::app::gowall_state::GowallTool::Recolor;
+                                                            
+                                                            let tool_name = match tool_clone {
+                                                                crate::app::gowall_state::GowallTool::Recolor => "Recolor",
+                                                                crate::app::gowall_state::GowallTool::Effects => "Effects",
+                                                                crate::app::gowall_state::GowallTool::Upscale => "Upscale",
+                                                                crate::app::gowall_state::GowallTool::PixelArt => "PixelArt",
+                                                                crate::app::gowall_state::GowallTool::ReplaceColor => "Remove BG",
+                                                                crate::app::gowall_state::GowallTool::Resize => "Resize",
+                                                                crate::app::gowall_state::GowallTool::Extract => "Extract",
+                                                                crate::app::gowall_state::GowallTool::Compress => "Compress",
+
+                                                                _ => "Unknown"
+                                                            };
+
+                                                            v_flex().gap_2().w_full().child(
+                                                                h_flex().gap_2().items_center().justify_between()
+                                                                    .child(div().text_xs().child("Tool:"))
+                                                                    .child(
+                                                                        Button::new(format!("gw_tool_dd_{}", nid)).disabled(is_loading)
+                                                                            .label(tool_name)
+                                                                            .small().outline()
+                                                                            .dropdown_menu({ let ve = ve.clone(); move |mut menu, window, _| {
+                                                                                let tools = [
+                                                                                    (crate::app::gowall_state::GowallTool::Recolor, "Recolor"),
+                                                                                    (crate::app::gowall_state::GowallTool::Effects, "Effects"),
+                                                                                    (crate::app::gowall_state::GowallTool::Upscale, "Upscale"),
+                                                                                    (crate::app::gowall_state::GowallTool::PixelArt, "PixelArt"),
+                                                                                    (crate::app::gowall_state::GowallTool::ReplaceColor, "Remove BG"),
+                                                                                    (crate::app::gowall_state::GowallTool::Resize, "Resize"),
+                                                                                ];
+                                                                                for (t, name) in tools {
+                                                                                    let ve = ve.clone();
+                                                                                    menu = menu.item(
+                                                                                        PopupMenuItem::new(name)
+                                                                                            .on_click(window.listener_for(&ve, move |this, _, _, cx| {
+                                                                                                if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                                                    if let crate::app::state::PipelineOp::Gowall(ref mut current_tool, ref mut p) = n.op {
+                                                                                                        *current_tool = t;
+                                                                                                        // set a reasonable default param
+                                                                                                        if t == crate::app::gowall_state::GowallTool::Recolor {
+                                                                                                            *p = "catppuccin-mocha".to_string();
+                                                                                                        } else if t == crate::app::gowall_state::GowallTool::Effects {
+                                                                                                            *p = "invert".to_string();
+                                                                                                        } else {
+                                                                                                            *p = "".to_string();
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                                this.trigger_node_processing(cx, "Changed Gowall tool...");
+                                                                                            }))
+                                                                                    );
+                                                                                }
+                                                                                menu
+                                                                            }})
+                                                                    )
+                                                            ).child(
+                                                                h_flex().gap_2().items_center().justify_between()
+                                                                    .child(div().text_xs().child("Config:"))
+                                                                    .child(
+                                                                        Button::new(format!("gw_dd_{}", nid)).disabled(is_loading)
+                                                                            .label(if param_clone.is_empty() { "N/A".to_string() } else { param_clone })
+                                                                            .small().outline()
+                                                                            .dropdown_menu(move |mut menu, window, _| {
+                                                                                let options = if is_recolor {
+                                                                                    crate::app::state::PRESET_NAMES.iter().map(|s| s.to_string()).collect::<Vec<_>>()
+                                                                                } else if tool_clone == crate::app::gowall_state::GowallTool::Effects {
+                                                                                    vec!["invert".to_string(), "grayscale".to_string(), "flip".to_string(), "mirror".to_string()]
+                                                                                } else {
+                                                                                    vec![]
+                                                                                };
+                                                                                for opt in options {
+                                                                                    let o = opt.clone();
+                                                                                    let ve = ve.clone();
+                                                                                    menu = menu.item(
+                                                                                        PopupMenuItem::new(opt)
+                                                                                            .on_click(window.listener_for(&ve, move |this, _, _, cx| {
+                                                                                                if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                                                    if let crate::app::state::PipelineOp::Gowall(_, ref mut p) = n.op {
+                                                                                                        *p = o.clone();
+                                                                                                    }
+                                                                                                }
+                                                                                                this.trigger_node_processing(cx, "Tweaking Gowall param...");
+                                                                                            }))
+                                                                                    );
+                                                                                }
+                                                                                menu
+                                                                            })
+                                                                    )
+                                                            ).into_any_element()
+                                                        },
+                                                        _ => div().into_any_element()
+                                                    }
                                                 )
                                                 .child(
                                                     v_flex().gap_2().w_full().pt_1()

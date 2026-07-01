@@ -1,27 +1,26 @@
-# Gowall GUI Implementation TODO
+# Gowall GUI Implementation TODO (Sidecar Architecture)
 
 ## Phase 1: Foundation & Scaffolding
-- [ ] Set up `GowallState` and global `Model<GowallState>` in `src/app/gowall_state.rs`.
-- [ ] Create base GPUI View `GowallWorkspace` in `src/ui/gowall_tab.rs`.
-- [ ] Add the Gowall tab to the main application navigation/tab bar.
-- [ ] Implement layout scaffolding (Left Sidebar for tools, Right Canvas for preview).
-- [ ] Add basic image loading (File Picker) and rendering to the Canvas.
+- [x] Set up `GowallState` and global `Model<GowallState>` in `src/app/gowall_state.rs`.
+- [x] Create base GPUI View `GowallWorkspace` in `src/ui/gowall_tab.rs`.
+- [x] Add the Gowall tab to the main application navigation/tab bar.
+- [x] Implement layout scaffolding (Left Sidebar for tools, Right Canvas for preview).
+- [x] Add basic image loading (File Picker) and rendering to the Canvas.
+- [x] Clone and clean up the `gowall` Go source code into `gowall_src/`.
 
-## Phase 2: Core Image Adjustments (Synchronous / Basic Async)
-- [ ] Implement "Quick Actions" row: Invert, Grayscale, Flip Horizontal, Flip Vertical.
-- [ ] Add Image Format Conversion (Save As: png, webp, jpeg) with quality slider.
-- [ ] Build the Custom Theme Recolor tool (reuse existing `image_themer` or `lutgen` logic).
-- [ ] Add Pixel Art Generator (downscale/upscale with Nearest filter).
-- [ ] Add Specific Color Replacement (Color picker + tolerance slider).
+## Phase 2: Go Sidecar Infrastructure
+- [x] Create a `build.rs` script to compile the `gowall_src` Go code into a binary during Cargo build.
+- [x] Implement an asynchronous `tokio::process::Command` wrapper in Rust to securely call the Go binary.
+- [x] Add error handling to parse Go panic/stderr outputs and show GPUI toast notifications.
 
-## Phase 3: Advanced Integrations & External Libraries
-- [ ] Add SVG/Icon Theming using `usvg`/`resvg`.
-- [ ] Implement OCR Text Extraction (integrate `rusty-tesseract`).
-- [ ] Build GIF Maker (drag-and-drop multiple frames, output GIF).
-- [ ] Integrate Daily Wallpapers (fetch from API via `reqwest`, display in grid).
+## Phase 3: Core Sidecar Integrations (Image Ops)
+- [x] Bind Theme Conversion (`gowall color -t ...`) to the UI dropdowns.
+- [x] Bind Quick Actions (Invert, Grayscale, Flip) to the UI buttons.
+- [x] Bind Format Conversion and Compression.
+- [x] Update GPUI Image Canvas automatically when the Go binary finishes processing.
 
-## Phase 4: Heavy AI Tasks (ONNX)
-- [ ] Add Background Removal (`rembg` or U-2-Net ONNX model).
-- [ ] Add AI Image Upscaling (Real-ESRGAN ONNX model).
-- [ ] Connect heavy AI tasks to `cx.background_executor()` to prevent UI blocking.
-- [ ] Add visual loading states (spinners/progress bars) during async execution.
+## Phase 4: Advanced Sidecar Integrations (AI & Utilities)
+- [x] Bind Background Removal (`gowall bg remove`) and hook up GPUI loading spinners.
+- [x] Bind AI Upscaling (`gowall upscale`) and handle long-running process timeouts.
+- [ ] Bind OCR (`gowall ocr`) and parse `stdout` into a GPUI selectable text area.
+- [ ] Bind Daily Wallpapers fetching and render them in a grid view.

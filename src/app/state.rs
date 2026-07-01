@@ -4,26 +4,41 @@ use std::path::PathBuf;
 
 /// Available preset palette names from lutgen-palettes.
 pub const PRESET_NAMES: &[&str] = &[
-    "Default",
-    "Catppuccin Mocha",
-    "Catppuccin Latte",
-    "Gruvbox Dark",
-    "Nord Arctic",
-    "Tokyo Night",
-    "Dracula",
-    "Rose Pine",
-    "Rose Pine Moon",
-    "Solarized Dark",
-    "One Dark",
-    "Kanagawa",
-    "Everforest Dark",
+    "Arc Dark",
+    "Atom Dark",
+    "Ayu",
     "Ayu Dark",
-    "Monokai Pro",
-    "Night Owl",
-    "Synthwave",
+    "Ayu Light",
+    "Ayu Mirage",
+    "Catppuccin",
+    "Catppuccin Frappe",
+    "Catppuccin Latte",
     "Cyberpunk",
-    "Vintage Sepia",
-    "Retro 4-Color",
+    "Dracula",
+    "Everforest",
+    "GitHub Light",
+    "Gruvbox",
+    "Kanagawa",
+    "Material",
+    "Melange Dark",
+    "Melange Light",
+    "Monokai",
+    "Night Owl",
+    "Nord",
+    "Oceanic Next",
+    "Onedark",
+    "PaleNight",
+    "Rose Pine",
+    "Shades of Purple",
+    "Solarized",
+    "Srcery",
+    "Sunset Aurant",
+    "Sunset Saffron",
+    "Sunset Tangerine",
+    "Synthwave 84",
+    "Tokyo Dark",
+    "Tokyo Moon",
+    "Tokyo Storm",
 ];
 
 /// Available Wayland transition animation types (`swww`).
@@ -214,17 +229,20 @@ impl BitDepthStyle {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PipelineOp {
-    Theme(ThemeSource),
+    Theme(ThemeSource, f32),
     Blur(f32),
     Photoshop(crate::modules::photoshop::PhotoshopParams),
     Dither,
     PixelSort,
+    Gowall(crate::app::gowall_state::GowallTool, String),
 }
 
 impl PipelineOp {
     pub fn display_name(&self) -> String {
         match self {
-            Self::Theme(t) => format!("Theme Grade: {}", t.display_name()),
+            Self::Theme(t, op) => {
+                format!("Theme Grade: {} (Opacity: {:.0}%)", t.display_name(), op * 100.0)
+            },
             Self::Blur(s) => format!("Blur Effect (σ={:.1})", s),
             Self::Photoshop(p) => format!(
                 "Color Adjust (B:{}, C:{:.0}%, S:{:.1})",
@@ -232,15 +250,18 @@ impl PipelineOp {
             ),
             Self::Dither => "Floyd-Steinberg Dither".to_string(),
             Self::PixelSort => "Luminance Pixel Sort".to_string(),
+            Self::Gowall(tool, param) => format!("Gowall {:?} ({})", tool, param),
         }
     }
 
     pub fn to_code(&self) -> String {
         match self {
-            Self::Theme(ts) => match ts {
-                ThemeSource::Preset(name) => format!("theme:Preset:{}", name),
-                ThemeSource::Custom(path) => format!("theme:Custom:{}", path.to_string_lossy()),
-                ThemeSource::CustomPalette(name, _) => format!("theme:Preset:{}", name),
+            Self::Theme(ts, op) => match ts {
+                ThemeSource::Preset(name) => format!("theme:Preset:{}:{}", name, op),
+                ThemeSource::Custom(path) => {
+                    format!("theme:Custom:{}:{}", path.to_string_lossy(), op)
+                },
+                ThemeSource::CustomPalette(name, _) => format!("theme:Preset:{}:{}", name, op),
             },
             Self::Blur(sigma) => format!("blur:{}", sigma),
             Self::Photoshop(p) => {
@@ -248,6 +269,7 @@ impl PipelineOp {
             },
             Self::Dither => "dither".to_string(),
             Self::PixelSort => "pixelsort".to_string(),
+            Self::Gowall(tool, param) => format!("gowall:{:?}:{}", tool, param),
         }
     }
 
@@ -258,11 +280,17 @@ impl PipelineOp {
         }
         match parts[0] {
             "theme" => {
-                if parts.len() == 3 {
-                    if parts[1] == "Preset" {
-                        return Some(Self::Theme(ThemeSource::Preset(parts[2].to_string())));
-                    } else if parts[1] == "Custom" {
-                        return Some(Self::Theme(ThemeSource::Custom(PathBuf::from(parts[2]))));
+                let p: Vec<&str> = code.splitn(4, ':').collect();
+                if p.len() >= 3 {
+                    let op = if p.len() == 4 {
+                        p[3].parse().unwrap_or(1.0)
+                    } else {
+                        1.0
+                    };
+                    if p[1] == "Preset" {
+                        return Some(Self::Theme(ThemeSource::Preset(p[2].to_string()), op));
+                    } else if p[1] == "Custom" {
+                        return Some(Self::Theme(ThemeSource::Custom(PathBuf::from(p[2])), op));
                     }
                 }
                 None
@@ -286,6 +314,27 @@ impl PipelineOp {
             },
             "dither" => Some(Self::Dither),
             "pixelsort" => Some(Self::PixelSort),
+            "gowall" => {
+                let p: Vec<&str> = code.splitn(3, ':').collect();
+                if p.len() >= 3 {
+                    // Quick parse of GowallTool from debug string
+                    let tool = match p[1] {
+                        "Recolor" => crate::app::gowall_state::GowallTool::Recolor,
+                        "Effects" => crate::app::gowall_state::GowallTool::Effects,
+                        "Compress" => crate::app::gowall_state::GowallTool::Compress,
+                        "Ocr" => crate::app::gowall_state::GowallTool::Ocr,
+                        "Upscale" => crate::app::gowall_state::GowallTool::Upscale,
+                        "PixelArt" => crate::app::gowall_state::GowallTool::PixelArt,
+                        "ReplaceColor" => crate::app::gowall_state::GowallTool::ReplaceColor,
+                        "Extract" => crate::app::gowall_state::GowallTool::Extract,
+                        "Resize" => crate::app::gowall_state::GowallTool::Resize,
+                        _ => crate::app::gowall_state::GowallTool::Effects,
+                    };
+                    Some(Self::Gowall(tool, p[2].to_string()))
+                } else {
+                    None
+                }
+            },
             _ => None,
         }
     }
@@ -346,7 +395,7 @@ pub fn import_pipeline_from_string(content: &str) -> Vec<ThemeChainNode> {
         } else if trimmed.starts_with('}') {
             if let Some(op) = current_op.take() {
                 let theme = match &op {
-                    PipelineOp::Theme(t) => t.clone(),
+                    PipelineOp::Theme(t, _) => t.clone(),
                     _ => ThemeSource::Preset("Default".to_string()),
                 };
                 chain.push(ThemeChainNode {

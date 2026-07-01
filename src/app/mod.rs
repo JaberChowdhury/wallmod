@@ -1,8 +1,8 @@
 //! Core Business Model for wallmod. Fully decoupled from GUI framework.
 
+pub mod gowall_state;
 pub mod helpers;
 pub mod state;
-pub mod gowall_state;
 
 pub use state::*;
 
@@ -95,6 +95,7 @@ pub struct WallmodApp {
     pub saved_colors: Vec<String>,
     pub preset_name_input: String,
     pub extraction_algo: usize,
+    pub gowall_state: crate::app::gowall_state::GowallState,
 }
 
 impl Default for WallmodApp {
@@ -103,12 +104,8 @@ impl Default for WallmodApp {
     }
 }
 
-pub type ProcessImageResult = Option<(
-    image::DynamicImage,
-    PathBuf,
-    Option<crate::modules::histogram::HistogramData>,
-    f32,
-)>;
+pub type ProcessImageResult =
+    Option<(image::DynamicImage, PathBuf, Option<crate::modules::histogram::HistogramData>, f32)>;
 
 impl WallmodApp {
     pub fn new() -> Self {
@@ -154,15 +151,15 @@ impl WallmodApp {
             daemon_enabled: false,
             day_time_hour: 8,
             night_time_hour: 20,
-            day_theme: "Catppuccin Mocha".to_string(),
-            night_theme: "Tokyo Night".to_string(),
+            day_theme: "Catppuccin".to_string(),
+            night_theme: "Tokyo Dark".to_string(),
             photoshop_params: crate::modules::photoshop::PhotoshopParams::default(),
             option_group_tab: 0,
             split_diff_ratio: 0.5,
             export_dir: None,
             theme_chain: vec![crate::app::state::ThemeChainNode {
                 id: 1,
-                op: crate::app::state::PipelineOp::Theme(initial_theme.clone()),
+                op: crate::app::state::PipelineOp::Theme(initial_theme.clone(), 1.0),
                 theme: initial_theme,
                 enabled: true,
                 bit_depth: crate::app::state::BitDepthStyle::Bit32,
@@ -185,6 +182,7 @@ impl WallmodApp {
             saved_colors: Vec::new(),
             preset_name_input: "My Fav Preset 1".to_string(),
             extraction_algo: 0,
+            gowall_state: crate::app::gowall_state::GowallState::new(),
         }
     }
 
@@ -194,7 +192,7 @@ impl WallmodApp {
             let next_id = self.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
             self.theme_chain.push(crate::app::state::ThemeChainNode {
                 id: next_id,
-                op: crate::app::state::PipelineOp::Theme(theme.clone()),
+                op: crate::app::state::PipelineOp::Theme(theme.clone(), 1.0),
                 theme,
                 enabled: true,
                 bit_depth: self.global_bit_depth,
@@ -202,7 +200,7 @@ impl WallmodApp {
         } else {
             self.theme_chain = vec![crate::app::state::ThemeChainNode {
                 id: 1,
-                op: crate::app::state::PipelineOp::Theme(theme.clone()),
+                op: crate::app::state::PipelineOp::Theme(theme.clone(), 1.0),
                 theme,
                 enabled: true,
                 bit_depth: self.global_bit_depth,
@@ -266,9 +264,7 @@ impl WallmodApp {
         let shades = current_theme.get_shades();
 
         if let ThemeSource::Custom(path) = &current_theme {
-            if let Some(ext) =
-                path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
-            {
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
                 if ext == "png" {
                     if let Ok(lut_img) = crate::app::helpers::open_image(path) {
                         let (lw, lh) = (lut_img.width(), lut_img.height());
@@ -294,16 +290,13 @@ impl WallmodApp {
                             if dither_enabled {
                                 let palette_colors = current_theme.get_shades();
                                 if !palette_colors.is_empty() {
-                                    processed_dyn =
-                                        crate::backend::dither::apply_floyd_steinberg(
-                                            &processed_dyn,
-                                            &palette_colors,
-                                        );
+                                    processed_dyn = crate::backend::dither::apply_floyd_steinberg(
+                                        &processed_dyn,
+                                        &palette_colors,
+                                    );
                                 }
                             }
-                            if seam_carve_target > 0
-                                && seam_carve_target < processed_dyn.width()
-                            {
+                            if seam_carve_target > 0 && seam_carve_target < processed_dyn.width() {
                                 processed_dyn = crate::backend::seam_carve::carve_width(
                                     &processed_dyn,
                                     seam_carve_target,
@@ -311,28 +304,21 @@ impl WallmodApp {
                                 );
                             }
                             if pixel_sort_enabled {
-                                processed_dyn = crate::backend::pixel_sort::apply_pixel_sort(
-                                    &processed_dyn,
-                                );
+                                processed_dyn =
+                                    crate::backend::pixel_sort::apply_pixel_sort(&processed_dyn);
                             }
                             let histogram =
-                                crate::modules::histogram::compute_histogram(&processed_dyn)
-                                    .ok();
+                                crate::modules::histogram::compute_histogram(&processed_dyn).ok();
                             let wcag_contrast =
                                 crate::app::helpers::compute_wcag_contrast(&processed_dyn);
                             static PREVIEW_COUNTER: std::sync::atomic::AtomicUsize =
                                 std::sync::atomic::AtomicUsize::new(1);
-                            let count = PREVIEW_COUNTER
-                                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                            let temp_path = std::env::temp_dir()
-                                .join(format!("wallmod_preview_{}.jpg", count));
+                            let count =
+                                PREVIEW_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            let temp_path =
+                                std::env::temp_dir().join(format!("wallmod_preview_{}.jpg", count));
                             let _ = processed_dyn.save(&temp_path);
-                            return Ok(Some((
-                                processed_dyn,
-                                temp_path,
-                                histogram,
-                                wcag_contrast,
-                            )));
+                            return Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast)));
                         }
                     }
                 }
@@ -349,10 +335,15 @@ impl WallmodApp {
                     continue;
                 }
                 match &node.op {
-                    crate::app::state::PipelineOp::Theme(theme) => {
+                    crate::app::state::PipelineOp::Theme(theme, opacity) => {
                         let node_shades = theme.get_shades();
                         if !node_shades.is_empty() {
                             let mut buf = current_dyn.to_rgba8();
+                            let original_buf = if *opacity < 1.0 {
+                                Some(buf.clone())
+                            } else {
+                                None
+                            };
                             match algorithm {
                                 RemapAlgorithm::Gaussian => {
                                     let remapper = GaussianRemapper::new(
@@ -386,6 +377,20 @@ impl WallmodApp {
                                     par_correct_image(&mut buf, &hald_clut);
                                 },
                             }
+                            if let Some(orig) = original_buf {
+                                let op = *opacity;
+                                for (px_out, px_in) in buf.pixels_mut().zip(orig.pixels()) {
+                                    px_out[0] = ((px_out[0] as f32) * op
+                                        + (px_in[0] as f32) * (1.0 - op))
+                                        as u8;
+                                    px_out[1] = ((px_out[1] as f32) * op
+                                        + (px_in[1] as f32) * (1.0 - op))
+                                        as u8;
+                                    px_out[2] = ((px_out[2] as f32) * op
+                                        + (px_in[2] as f32) * (1.0 - op))
+                                        as u8;
+                                }
+                            }
                             current_dyn = image::DynamicImage::ImageRgba8(buf);
                         }
                     },
@@ -398,10 +403,8 @@ impl WallmodApp {
                     },
                     crate::app::state::PipelineOp::Photoshop(p) => {
                         if !p.is_neutral() {
-                            current_dyn = crate::modules::photoshop::apply_photoshop_sync(
-                                current_dyn,
-                                *p,
-                            );
+                            current_dyn =
+                                crate::modules::photoshop::apply_photoshop_sync(current_dyn, *p);
                         }
                     },
                     crate::app::state::PipelineOp::Dither => {
@@ -415,6 +418,69 @@ impl WallmodApp {
                     },
                     crate::app::state::PipelineOp::PixelSort => {
                         current_dyn = crate::backend::pixel_sort::apply_pixel_sort(&current_dyn);
+                    },
+                    crate::app::state::PipelineOp::Gowall(tool, params) => {
+                        let temp_in = std::env::temp_dir().join("wallmod_gowall_pipe_in.png");
+                        let temp_out = std::env::temp_dir().join("wallmod_gowall_pipe_out.png");
+                        let _ = current_dyn.save(&temp_in);
+
+                        let mut args = vec![];
+                        match tool {
+                            crate::app::gowall_state::GowallTool::Recolor => {
+                                args.push("convert".to_string());
+                                args.push(temp_in.to_string_lossy().to_string());
+                                args.push("-t".to_string());
+                                args.push(params.clone());
+                            },
+                            crate::app::gowall_state::GowallTool::Effects => {
+                                let mut parts: Vec<String> =
+                                    params.split_whitespace().map(|s| s.to_string()).collect();
+                                args.append(&mut parts);
+                                args.push(temp_in.to_string_lossy().to_string());
+                            },
+                            crate::app::gowall_state::GowallTool::Upscale => {
+                                args.push("upscale".to_string());
+                                args.push(temp_in.to_string_lossy().to_string());
+                                args.push("-s".to_string());
+                                args.push("2".to_string());
+                            },
+                            crate::app::gowall_state::GowallTool::PixelArt => {
+                                args.push("pixelate".to_string());
+                                args.push(temp_in.to_string_lossy().to_string());
+                                args.push("-s".to_string());
+                                args.push("15".to_string());
+                            },
+                            crate::app::gowall_state::GowallTool::ReplaceColor => {
+                                args.push("bg".to_string());
+                                args.push("remove".to_string());
+                                args.push(temp_in.to_string_lossy().to_string());
+                            },
+                            crate::app::gowall_state::GowallTool::Resize => {
+                                args.push("resize".to_string());
+                                args.push(temp_in.to_string_lossy().to_string());
+                                args.push("-d".to_string());
+                                args.push(params.clone());
+                            },
+                            _ => {},
+                        }
+
+                        if !args.is_empty() {
+                            args.push("--output".to_string());
+                            args.push(temp_out.to_string_lossy().to_string());
+                            args.push("--preview".to_string());
+                            args.push("false".to_string());
+                            args.push("--yes".to_string());
+
+                            let mut exe_path = std::env::current_exe().unwrap_or_default();
+                            exe_path.pop();
+                            let gowall_bin = exe_path.join("gowall");
+
+                            let _ = std::process::Command::new(&gowall_bin).args(&args).output();
+
+                            if let Ok(new_img) = image::open(&temp_out) {
+                                current_dyn = new_img;
+                            }
+                        }
                     },
                 }
                 if node.bit_depth != crate::app::state::BitDepthStyle::Bit32 {

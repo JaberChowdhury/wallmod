@@ -1,12 +1,12 @@
 //! Centralized GPUI UI Presentation Layer.
 //! Refactored into clean modular components following standard software engineering practices.
 
+pub mod gowall_tab;
 pub mod header;
 pub mod histogram;
 pub mod sidebar;
 pub mod swatches;
 pub mod workspace;
-pub mod gowall_tab;
 
 use crate::app::WallmodApp;
 use gpui::*;
@@ -165,10 +165,9 @@ impl WallmodView {
         cx.spawn(async move |this, cx| loop {
             cx.background_executor().timer(std::time::Duration::from_secs(60)).await;
             let _ = this.update(cx, |view, cx| {
-                if view.app.daemon_enabled
-                    && view.app.check_daemon_tick() {
-                        view.trigger_async_processing(cx, "Automated time-of-day theme shift...");
-                    }
+                if view.app.daemon_enabled && view.app.check_daemon_tick() {
+                    view.trigger_async_processing(cx, "Automated time-of-day theme shift...");
+                }
             });
         })
         .detach();
@@ -301,7 +300,7 @@ impl WallmodView {
                 self.app.state = crate::app::AppState::Idle;
                 cx.notify();
                 return;
-            }
+            },
         };
         let algorithm = self.app.algorithm;
         let preserve_luma = self.app.preserve_luma;

@@ -211,15 +211,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .child(
                     Button::new("cat_cg")
-                        .child(
-                            gpui::svg().path("palette.svg").size_4().text_color(
-                                if sidebar_tab == SidebarTab::ColorGrading {
-                                    cx.theme().secondary
-                                } else {
-                                    cx.theme().primary
-                                }
-                            ),
-                        )
+                        .child(gpui::svg().path("palette.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::ColorGrading {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
                         .child("Color Grading")
                         .small()
                         .cursor_pointer()
@@ -228,23 +226,19 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::ColorGrading;
                             this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
                             cx.notify();
                         })),
                 )
                 .child(
                     Button::new("cat_ps")
-                        .child(
-                            gpui::svg()
-                                .path("settings.svg")
-                                .size_4()
-                                .text_color(
-                                    if sidebar_tab == SidebarTab::PhotoshopEffects {
-                                        cx.theme().secondary
-                                    } else {
-                                        cx.theme().primary
-                                    }
-                                ),
-                        )
+                        .child(gpui::svg().path("settings.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::PhotoshopEffects {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
                         .child("Adjust & Effects")
                         .small()
                         .cursor_pointer()
@@ -253,23 +247,43 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::PhotoshopEffects;
                             this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                            cx.notify();
+                        })),
+                )
+                .child(
+                    Button::new("wv_gowall_hdr")
+                        .child(gpui::svg().path("wand.svg").size_4().text_color(
+                            if view.app.workspace_view == crate::app::state::WorkspaceView::Gowall {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
+                        .child("Gowall GUI")
+                        .small()
+                        .cursor_pointer()
+                        .selected(
+                            view.app.workspace_view == crate::app::state::WorkspaceView::Gowall,
+                        )
+                        .when(
+                            view.app.workspace_view == crate::app::state::WorkspaceView::Gowall,
+                            |this| this.primary(),
+                        )
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Gowall;
                             cx.notify();
                         })),
                 )
                 .child(
                     Button::new("cat_eng")
-                        .child(
-                            gpui::svg()
-                                .path("panel-left.svg")
-                                .size_4()
-                                .text_color(
-                                    if sidebar_tab == SidebarTab::DesktopEngine {
-                                        cx.theme().secondary
-                                    } else {
-                                        cx.theme().primary
-                                    }
-                                ),
-                        )
+                        .child(gpui::svg().path("panel-left.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::DesktopEngine {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
                         .child("Wallpaper Engine")
                         .small()
                         .cursor_pointer()
@@ -278,20 +292,19 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::DesktopEngine;
                             this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
                             cx.notify();
                         })),
                 )
                 .child(
                     Button::new("cat_exp")
-                        .child(
-                            gpui::svg().path("replace.svg").size_4().text_color(
-                                if sidebar_tab == SidebarTab::ExportSync {
-                                    cx.theme().secondary
-                                } else {
-                                    cx.theme().primary
-                                }
-                            ),
-                        )
+                        .child(gpui::svg().path("replace.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::ExportSync {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
                         .child("Export & Sync")
                         .small()
                         .cursor_pointer()
@@ -300,20 +313,19 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::ExportSync;
                             this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
                             cx.notify();
                         })),
                 )
                 .child(
                     Button::new("cat_ai")
-                        .child(
-                            gpui::svg().path("search.svg").size_4().text_color(
-                                if sidebar_tab == SidebarTab::ToolsExt {
-                                    cx.theme().secondary
-                                } else {
-                                    cx.theme().primary
-                                }
-                            ),
-                        )
+                        .child(gpui::svg().path("search.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::ToolsExt {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
                         .child("AI & Tools")
                         .small()
                         .cursor_pointer()
@@ -322,23 +334,19 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::ToolsExt;
                             this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
                             cx.notify();
                         })),
                 )
                 .child(
                     Button::new("cat_settings")
-                        .child(
-                            gpui::svg()
-                                .path("settings.svg")
-                                .size_4()
-                                .text_color(
-                                    if sidebar_tab == SidebarTab::Settings {
-                                        cx.theme().secondary
-                                    } else {
-                                        cx.theme().primary
-                                    }
-                                ),
-                        )
+                        .child(gpui::svg().path("settings.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::Settings {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
                         .child("Settings")
                         .small()
                         .cursor_pointer()
@@ -347,20 +355,19 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::Settings;
                             this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
                             cx.notify();
                         })),
                 )
                 .child(
                     Button::new("cat_favs")
-                        .child(
-                            gpui::svg().path("heart.svg").size_4().text_color(
-                                if sidebar_tab == SidebarTab::FavoriteColors {
-                                    cx.theme().secondary
-                                } else {
-                                    cx.theme().primary
-                                }
-                            ),
-                        )
+                        .child(gpui::svg().path("heart.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::FavoriteColors {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
                         .child("Favorite Colors")
                         .small()
                         .cursor_pointer()
@@ -369,6 +376,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::FavoriteColors;
                             this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
                             cx.notify();
                         })),
                 )
