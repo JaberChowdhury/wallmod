@@ -24,6 +24,8 @@ pub struct WallmodView {
     pub palette_g_slider: Entity<SliderState>,
     pub palette_b_slider: Entity<SliderState>,
     pub palette_hex_input: Entity<gpui_component::input::InputState>,
+    pub shader_inputs:
+        std::collections::HashMap<usize, [Entity<gpui_component::input::InputState>; 4]>,
     pub subscriptions: Vec<Subscription>,
 }
 
@@ -229,6 +231,7 @@ impl WallmodView {
             palette_g_slider,
             palette_b_slider,
             palette_hex_input,
+            shader_inputs: std::collections::HashMap::new(),
             subscriptions,
         }
     }
@@ -306,13 +309,41 @@ impl WallmodView {
         let preserve_luma = self.app.preserve_luma;
         let hald_level = self.app.hald_level;
 
-        cx.spawn(async move |this, cx| {
+        let is_done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let is_done_bg = is_done.clone();
+        let is_done_ui = is_done.clone();
+        let status_tracker = std::sync::Arc::new(std::sync::Mutex::new(None::<String>));
+        let status_tracker_bg = status_tracker.clone();
+        let status_tracker_ui = status_tracker.clone();
+
+        cx.spawn(async move |this_view, mut cx| {
+            while !is_done_ui.load(std::sync::atomic::Ordering::Relaxed) {
+                cx.background_executor().timer(std::time::Duration::from_millis(50)).await;
+                if let Ok(lock) = status_tracker_ui.lock() {
+                    if let Some(msg) = lock.clone() {
+                        let _ = this_view.update(cx, |view: &mut WallmodView, cx| {
+                            view.app.processing_status = Some(msg);
+                            cx.notify();
+                        });
+                    }
+                }
+            }
+        })
+        .detach();
+
+        let on_progress = Box::new(move |msg: String| {
+            if let Ok(mut lock) = status_tracker_bg.lock() {
+                *lock = Some(msg);
+            }
+        }) as Box<dyn Fn(String) + Send>;
+
+        cx.spawn(async move |this, mut cx| {
             cx.background_executor().timer(std::time::Duration::from_millis(100)).await;
 
             let result = cx
                 .background_executor()
                 .spawn(async move {
-                    crate::app::WallmodApp::process_image_sync(
+                    let res = crate::app::WallmodApp::process_image_sync(
                         Some(base_image_dyn.clone()),
                         current_theme,
                         photoshop_params,
@@ -326,7 +357,10 @@ impl WallmodView {
                         algorithm,
                         preserve_luma,
                         hald_level,
-                    )
+                        Some(on_progress),
+                    );
+                    is_done_bg.store(true, std::sync::atomic::Ordering::Relaxed);
+                    res
                 })
                 .await;
 
@@ -334,13 +368,16 @@ impl WallmodView {
                 match result {
                     Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast))) => {
                         view.app.update_preview(processed_dyn, temp_path, histogram, wcag_contrast);
+                        view.app.processing_status = None;
                     },
                     Ok(None) => {
                         view.app.state = crate::app::AppState::Idle;
+                        view.app.processing_status = None;
                     },
                     Err(err) => {
                         eprintln!("Processing error: {}", err);
                         view.app.state = crate::app::AppState::Error(err);
+                        view.app.processing_status = None;
                     },
                 }
                 cx.notify();
@@ -390,6 +427,68 @@ impl WallmodView {
         })
         .detach();
     }
+}
+
+fn render_floating_tracker(
+    app: &crate::app::WallmodApp,
+    cx: &mut Context<WallmodView>,
+) -> AnyElement {
+    let (status_text, is_idle) = match &app.processing_status {
+        Some(msg) => (msg.clone(), false),
+        None => {
+            if matches!(
+                app.state,
+                crate::app::AppState::Idle | crate::app::AppState::PreviewReady(_)
+            ) {
+                ("Idle".to_string(), true)
+            } else {
+                ("Processing...".to_string(), false)
+            }
+        },
+    };
+
+    let bg_color = if is_idle {
+        gpui::Hsla {
+            h: 0.3,
+            s: 0.8,
+            l: 0.4,
+            a: 0.9,
+        }
+    } else {
+        cx.theme().secondary
+    };
+    div()
+        .absolute()
+        .bottom(px(16.0))
+        .right(px(16.0))
+        .w(px(250.0))
+        .p_4()
+        .rounded_xl()
+        .bg(bg_color)
+        .border_1()
+        .border_color(cx.theme().border)
+        .shadow_lg()
+        .child(
+            v_flex()
+                .gap_2()
+                .items_center()
+                .child(div().text_sm().font_bold().child(if is_idle {
+                    "Pipeline Ready"
+                } else {
+                    "Pipeline Running"
+                }))
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(if is_idle {
+                            gpui::black()
+                        } else {
+                            cx.theme().muted_foreground
+                        })
+                        .child(status_text),
+                ),
+        )
+        .into_any_element()
 }
 
 fn render_floating_stats(
@@ -521,6 +620,11 @@ impl Render for WallmodView {
             )
             .children(if self.app.show_floating_stats {
                 Some(render_floating_stats(&self.app, cx))
+            } else {
+                None
+            })
+            .children(if self.app.show_progress_panel {
+                Some(render_floating_tracker(&self.app, cx))
             } else {
                 None
             })

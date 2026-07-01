@@ -528,30 +528,126 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                         .child(div().h_px().w_full().bg(cx.theme().border).my_2())
                         .child(div().text_sm().font_bold().child("Image Export"))
                         .child(
-                            Button::new("btn_save_img").disabled(is_loading)
-                                .child(gpui::svg().path("file.svg").size_4().text_color(cx.theme().primary))
-                                .child("Save Graded Image As...")
-                                .primary()
-                                .w_full()
-                                .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
-                                    let out_dir = this.app.export_dir.clone();
-                                    cx.spawn(async move |this, cx| {
-                                        let mut dialog = rfd::AsyncFileDialog::new().set_file_name("wallmod_graded.png");
-                                        if let Some(dir) = out_dir {
-                                            dialog = dialog.set_directory(&dir);
-                                        }
-                                        if let Some(file) = dialog.save_file().await {
-                                            let save_path = file.path().to_path_buf();
-                                            let _ = this.update(cx, |view, cx| {
-                                                if let Some(ref dyn_img) = view.app.processed_dyn {
-                                                    let _ = dyn_img.save(save_path);
-                                                    view.app.state = crate::app::AppState::Notice("Saved successfully!".to_string());
+                            h_flex().gap_2().w_full()
+                                .child(
+                                    Button::new("btn_save_png").disabled(is_loading)
+                                        .child("PNG")
+                                        .small().primary().flex_1()
+                                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                            let out_dir = this.app.export_dir.clone();
+                                            cx.spawn(async move |this, cx| {
+                                                let mut dialog = rfd::AsyncFileDialog::new().set_file_name("wallmod_graded.png");
+                                                if let Some(dir) = out_dir { dialog = dialog.set_directory(&dir); }
+                                                if let Some(file) = dialog.save_file().await {
+                                                    let save_path = file.path().to_path_buf();
+                                                    let _ = this.update(cx, |view, cx| {
+                                                        if let Some(ref dyn_img) = view.app.processed_dyn {
+                                                            let _ = dyn_img.save(save_path);
+                                                            view.app.state = crate::app::AppState::Notice("Saved PNG successfully!".to_string());
+                                                        }
+                                                        cx.notify();
+                                                    });
                                                 }
-                                                cx.notify();
-                                            });
-                                        }
-                                    }).detach();
-                                }))
+                                            }).detach();
+                                        }))
+                                )
+                                .child(
+                                    Button::new("btn_save_jpg").disabled(is_loading)
+                                        .child("JPG")
+                                        .small().primary().flex_1()
+                                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                            let out_dir = this.app.export_dir.clone();
+                                            cx.spawn(async move |this, cx| {
+                                                let mut dialog = rfd::AsyncFileDialog::new().set_file_name("wallmod_graded.jpg");
+                                                if let Some(dir) = out_dir { dialog = dialog.set_directory(&dir); }
+                                                if let Some(file) = dialog.save_file().await {
+                                                    let save_path = file.path().to_path_buf();
+                                                    let _ = this.update(cx, |view, cx| {
+                                                        if let Some(ref dyn_img) = view.app.processed_dyn {
+                                                            let _ = dyn_img.save(save_path);
+                                                            view.app.state = crate::app::AppState::Notice("Saved JPG successfully!".to_string());
+                                                        }
+                                                        cx.notify();
+                                                    });
+                                                }
+                                            }).detach();
+                                        }))
+                                )
+                                .child(
+                                    Button::new("btn_save_webp").disabled(is_loading)
+                                        .child("WEBP")
+                                        .small().primary().flex_1()
+                                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                            let out_dir = this.app.export_dir.clone();
+                                            cx.spawn(async move |this, cx| {
+                                                let mut dialog = rfd::AsyncFileDialog::new().set_file_name("wallmod_graded.webp");
+                                                if let Some(dir) = out_dir { dialog = dialog.set_directory(&dir); }
+                                                if let Some(file) = dialog.save_file().await {
+                                                    let save_path = file.path().to_path_buf();
+                                                    let _ = this.update(cx, |view, cx| {
+                                                        if let Some(ref dyn_img) = view.app.processed_dyn {
+                                                            let _ = dyn_img.save(save_path);
+                                                            view.app.state = crate::app::AppState::Notice("Saved WEBP successfully!".to_string());
+                                                        }
+                                                        cx.notify();
+                                                    });
+                                                }
+                                            }).detach();
+                                        }))
+                                )
+                        )
+                        .child(
+                            h_flex().gap_2().w_full()
+                                .child(
+                                    Button::new("btn_save_json").disabled(is_loading)
+                                        .child("Palette JSON")
+                                        .small().outline().flex_1()
+                                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                            let out_dir = this.app.export_dir.clone();
+                                            let theme = this.app.current_theme.clone();
+                                            cx.spawn(async move |this, cx| {
+                                                let mut dialog = rfd::AsyncFileDialog::new().set_file_name("palette.json");
+                                                if let Some(dir) = out_dir { dialog = dialog.set_directory(&dir); }
+                                                if let Some(file) = dialog.save_file().await {
+                                                    let save_path = file.path().to_path_buf();
+                                                    let shades = theme.get_shades();
+                                                    let json = format!(r#"{{ "primary": "{:?}", "shades": {:?} }}"#, shades.first(), shades);
+                                                    let _ = std::fs::write(save_path, json);
+                                                    let _ = this.update(cx, |view, cx| {
+                                                        view.app.state = crate::app::AppState::Notice("Saved JSON successfully!".to_string());
+                                                        cx.notify();
+                                                    });
+                                                }
+                                            }).detach();
+                                        }))
+                                )
+                                .child(
+                                    Button::new("btn_save_css").disabled(is_loading)
+                                        .child("Palette CSS")
+                                        .small().outline().flex_1()
+                                        .cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                            let out_dir = this.app.export_dir.clone();
+                                            let theme = this.app.current_theme.clone();
+                                            cx.spawn(async move |this, cx| {
+                                                let mut dialog = rfd::AsyncFileDialog::new().set_file_name("palette.css");
+                                                if let Some(dir) = out_dir { dialog = dialog.set_directory(&dir); }
+                                                if let Some(file) = dialog.save_file().await {
+                                                    let save_path = file.path().to_path_buf();
+                                                    let shades = theme.get_shades();
+                                                    let mut css = String::from(":root {\n");
+                                                    for (i, shade) in shades.iter().enumerate() {
+                                                        css.push_str(&format!("  --color-{}: rgb({}, {}, {});\n", i, shade[0], shade[1], shade[2]));
+                                                    }
+                                                    css.push_str("}\n");
+                                                    let _ = std::fs::write(save_path, css);
+                                                    let _ = this.update(cx, |view, cx| {
+                                                        view.app.state = crate::app::AppState::Notice("Saved CSS successfully!".to_string());
+                                                        cx.notify();
+                                                    });
+                                                }
+                                            }).detach();
+                                        }))
+                                )
                         )
                         .child(div().h_px().w_full().bg(cx.theme().border).my_2())
                         .child(div().text_sm().font_bold().child("Batch & Output Management"))
@@ -615,7 +711,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                                         if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
                                                             if ["png", "jpg", "jpeg", "webp"].contains(&ext.as_str()) {
                                                                 if let Ok(img) = crate::app::helpers::open_image(&path) {
-                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params, blur, dither, seam, psort, chain.clone(), cmode, bitdepth, alg, luma, hald) {
+                                                                    if let Ok(Some((processed, _, _, _))) = crate::app::WallmodApp::process_image_sync(Some(img), theme.clone(), params, blur, dither, seam, psort, chain.clone(), cmode, bitdepth, alg, luma, hald, None) {
                                                                         if let Some(name) = path.file_name() {
                                                                             let _ = processed.save(target_dir.join(name));
                                                                         }

@@ -261,9 +261,9 @@ pub fn render_workspace(
                                                     let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
                                                     let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
                                                     let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                                                    
+
                                                     let shades = generate_tailwind_shades(r, g, b);
-                                                    
+
                                                     v_flex().gap_2().w_full()
                                                         .child(div().text_xs().font_bold().text_color(cx.theme().muted_foreground).child(hex.clone()))
                                                         .child(
@@ -615,6 +615,10 @@ pub fn render_workspace(
                                                     this.app.chaining_mode = !this.app.chaining_mode;
                                                     cx.notify();
                                                 })))
+                                                .child(Button::new("btn_toggle_tracker").disabled(is_loading).label(if view.app.show_progress_panel { "Tracker: ON" } else { "Tracker: OFF" }).small().outline().selected(view.app.show_progress_panel).cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    this.app.show_progress_panel = !this.app.show_progress_panel;
+                                                    cx.notify();
+                                                })))
                                                 .child(Button::new("btn_pipe_clear").disabled(is_loading).child(gpui::svg().path("close.svg").size_4().text_color(gpui::Rgba { r: 0.9, g: 0.2, b: 0.2, a: 1.0 })).tooltip("Reset Chain").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                                                     let init = crate::app::state::ThemeSource::Preset("Default".to_string());
                                                     this.app.theme_chain = vec![crate::app::state::ThemeChainNode { id: 1, op: crate::app::state::PipelineOp::Theme(init.clone(), 1.0), theme: init.clone(), enabled: true, bit_depth: crate::app::state::BitDepthStyle::Bit32 }];
@@ -711,6 +715,19 @@ pub fn render_workspace(
                                                     });
                                                     this.app.chaining_mode = true;
                                                     this.trigger_node_processing(cx, "Added Gowall step...");
+                                                })))
+                                                .child(Button::new("btn_add_wgsl").disabled(is_loading).child("+ WGSL Shader").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                                                    let next_id = this.app.theme_chain.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                                                    let theme = this.app.current_theme.clone();
+                                                    this.app.theme_chain.push(crate::app::state::ThemeChainNode {
+                                                        id: next_id,
+                                                        op: crate::app::state::PipelineOp::Shader("CRT Scanlines".to_string(), [1.0, 1.0, 1.0, 1.0]),
+                                                        theme,
+                                                        enabled: true,
+                                                        bit_depth: this.app.global_bit_depth,
+                                                    });
+                                                    this.app.chaining_mode = true;
+                                                    this.trigger_node_processing(cx, "Added Shader step...");
                                                 })))
                                                 .child(div().w_px().h_6().bg(cx.theme().border))
                                                 .child(Button::new("btn_export_pipe").disabled(is_loading).tooltip("Export Pipeline").small().outline().cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
@@ -856,7 +873,7 @@ pub fn render_workspace(
                                                             let param_clone = param.clone();
                                                             let tool_clone = *tool;
                                                             let is_recolor = *tool == crate::app::gowall_state::GowallTool::Recolor;
-                                                            
+
                                                             let tool_name = match tool_clone {
                                                                 crate::app::gowall_state::GowallTool::Recolor => "Recolor",
                                                                 crate::app::gowall_state::GowallTool::Effects => "Effects",
@@ -945,6 +962,67 @@ pub fn render_workspace(
                                                                             })
                                                                     )
                                                             ).into_any_element()
+                                                        },
+                                                        crate::app::state::PipelineOp::Shader(name, params) => {
+                                                            let ve = cx.entity().clone();
+                                                            let name_clone = name.clone();
+                                                            if !view.shader_inputs.contains_key(&nid) {
+                                                                let arr = [
+                                                                    cx.new(|cx| gpui_component::input::InputState::new(window, cx).default_value(&params[0].to_string())),
+                                                                    cx.new(|cx| gpui_component::input::InputState::new(window, cx).default_value(&params[1].to_string())),
+                                                                    cx.new(|cx| gpui_component::input::InputState::new(window, cx).default_value(&params[2].to_string())),
+                                                                    cx.new(|cx| gpui_component::input::InputState::new(window, cx).default_value(&params[3].to_string())),
+                                                                ];
+                                                                view.shader_inputs.insert(nid, arr);
+                                                            }
+                                                            let inputs = view.shader_inputs.get(&nid).unwrap().clone();
+                                                            let labels = crate::backend::shaders::get_shader_param_labels(&name_clone);
+                                                            v_flex().w_full().gap_2()
+                                                                .child(
+                                                                    Button::new(format!("dd_shader_{}", nid)).disabled(is_loading)
+                                                                        .label(name_clone.clone())
+                                                                        .small().outline()
+                                                                        .dropdown_menu({ let ve = ve.clone(); move |mut menu, window, _| {
+                                                                            for (preset_name, _) in crate::backend::shaders::SHADER_PRESETS {
+                                                                                let preset = preset_name.to_string();
+                                                                                let ve = ve.clone();
+                                                                                menu = menu.item(
+                                                                                    PopupMenuItem::new(preset.clone())
+                                                                                        .on_click(window.listener_for(&ve, move |this, _, _, cx| {
+                                                                                            if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                                                if let crate::app::state::PipelineOp::Shader(_, current_p) = n.op {
+                                                                                                    n.op = crate::app::state::PipelineOp::Shader(preset.clone(), current_p);
+                                                                                                } else {
+                                                                                                    n.op = crate::app::state::PipelineOp::Shader(preset.clone(), [1.0, 1.0, 1.0, 1.0]);
+                                                                                                }
+                                                                                            }
+                                                                                            this.trigger_node_processing(cx, "Tweaking Shader preset...");
+                                                                                        }))
+                                                                                );
+                                                                            }
+                                                                            menu
+                                                                        }})
+                                                                )
+                                                                .child(h_flex().gap_2().items_center().w_full()
+                                                                    .child(v_flex().w_full().child(div().text_xs().text_color(cx.theme().muted).child(labels[0])).child(gpui_component::input::Input::new(&inputs[0])))
+                                                                    .child(v_flex().w_full().child(div().text_xs().text_color(cx.theme().muted).child(labels[1])).child(gpui_component::input::Input::new(&inputs[1])))
+                                                                    .child(v_flex().w_full().child(div().text_xs().text_color(cx.theme().muted).child(labels[2])).child(gpui_component::input::Input::new(&inputs[2])))
+                                                                    .child(v_flex().w_full().child(div().text_xs().text_color(cx.theme().muted).child(labels[3])).child(gpui_component::input::Input::new(&inputs[3])))
+                                                                )
+                                                                .child(Button::new(format!("shd_apply_{}", nid)).child("Apply Params").small().outline().on_click(cx.listener(move |this, _, _, cx| {
+                                                                    if let Some(ins) = this.shader_inputs.get(&nid) {
+                                                                        let p0 = ins[0].read(cx).text().to_string().parse::<f32>().unwrap_or(0.0);
+                                                                        let p1 = ins[1].read(cx).text().to_string().parse::<f32>().unwrap_or(0.0);
+                                                                        let p2 = ins[2].read(cx).text().to_string().parse::<f32>().unwrap_or(0.0);
+                                                                        let p3 = ins[3].read(cx).text().to_string().parse::<f32>().unwrap_or(0.0);
+                                                                        if let Some(n) = this.app.theme_chain.iter_mut().find(|x| x.id == nid) {
+                                                                            if let crate::app::state::PipelineOp::Shader(_, ref mut p) = n.op {
+                                                                                *p = [p0, p1, p2, p3];
+                                                                            }
+                                                                        }
+                                                                        this.trigger_node_processing(cx, "Applying Shader params...");
+                                                                    }
+                                                                }))).into_any_element()
                                                         },
                                                         _ => div().into_any_element()
                                                     }
