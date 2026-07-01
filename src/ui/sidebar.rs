@@ -60,7 +60,86 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
         .child(div().h_px().w_full().bg(cx.theme().border))
         .child(
             match sidebar_tab {
-                SidebarTab::CodeRender => { div().child("Code Render (Coming soon)").into_any_element() },
+                SidebarTab::CodeRender => {
+                    v_flex().gap_4().w_full().p_4()
+                        .child(div().text_sm().font_bold().child("Code to Image Engine (Silicon)"))
+                        .child(div().text_xs().text_color(cx.theme().muted_foreground).child("Requires 'silicon' CLI installed on your system."))
+                        .child(
+                            Button::new("btn_silicon_clipboard")
+                                .child(gpui::svg().path("copy.svg").size_4().text_color(cx.theme().primary))
+                                .child("Render from Clipboard")
+                                .secondary()
+                                .w_full()
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.app.state = crate::app::AppState::Loading(0.0, "Rendering Code...".to_string());
+                                    let task = cx.spawn(async move |this, cx| {
+                                        let out_path = rfd::AsyncFileDialog::new()
+                                            .set_file_name("code_render.png")
+                                            .save_file()
+                                            .await;
+                                        if let Some(path) = out_path {
+                                            let out = std::process::Command::new("silicon")
+                                                .arg("--from-clipboard")
+                                                .arg("-o")
+                                                .arg(path.path())
+                                                .output();
+                                            let msg = match out {
+                                                Ok(o) if o.status.success() => "Render saved successfully!".to_string(),
+                                                Ok(o) => format!("Silicon Error: {}", String::from_utf8_lossy(&o.stderr)),
+                                                Err(e) => format!("Failed to run silicon: {}", e),
+                                            };
+                                            let _ = this.update(cx, |view, cx| {
+                                                view.app.state = crate::app::AppState::Notice(msg);
+                                                cx.notify();
+                                            });
+                                        } else {
+                                            let _ = this.update(cx, |view, cx| {
+                                                view.app.state = crate::app::AppState::Idle;
+                                                cx.notify();
+                                            });
+                                        }
+                                    });
+                                    task.detach();
+                                    cx.notify();
+                                }))
+                        )
+                        .child(
+                            Button::new("btn_silicon_file")
+                                .child(gpui::svg().path("file.svg").size_4().text_color(cx.theme().primary))
+                                .child("Select File to Render")
+                                .secondary()
+                                .w_full()
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.app.state = crate::app::AppState::Loading(0.0, "Select file to render...".to_string());
+                                    let task = cx.spawn(async move |this, cx| {
+                                        let file_path = rfd::AsyncFileDialog::new().pick_file().await;
+                                        if let Some(file) = file_path {
+                                            let out_path = rfd::AsyncFileDialog::new().set_file_name("code_render.png").save_file().await;
+                                            if let Some(out) = out_path {
+                                                let res = std::process::Command::new("silicon")
+                                                    .arg(file.path())
+                                                    .arg("-o")
+                                                    .arg(out.path())
+                                                    .output();
+                                                let msg = match res {
+                                                    Ok(o) if o.status.success() => "Render saved successfully!".to_string(),
+                                                    Ok(o) => format!("Silicon Error: {}", String::from_utf8_lossy(&o.stderr)),
+                                                    Err(e) => format!("Failed to run silicon: {}", e),
+                                                };
+                                                let _ = this.update(cx, |view, cx| { view.app.state = crate::app::AppState::Notice(msg); cx.notify(); });
+                                            } else {
+                                                let _ = this.update(cx, |view, cx| { view.app.state = crate::app::AppState::Idle; cx.notify(); });
+                                            }
+                                        } else {
+                                            let _ = this.update(cx, |view, cx| { view.app.state = crate::app::AppState::Idle; cx.notify(); });
+                                        }
+                                    });
+                                    task.detach();
+                                    cx.notify();
+                                }))
+                        )
+                        .into_any_element()
+                },
                 SidebarTab::FavoriteColors => { div().child("Favorite Colors").into_any_element() },
                 SidebarTab::ColorGrading => {
                     v_flex().gap_3().w_full().flex_1().overflow_y_scrollbar()
