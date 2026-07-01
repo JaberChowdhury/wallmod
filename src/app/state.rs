@@ -108,6 +108,7 @@ pub enum WorkspaceView {
     Telemetry,
     ExtractColor,
     PaletteEditor,
+    FavoriteColors,
     Albums,
     Gowall,
 }
@@ -134,6 +135,7 @@ impl std::fmt::Display for WorkspaceView {
             WorkspaceView::Telemetry => write!(f, "Dashboard Info"),
             WorkspaceView::ExtractColor => write!(f, "Extract Color"),
             WorkspaceView::PaletteEditor => write!(f, "Edit Palette"),
+            WorkspaceView::FavoriteColors => write!(f, "Favorite Colors"),
             WorkspaceView::Albums => write!(f, "Album Gallery"),
             WorkspaceView::Gowall => write!(f, "Gowall GUI"),
         }

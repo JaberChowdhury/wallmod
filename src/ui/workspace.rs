@@ -243,9 +243,29 @@ pub fn render_workspace(
 
                                                         v_flex().gap_2().w(px(140.0)).p_3().border_1().border_color(cx.theme().border).rounded_lg().bg(cx.theme().secondary)
                                                             .child(
-                                                                h_flex().gap_3().items_center()
-                                                                    .child(div().w(px(16.0)).h(px(16.0)).rounded_full().bg(gpui::Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 }).border_1().border_color(cx.theme().border.opacity(0.5)))
-                                                                    .child(div().text_sm().font_bold().child(hex))
+                                                                h_flex().gap_3().items_center().justify_between()
+                                                                    .child(
+                                                                        h_flex().gap_3().items_center()
+                                                                            .child(div().w(px(16.0)).h(px(16.0)).rounded_full().bg(gpui::Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 }).border_1().border_color(cx.theme().border.opacity(0.5)))
+                                                                            .child(div().text_sm().font_bold().child(hex.clone()))
+                                                                    )
+                                                                    .child({
+                                                                        let hex_clone = hex.clone();
+                                                                        let is_fav = view.app.favorite_colors.contains(&hex_clone);
+                                                                        Button::new(format!("fav_{}", hex_clone.clone()))
+                                                                            .child(gpui::svg().path("heart.svg").size_4().text_color(if is_fav { cx.theme().primary } else { cx.theme().muted_foreground }))
+                                                                            .ghost()
+                                                                            .small()
+                                                                            .cursor_pointer()
+                                                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                                                if this.app.favorite_colors.contains(&hex_clone) {
+                                                                                    this.app.favorite_colors.retain(|x| x != &hex_clone);
+                                                                                } else {
+                                                                                    this.app.favorite_colors.push(hex_clone.clone());
+                                                                                }
+                                                                                cx.notify();
+                                                                            }))
+                                                                    })
                                                             )
                                                             .child(
                                                                 h_flex().justify_between()
@@ -286,6 +306,84 @@ pub fn render_workspace(
                                     } else {
                                         div().flex_1().flex().items_center().justify_center().text_color(cx.theme().muted_foreground)
                                             .child("No colors extracted. Click the button above to run the K-Means extraction algorithm.")
+                                            .into_any_element()
+                                    }
+                                )
+                                .into_any_element()
+                        }
+                        WorkspaceView::FavoriteColors => {
+                            let favs = view.app.favorite_colors.clone();
+                            let sel = view.app.favorite_palette_selection.clone();
+
+                            v_flex().gap_4().size_full().p_6()
+                                .child(
+                                    h_flex().justify_between().items_center()
+                                        .child(div().text_xl().font_bold().child("Favorite Colors"))
+                                        .child(
+                                            Button::new("btn_create_palette_from_favs")
+                                                .child(gpui::svg().path("wand.svg").size_4().text_color(if sel.is_empty() { cx.theme().muted_foreground } else { cx.theme().primary }))
+                                                .child(format!("Create Palette ({})", sel.len()))
+                                                .primary()
+                                                .disabled(sel.is_empty())
+                                                .cursor_pointer()
+                                                .on_click(cx.listener(|this, _, _, cx| {
+                                                    if !this.app.favorite_palette_selection.is_empty() {
+                                                        let mut colors = Vec::new();
+                                                        for hex in &this.app.favorite_palette_selection {
+                                                            let s = hex.trim_start_matches('#');
+                                                            if s.len() == 6 {
+                                                                if let (Ok(r), Ok(g), Ok(b)) = (
+                                                                    u8::from_str_radix(&s[0..2], 16),
+                                                                    u8::from_str_radix(&s[2..4], 16),
+                                                                    u8::from_str_radix(&s[4..6], 16),
+                                                                ) {
+                                                                    colors.push([r, g, b]);
+                                                                }
+                                                            }
+                                                        }
+                                                        if !colors.is_empty() {
+                                                            let new_theme = crate::app::state::ThemeSource::CustomPalette("Favorites Palette".to_string(), colors);
+                                                            this.app.apply_theme(new_theme);
+                                                            this.app.selected_preset = None;
+                                                            this.app.workspace_view = crate::app::state::WorkspaceView::PaletteEditor;
+                                                            this.app.selected_color_idx = None;
+                                                            this.trigger_async_processing(cx, "Applying favorites palette...");
+                                                        }
+                                                    }
+                                                }))
+                                        )
+                                )
+                                .child(div().h_px().w_full().bg(cx.theme().border))
+                                .child(
+                                    if favs.is_empty() {
+                                        div().text_sm().text_color(cx.theme().muted_foreground).child("No favorite colors saved yet. Go to Extract Colors and save some!")
+                                            .into_any_element()
+                                    } else {
+                                        div().flex().flex_wrap().gap_4().w_full().overflow_y_scrollbar()
+                                            .children(favs.into_iter().enumerate().map(|(i, hex)| {
+                                                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                                                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                                                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                                                let is_selected = sel.contains(&hex);
+
+                                                v_flex().id(("fav_swatch", i)).gap_2().w(px(120.0)).p_3().border_1().rounded_lg()
+                                                    .border_color(if is_selected { cx.theme().primary } else { cx.theme().border })
+                                                    .bg(if is_selected { cx.theme().primary.opacity(0.1) } else { cx.theme().secondary })
+                                                    .cursor_pointer()
+                                                    .on_click({
+                                                        let hex_clone = hex.clone();
+                                                        cx.listener(move |this, _, _, cx| {
+                                                            if this.app.favorite_palette_selection.contains(&hex_clone) {
+                                                                this.app.favorite_palette_selection.remove(&hex_clone);
+                                                            } else {
+                                                                this.app.favorite_palette_selection.insert(hex_clone.clone());
+                                                            }
+                                                            cx.notify();
+                                                        })
+                                                    })
+                                                    .child(div().w_full().h(px(60.0)).rounded_md().bg(gpui::Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 }).border_1().border_color(cx.theme().border.opacity(0.5)))
+                                                    .child(div().text_sm().font_bold().text_color(if is_selected { cx.theme().primary } else { cx.theme().foreground }).child(hex))
+                                            }))
                                             .into_any_element()
                                     }
                                 )
