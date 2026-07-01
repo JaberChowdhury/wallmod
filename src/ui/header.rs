@@ -331,6 +331,29 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         })),
                 )
                 .child(
+                    Button::new("cat_code_render")
+                        .child(gpui::svg().path("code.svg").size_4().text_color(
+                            if sidebar_tab == SidebarTab::CodeRender {
+                                cx.theme().secondary
+                            } else {
+                                cx.theme().primary
+                            },
+                        ))
+                        .child("Code Render")
+                        .small()
+                        .cursor_pointer()
+                        .selected(sidebar_tab == SidebarTab::CodeRender)
+                        .when(sidebar_tab == SidebarTab::CodeRender, |this| {
+                            this.primary()
+                        })
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.app.sidebar_tab = SidebarTab::CodeRender;
+                            this.app.option_group_tab = 0;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                            cx.notify();
+                        })),
+                )
+                .child(
                     div()
                         .relative()
                         .child(
@@ -358,42 +381,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                     .top(px(32.0))
                                     .right(px(0.0))
                                     .w(px(200.0))
-                                    .bg(cx.theme().background)
+                                    .bg(cx.theme().secondary)
                                     .border_1()
                                     .border_color(cx.theme().border)
                                     .rounded_md()
                                     .shadow_sm()
                                     .p_1()
                                     .gap_1()
-                                    .child(
-                                        Button::new("cat_code_render")
-                                            .child(
-                                                gpui::svg().path("code.svg").size_4().text_color(
-                                                    if sidebar_tab == SidebarTab::CodeRender {
-                                                        cx.theme().secondary
-                                                    } else {
-                                                        cx.theme().primary
-                                                    },
-                                                ),
-                                            )
-                                            .child("Code Render")
-                                            .w_full()
-                                            .justify_start()
-                                            .small()
-                                            .cursor_pointer()
-                                            .selected(sidebar_tab == SidebarTab::CodeRender)
-                                            .when(sidebar_tab == SidebarTab::CodeRender, |b| {
-                                                b.primary()
-                                            })
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.app.sidebar_tab = SidebarTab::CodeRender;
-                                                this.app.option_group_tab = 0;
-                                                this.app.workspace_view =
-                                                    crate::app::state::WorkspaceView::Standard;
-                                                this.app.show_header_dropdown = false;
-                                                cx.notify();
-                                            })),
-                                    )
                                     .child(
                                         Button::new("btn_toggle_float_stats")
                                             .child(
