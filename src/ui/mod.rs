@@ -379,7 +379,7 @@ impl WallmodView {
         let status_tracker_bg = status_tracker.clone();
         let status_tracker_ui = status_tracker.clone();
 
-        cx.spawn(async move |this_view, mut cx| {
+        cx.spawn(async move |this_view, cx| {
             while !is_done_ui.load(std::sync::atomic::Ordering::Relaxed) {
                 cx.background_executor()
                     .timer(std::time::Duration::from_millis(50))
@@ -402,7 +402,7 @@ impl WallmodView {
             }
         }) as Box<dyn Fn(String) + Send>;
 
-        cx.spawn(async move |this, mut cx| {
+        cx.spawn(async move |this, cx| {
             cx.background_executor()
                 .timer(std::time::Duration::from_millis(100))
                 .await;
