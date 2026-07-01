@@ -35,7 +35,7 @@ pub fn extract_dominant_colors(
         }
 
         let mut sorted: Vec<(u16, usize)> = counts.into_iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         let colors = sorted
             .into_iter()

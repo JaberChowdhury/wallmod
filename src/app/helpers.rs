@@ -158,12 +158,12 @@ pub fn extract_dominant_colors(img: &image::DynamicImage) -> Vec<[u8; 3]> {
     }
     let mut result = Vec::new();
     for i in 0..8 {
-        if counts[i] > 0 {
-            result.push([
-                (buckets[i][0] / counts[i]) as u8,
-                (buckets[i][1] / counts[i]) as u8,
-                (buckets[i][2] / counts[i]) as u8,
-            ]);
+        if let (Some(r), Some(g), Some(b)) = (
+            buckets[i][0].checked_div(counts[i]),
+            buckets[i][1].checked_div(counts[i]),
+            buckets[i][2].checked_div(counts[i]),
+        ) {
+            result.push([r as u8, g as u8, b as u8]);
         }
     }
     if result.len() < 4 {

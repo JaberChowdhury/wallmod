@@ -27,7 +27,7 @@ pub fn parallel_blur(img: &RgbaImage, sigma: f32) -> RgbaImage {
 
     // Horizontal pass
     out_x.par_chunks_mut(width).enumerate().for_each(|(y, row_out)| {
-        for x in 0..width {
+        for (x, out_px) in row_out.iter_mut().enumerate() {
             let mut r = 0.0;
             let mut g = 0.0;
             let mut b = 0.0;
@@ -41,7 +41,7 @@ pub fn parallel_blur(img: &RgbaImage, sigma: f32) -> RgbaImage {
                 b += pixel[2] as f32 * w;
                 a += pixel[3] as f32 * w;
             }
-            row_out[x] = Rgba([r as u8, g as u8, b as u8, a as u8]);
+            *out_px = Rgba([r as u8, g as u8, b as u8, a as u8]);
         }
     });
 
@@ -49,7 +49,7 @@ pub fn parallel_blur(img: &RgbaImage, sigma: f32) -> RgbaImage {
 
     // Vertical pass
     final_buf.par_chunks_mut(width).enumerate().for_each(|(y, row_out)| {
-        for x in 0..width {
+        for (x, out_px) in row_out.iter_mut().enumerate() {
             let mut r = 0.0;
             let mut g = 0.0;
             let mut b = 0.0;
@@ -63,7 +63,7 @@ pub fn parallel_blur(img: &RgbaImage, sigma: f32) -> RgbaImage {
                 b += pixel[2] as f32 * w;
                 a += pixel[3] as f32 * w;
             }
-            row_out[x] = Rgba([r as u8, g as u8, b as u8, a as u8]);
+            *out_px = Rgba([r as u8, g as u8, b as u8, a as u8]);
         }
     });
 

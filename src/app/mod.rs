@@ -102,6 +102,13 @@ impl Default for WallmodApp {
     }
 }
 
+pub type ProcessImageResult = Option<(
+    image::DynamicImage,
+    PathBuf,
+    Option<crate::modules::histogram::HistogramData>,
+    f32,
+)>;
+
 impl WallmodApp {
     pub fn new() -> Self {
         let initial_theme = ThemeSource::Preset("Default".to_string());
@@ -235,6 +242,7 @@ impl WallmodApp {
         // Do not synchronously update preview here; trigger_async_processing will handle it!
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn process_image_sync(
         base_image_dyn: Option<image::DynamicImage>,
         current_theme: ThemeSource,
@@ -249,15 +257,7 @@ impl WallmodApp {
         algorithm: RemapAlgorithm,
         preserve_luma: bool,
         hald_level: u8,
-    ) -> Result<
-        Option<(
-            image::DynamicImage,
-            PathBuf,
-            Option<crate::modules::histogram::HistogramData>,
-            f32,
-        )>,
-        String,
-    > {
+    ) -> Result<ProcessImageResult, String> {
         let Some(dyn_img) = base_image_dyn else {
             return Ok(None);
         };

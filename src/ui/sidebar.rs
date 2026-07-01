@@ -464,21 +464,19 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                         let trans = this.app.swww_transition.clone();
                                         let disp = this.app.target_display.clone();
                                         let be = this.app.wallpaper_backend.code();
-                                        std::thread::spawn(move || {
-                                            let _ = crate::backend::runtime::spawn_blocking(move || {
-                                                if be == "feh" || be == "auto" {
-                                                    std::process::Command::new("feh").arg("--bg-fill").arg(&p).spawn().ok();
+                                        drop(crate::backend::runtime::spawn_blocking(move || {
+                                            if be == "feh" || be == "auto" {
+                                                std::process::Command::new("feh").arg("--bg-fill").arg(&p).spawn().ok();
+                                            }
+                                            if be == "swww" || be == "auto" {
+                                                let mut cmd = std::process::Command::new("swww");
+                                                cmd.arg("img").arg(&p).arg("--transition-type").arg(&trans);
+                                                if disp != "All Displays" {
+                                                    cmd.arg("--outputs").arg(&disp);
                                                 }
-                                                if be == "swww" || be == "auto" {
-                                                    let mut cmd = std::process::Command::new("swww");
-                                                    cmd.arg("img").arg(&p).arg("--transition-type").arg(&trans);
-                                                    if disp != "All Displays" {
-                                                        cmd.arg("--outputs").arg(&disp);
-                                                    }
-                                                    cmd.spawn().ok();
-                                                }
-                                            });
-                                        });
+                                                cmd.spawn().ok();
+                                            }
+                                        }));
                                     }
                                 }))
                         )

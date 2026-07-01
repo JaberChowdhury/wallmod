@@ -45,7 +45,7 @@ pub fn render_histogram(
 
             // Downsample 256 bins into 64 visual frequency bars
             let mut bars = [0.0f32; 64];
-            for i in 0..64 {
+            for (i, bar) in bars.iter_mut().enumerate() {
                 let mut sum = 0u32;
                 for j in 0..4 {
                     sum += hist.luma[i * 4 + j];
@@ -56,7 +56,7 @@ pub fn render_histogram(
                 } else {
                     0.05
                 };
-                bars[i] = norm.clamp(0.05, 1.0);
+                *bar = norm.clamp(0.05, 1.0);
             }
 
             h_flex()

@@ -19,6 +19,7 @@ pub struct PipelineController;
 
 impl PipelineController {
     /// Orchestrates memoized processing, wallpaper setting, and concurrent terminal config export.
+    #[allow(clippy::too_many_arguments)]
     pub async fn execute_pipeline(
         img_path: PathBuf,
         theme_name: String,
