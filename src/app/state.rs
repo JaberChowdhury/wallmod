@@ -111,6 +111,7 @@ pub enum WorkspaceView {
     FavoriteColors,
     Albums,
     Gowall,
+    CodeRender,
 }
 
 impl WorkspaceView {
@@ -136,8 +137,9 @@ impl std::fmt::Display for WorkspaceView {
             WorkspaceView::ExtractColor => write!(f, "Extract Color"),
             WorkspaceView::PaletteEditor => write!(f, "Edit Palette"),
             WorkspaceView::FavoriteColors => write!(f, "Favorite Colors"),
-            WorkspaceView::Albums => write!(f, "Album Gallery"),
+            WorkspaceView::Albums => write!(f, "Albums"),
             WorkspaceView::Gowall => write!(f, "Gowall GUI"),
+            WorkspaceView::CodeRender => write!(f, "Code Render Engine"),
         }
     }
 }

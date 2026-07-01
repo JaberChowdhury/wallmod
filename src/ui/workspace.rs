@@ -1178,6 +1178,33 @@ pub fn render_workspace(
                                 )
                                 .into_any_element()
                         }
+                        WorkspaceView::CodeRender => {
+                            let input_view = view.code_render_input.clone();
+                            h_flex().size_full().gap_4().p_4()
+                                .child(
+                                    v_flex().flex_1().h_full().gap_2()
+                                        .child(div().text_sm().font_bold().child("Source Code Editor"))
+                                        .child(
+                                            div().flex_1().w_full().border_1().border_color(cx.theme().border).rounded_lg().bg(cx.theme().background).overflow_hidden()
+                                                .child(gpui_component::input::Input::new(&input_view).w_full().h_full())
+                                        )
+                                )
+                                .child(
+                                    v_flex().flex_1().h_full().gap_2()
+                                        .child(div().text_sm().font_bold().child("Silicon Preview"))
+                                        .child(
+                                            div().flex_1().w_full().border_1().border_color(cx.theme().border).rounded_lg().bg(cx.theme().background).overflow_hidden().flex().items_center().justify_center()
+                                                .child(
+                                                    if let Some(preview_path) = &view.app.code_render_preview {
+                                                        img(preview_path.clone()).size_full().object_fit(ObjectFit::Contain).into_any_element()
+                                                    } else {
+                                                        div().text_sm().text_color(cx.theme().muted_foreground).child("No preview generated. Click 'Render Preview' in the sidebar.").into_any_element()
+                                                    }
+                                                )
+                                        )
+                                )
+                                .into_any_element()
+                        }
                         WorkspaceView::Gowall => {
                             crate::ui::gowall_tab::render_gowall_tab(view, cx).into_any_element()
                         }

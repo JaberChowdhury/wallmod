@@ -43,7 +43,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .items_center()
                         .child(
                             gpui::svg()
-                                .path("logo.svg")
+                                .path("wallmod_logo.svg")
                                 .size_5()
                                 .text_color(cx.theme().primary),
                         )
@@ -112,7 +112,7 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                 .p_1()
                                 .rounded_md()
                                 .cursor_pointer()
-                                // .hover(|s| s.bg(cx.theme().secondary))
+                                // .hover(|s| s.bg({ let mut b = cx.theme().background; b.a = 1.0; b }))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     let mode = if this.app.is_dark_mode {
                                         gpui_component::ThemeMode::Light
@@ -131,7 +131,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                 .p_1()
                                 .rounded_md()
                                 .cursor_pointer()
-                                .hover(|s| s.bg(cx.theme().secondary))
+                                .hover(|s| {
+                                    s.bg({
+                                        let mut b = cx.theme().background;
+                                        b.a = 1.0;
+                                        b
+                                    })
+                                })
                                 .on_mouse_down(MouseButton::Left, |_, window, _| {
                                     window.minimize_window();
                                 })
@@ -152,7 +158,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                 .p_1()
                                 .rounded_md()
                                 .cursor_pointer()
-                                .hover(|s| s.bg(cx.theme().secondary))
+                                .hover(|s| {
+                                    s.bg({
+                                        let mut b = cx.theme().background;
+                                        b.a = 1.0;
+                                        b
+                                    })
+                                })
                                 .on_mouse_down(
                                     MouseButton::Left,
                                     cx.listener(|this, _, window, cx| {
@@ -187,7 +199,13 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                 .p_1()
                                 .rounded_md()
                                 .cursor_pointer()
-                                .hover(|s| s.bg(cx.theme().secondary))
+                                .hover(|s| {
+                                    s.bg({
+                                        let mut b = cx.theme().background;
+                                        b.a = 1.0;
+                                        b
+                                    })
+                                })
                                 .on_mouse_down(MouseButton::Left, |_, window, _| {
                                     window.remove_window();
                                 })
@@ -326,7 +344,8 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::FavoriteColors;
                             this.app.option_group_tab = 0;
-                            this.app.workspace_view = crate::app::state::WorkspaceView::FavoriteColors;
+                            this.app.workspace_view =
+                                crate::app::state::WorkspaceView::FavoriteColors;
                             cx.notify();
                         })),
                 )
@@ -343,13 +362,11 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::CodeRender)
-                        .when(sidebar_tab == SidebarTab::CodeRender, |this| {
-                            this.primary()
-                        })
+                        .when(sidebar_tab == SidebarTab::CodeRender, |this| this.primary())
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::CodeRender;
                             this.app.option_group_tab = 0;
-                            this.app.workspace_view = crate::app::state::WorkspaceView::Standard;
+                            this.app.workspace_view = crate::app::state::WorkspaceView::CodeRender;
                             cx.notify();
                         })),
                 )
@@ -381,7 +398,11 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                                     .top(px(32.0))
                                     .right(px(0.0))
                                     .w(px(200.0))
-                                    .bg(cx.theme().secondary)
+                                    .bg({
+                                        let mut b = cx.theme().background;
+                                        b.a = 1.0;
+                                        b
+                                    })
                                     .border_1()
                                     .border_color(cx.theme().border)
                                     .rounded_md()

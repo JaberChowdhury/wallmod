@@ -24,6 +24,7 @@ pub struct WallmodView {
     pub palette_g_slider: Entity<SliderState>,
     pub palette_b_slider: Entity<SliderState>,
     pub palette_hex_input: Entity<gpui_component::input::InputState>,
+    pub code_render_input: Entity<gpui_component::input::InputState>,
     pub shader_inputs:
         std::collections::HashMap<usize, [Entity<gpui_component::input::InputState>; 4]>,
     pub subscriptions: Vec<Subscription>,
@@ -279,6 +280,12 @@ impl WallmodView {
             },
         ));
 
+        let code_render_input = cx.new(|cx| {
+            gpui_component::input::InputState::new(window, cx)
+                .multi_line(true)
+                .placeholder("Enter code here or select a file...")
+        });
+
         Self {
             app: WallmodApp::new(),
             blur_slider,
@@ -290,6 +297,7 @@ impl WallmodView {
             palette_g_slider,
             palette_b_slider,
             palette_hex_input,
+            code_render_input,
             shader_inputs: std::collections::HashMap::new(),
             subscriptions,
         }

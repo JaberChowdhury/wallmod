@@ -61,42 +61,133 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
         .child(
             match sidebar_tab {
                 SidebarTab::CodeRender => {
+                    let langs = ["rust", "python", "go", "cpp", "c", "javascript", "typescript", "html", "css", "json", "bash"];
+                    let themes = ["Dracula", "GitHub", "Monokai Extended", "Solarized (dark)", "Solarized (light)", "1337", "Coldark-Dark"];
+                    
                     v_flex().gap_4().w_full().p_4()
-                        .child(div().text_sm().font_bold().child("Code to Image Engine (Silicon)"))
-                        .child(div().text_xs().text_color(cx.theme().muted_foreground).child("Requires 'silicon' CLI installed on your system."))
+                        .child(div().text_sm().font_bold().child("Silicon Code Render"))
+                        
+                        // Theme Dropdown
                         .child(
-                            Button::new("btn_silicon_clipboard")
-                                .child(gpui::svg().path("copy.svg").size_4().text_color(cx.theme().primary))
-                                .child("Render from Clipboard")
-                                .secondary()
+                            v_flex().gap_1().relative()
+                                .child(div().text_xs().font_bold().child("Theme"))
+                                .child(
+                                    Button::new("btn_theme_dropdown")
+                                        .child(h_flex().w_full().justify_between().child(view.app.code_render_theme.clone()).child(gpui::svg().path("chevron-down.svg").size_4().text_color(cx.theme().primary)))
+                                        .secondary()
+                                        .w_full()
+                                        .on_click(cx.listener(|this, _, _, cx| {
+                                            this.app.show_theme_dropdown = !this.app.show_theme_dropdown;
+                                            this.app.show_language_dropdown = false;
+                                            cx.notify();
+                                        }))
+                                )
+                                .when(view.app.show_theme_dropdown, |e| {
+                                    e.child(
+                                        div().absolute().top_12().left_0().w_full()
+                                            .bg({ let mut b = cx.theme().background; b.a = 1.0; b }).border_1().border_color(cx.theme().border).rounded_md().shadow_lg()
+                                            .child(
+                                                v_flex().w_full().max_h(px(150.0)).overflow_y_hidden()
+                                                    .children(themes.into_iter().map(|t| {
+                                                        Button::new(format!("theme_{}", t))
+                                                            .child(t)
+                                                            .w_full().justify_start().ghost()
+                                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                                this.app.code_render_theme = t.to_string();
+                                                                this.app.show_theme_dropdown = false;
+                                                                cx.notify();
+                                                            }))
+                                                    }))
+                                            )
+                                    )
+                                })
+                        )
+
+                        // Language Dropdown
+                        .child(
+                            v_flex().gap_1().relative()
+                                .child(div().text_xs().font_bold().child("Language"))
+                                .child(
+                                    Button::new("btn_lang_dropdown")
+                                        .child(h_flex().w_full().justify_between().child(view.app.code_render_language.clone()).child(gpui::svg().path("chevron-down.svg").size_4().text_color(cx.theme().primary)))
+                                        .secondary()
+                                        .w_full()
+                                        .on_click(cx.listener(|this, _, _, cx| {
+                                            this.app.show_language_dropdown = !this.app.show_language_dropdown;
+                                            this.app.show_theme_dropdown = false;
+                                            cx.notify();
+                                        }))
+                                )
+                                .when(view.app.show_language_dropdown, |e| {
+                                    e.child(
+                                        div().absolute().top_12().left_0().w_full()
+                                            .bg({ let mut b = cx.theme().background; b.a = 1.0; b }).border_1().border_color(cx.theme().border).rounded_md().shadow_lg()
+                                            .child(
+                                                v_flex().w_full().max_h(px(150.0)).overflow_y_hidden()
+                                                    .children(langs.into_iter().map(|l| {
+                                                        Button::new(format!("lang_{}", l))
+                                                            .child(l)
+                                                            .w_full().justify_start().ghost()
+                                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                                this.app.code_render_language = l.to_string();
+                                                                this.app.show_language_dropdown = false;
+                                                                cx.notify();
+                                                            }))
+                                                    }))
+                                            )
+                                    )
+                                })
+                        )
+                        
+                        .child(div().h_px().w_full().bg(cx.theme().border))
+                        
+                        .child(
+                            Button::new("btn_silicon_render")
+                                .child(gpui::svg().path("image.svg").size_4().text_color(cx.theme().primary))
+                                .child("Render Preview")
+                                .primary()
                                 .w_full()
                                 .on_click(cx.listener(|this, _, _, cx| {
+                                    let code_text = this.code_render_input.read(cx).text().to_string();
+                                    if code_text.trim().is_empty() {
+                                        this.app.state = crate::app::AppState::Notice("Code is empty.".to_string());
+                                        cx.notify();
+                                        return;
+                                    }
+
+                                    let lang = this.app.code_render_language.clone();
+                                    let theme = this.app.code_render_theme.clone();
                                     this.app.state = crate::app::AppState::Loading(0.0, "Rendering Code...".to_string());
+                                    cx.notify();
+
+                                    let (tx, rx) = std::sync::mpsc::channel::<Result<std::path::PathBuf, String>>();
+                                    std::thread::spawn(move || {
+                                        let res = crate::render::render_code_to_image(&code_text, &lang, &theme);
+                                        let _ = tx.send(res);
+                                    });
+
                                     let task = cx.spawn(async move |this, cx| {
-                                        let out_path = rfd::AsyncFileDialog::new()
-                                            .set_file_name("code_render.png")
-                                            .save_file()
-                                            .await;
-                                        if let Some(path) = out_path {
-                                            let out = std::process::Command::new("silicon")
-                                                .arg("--from-clipboard")
-                                                .arg("-o")
-                                                .arg(path.path())
-                                                .output();
-                                            let msg = match out {
-                                                Ok(o) if o.status.success() => "Render saved successfully!".to_string(),
-                                                Ok(o) => format!("Silicon Error: {}", String::from_utf8_lossy(&o.stderr)),
-                                                Err(e) => format!("Failed to run silicon: {}", e),
-                                            };
-                                            let _ = this.update(cx, |view, cx| {
-                                                view.app.state = crate::app::AppState::Notice(msg);
-                                                cx.notify();
-                                            });
-                                        } else {
-                                            let _ = this.update(cx, |view, cx| {
-                                                view.app.state = crate::app::AppState::Idle;
-                                                cx.notify();
-                                            });
+                                        loop {
+                                            cx.background_executor().timer(std::time::Duration::from_millis(50)).await;
+                                            match rx.try_recv() {
+                                                Ok(Ok(path)) => {
+                                                    let _ = cx.update(|cx| this.update(cx, |view, cx| {
+                                                        view.app.code_render_preview = Some(path);
+                                                        view.app.state = crate::app::AppState::Idle;
+                                                        cx.notify();
+                                                    }));
+                                                    break;
+                                                }
+                                                Ok(Err(msg)) => {
+                                                    let _ = cx.update(|cx| this.update(cx, |view, cx| {
+                                                        view.app.state = crate::app::AppState::Notice(msg);
+                                                        cx.notify();
+                                                    }));
+                                                    break;
+                                                }
+                                                Err(std::sync::mpsc::TryRecvError::Empty) => continue,
+                                                Err(_) => break,
+                                            }
                                         }
                                     });
                                     task.detach();
@@ -104,38 +195,50 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 }))
                         )
                         .child(
-                            Button::new("btn_silicon_file")
-                                .child(gpui::svg().path("file.svg").size_4().text_color(cx.theme().primary))
-                                .child("Select File to Render")
+                            Button::new("btn_silicon_save")
+                                .child(gpui::svg().path("save.svg").size_4().text_color(cx.theme().primary))
+                                .child("Save Render...")
                                 .secondary()
                                 .w_full()
+                                .disabled(view.app.code_render_preview.is_none())
                                 .on_click(cx.listener(|this, _, _, cx| {
-                                    this.app.state = crate::app::AppState::Loading(0.0, "Select file to render...".to_string());
-                                    let task = cx.spawn(async move |this, cx| {
-                                        let file_path = rfd::AsyncFileDialog::new().pick_file().await;
-                                        if let Some(file) = file_path {
-                                            let out_path = rfd::AsyncFileDialog::new().set_file_name("code_render.png").save_file().await;
-                                            if let Some(out) = out_path {
-                                                let res = std::process::Command::new("silicon")
-                                                    .arg(file.path())
-                                                    .arg("-o")
-                                                    .arg(out.path())
-                                                    .output();
-                                                let msg = match res {
-                                                    Ok(o) if o.status.success() => "Render saved successfully!".to_string(),
-                                                    Ok(o) => format!("Silicon Error: {}", String::from_utf8_lossy(&o.stderr)),
-                                                    Err(e) => format!("Failed to run silicon: {}", e),
-                                                };
-                                                let _ = this.update(cx, |view, cx| { view.app.state = crate::app::AppState::Notice(msg); cx.notify(); });
-                                            } else {
-                                                let _ = this.update(cx, |view, cx| { view.app.state = crate::app::AppState::Idle; cx.notify(); });
+                                    if let Some(preview) = &this.app.code_render_preview {
+                                        let p = preview.clone();
+                                        cx.spawn(async move |this, cx| {
+                                            if let Some(out) = rfd::AsyncFileDialog::new().set_file_name("code_render.png").save_file().await {
+                                                let _ = std::fs::copy(&p, out.path());
+                                                let _ = this.update(cx, |view, cx| {
+                                                    view.app.state = crate::app::AppState::Notice("Saved successfully!".to_string());
+                                                    cx.notify();
+                                                });
                                             }
-                                        } else {
-                                            let _ = this.update(cx, |view, cx| { view.app.state = crate::app::AppState::Idle; cx.notify(); });
-                                        }
-                                    });
-                                    task.detach();
-                                    cx.notify();
+                                        }).detach();
+                                    }
+                                }))
+                        )
+                        .child(
+                            Button::new("btn_silicon_load_file")
+                                .child(gpui::svg().path("file.svg").size_4().text_color(cx.theme().primary))
+                                .child("Load File Source")
+                                .secondary()
+                                .w_full()
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    if let Some(file) = rfd::FileDialog::new().pick_file() {
+                                        let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("").to_string();
+                                        let content = std::fs::read_to_string(&file).unwrap_or_default();
+                                        let lang = match ext.as_str() {
+                                            "rs" => "rust", "py" => "python", "go" => "go", "cpp" | "cxx" => "cpp", "c" => "c",
+                                            "js" => "javascript", "ts" => "typescript", "html" => "html", "css" => "css", "json" => "json", "sh" => "bash",
+                                            _ => "rust"
+                                        }.to_string();
+                                        
+                                        this.code_render_input.update(cx, |input, cx| {
+                                            input.set_value(content, window, cx);
+                                        });
+                                        
+                                        this.app.code_render_language = lang;
+                                        cx.notify();
+                                    }
                                 }))
                         )
                         .into_any_element()
@@ -844,7 +947,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                         .child(div().text_xs().font_bold().text_color(cx.theme().primary).child(format!("{:.1}%", ram_pct)))
                                 )
                                 .child(
-                                    div().w_full().h(px(8.0)).rounded_full().bg(cx.theme().background).overflow_hidden()
+                                    div().w_full().h(px(8.0)).rounded_full().bg({ let mut b = cx.theme().background; b.a = 1.0; b }).overflow_hidden()
                                         .child(div().h_full().w(gpui::Length::Definite(gpui::DefiniteLength::Fraction((ram_pct / 100.0).clamp(0.0, 1.0)))).bg(cx.theme().primary))
                                 )
                                 .child(
@@ -857,7 +960,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     div().flex().flex_wrap().gap_1().w_full()
                                         .children(cpu_threads.iter().enumerate().map(|(idx, &load)| {
                                             let color = if load > 80.0 { gpui::rgb(0xef4444) } else if load > 50.0 { gpui::rgb(0xf59e0b) } else { gpui::rgb(0x22c55e) };
-                                            div().w(px(58.0)).h(px(24.0)).flex().items_center().justify_center().rounded_md().bg(cx.theme().background).border_1().border_color(cx.theme().border).text_xs().text_color(color).child(format!("C{}:{:3.0}%", idx, load))
+                                            div().w(px(58.0)).h(px(24.0)).flex().items_center().justify_center().rounded_md().bg({ let mut b = cx.theme().background; b.a = 1.0; b }).border_1().border_color(cx.theme().border).text_xs().text_color(color).child(format!("C{}:{:3.0}%", idx, load))
                                         }))
                                 )
                                 .child(div().h_px().w_full().bg(cx.theme().border))

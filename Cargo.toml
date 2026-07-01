@@ -25,6 +25,8 @@ wgpu = "0.19"
 pollster = "0.3"
 bytemuck = "1.25.0"
 futures-intrusive = "0.5.0"
+silicon = { path = "silicon_fork", default-features = false, features = ["harfbuzz", "anyhow"] }
+syntect = "5.3.0"
 
 [features]
 lutgen = []

@@ -6,6 +6,7 @@
 pub mod app;
 pub mod backend;
 pub mod modules;
+pub mod render;
 pub mod ui;
 pub mod wallpaper;
 

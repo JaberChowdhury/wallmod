@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+env:
+  RUST_BACKTRACE: 1
+
+jobs:
+
+  test-linux:
+    name: x86_64-unknown-linux-gnu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt, clippy
+          override: true
+
+      - name: APT update
+        run: sudo apt-get update
+
+      - name: Install dependencies
+        run: sudo apt-get install libx11-xcb-dev libxcb-shape0-dev libxcb-xfixes0-dev libharfbuzz-dev
+
+      - name: Cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+      - name: Cargo clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
+      - name: Cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -- --nocapture
+
+  test-windows:
+    name: x86_64-pc-windows-msvc
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --no-default-features --features=bin
+
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features=bin -- --nocapture
+
+  test-macos:
+    name: x86_64-apple-darwin
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -- --nocapture

@@ -101,6 +101,11 @@ pub struct WallmodApp {
     pub gowall_state: crate::app::gowall_state::GowallState,
     pub show_progress_panel: bool,
     pub processing_status: Option<String>,
+    pub code_render_language: String,
+    pub code_render_theme: String,
+    pub code_render_preview: Option<PathBuf>,
+    pub show_language_dropdown: bool,
+    pub show_theme_dropdown: bool,
 }
 
 impl Default for WallmodApp {
@@ -197,6 +202,11 @@ impl WallmodApp {
             gowall_state: crate::app::gowall_state::GowallState::new(),
             show_progress_panel: false,
             processing_status: None,
+            code_render_language: "rust".to_string(),
+            code_render_theme: "Dracula".to_string(),
+            code_render_preview: None,
+            show_language_dropdown: false,
+            show_theme_dropdown: false,
         }
     }
 
