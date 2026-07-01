@@ -42,7 +42,7 @@ func RunExtractCmd(cmd *cobra.Command, args []string) {
 
 	numOfColors, err := cmd.Flags().GetInt("colors")
 	utils.HandleError(err, "Error")
-	previewFlag, err := cmd.Flags().GetBool("preview")
+	_, err = cmd.Flags().GetBool("preview")
 	utils.HandleError(err, "Error")
 
 	processor := &image.ExtractProcessor{
@@ -56,9 +56,7 @@ func RunExtractCmd(cmd *cobra.Command, args []string) {
 	})
 	utils.HandleError(err, "Error")
 
-	if previewFlag {
-		utils.OpenURL(config.HexCodeVisualUrl)
-	}
+	// URL launch disabled
 }
 
 func ValidateParseExtractCmd(cmd *cobra.Command, flags config.GlobalSubCommandFlags, args []string) error {

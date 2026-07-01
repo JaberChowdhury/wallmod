@@ -6,7 +6,6 @@ package cmd
 import (
 	"sort"
 
-	"github.com/Achno/gowall/config"
 	"github.com/Achno/gowall/internal/image"
 	"github.com/Achno/gowall/internal/logger"
 	"github.com/Achno/gowall/utils"
@@ -35,7 +34,6 @@ func BuildListCmd() *cobra.Command {
 
 func RunListCmd(cmd *cobra.Command, args []string) {
 	theme, _ := cmd.Flags().GetString("theme")
-	previewFlag, _ := cmd.Flags().GetBool("preview")
 
 	switch {
 	case theme != "":
@@ -46,10 +44,7 @@ func RunListCmd(cmd *cobra.Command, args []string) {
 			logger.Print(color)
 		}
 
-		if previewFlag {
-			utils.OpenURL(config.HexCodeVisualUrl)
-		}
-
+		// URL launch disabled
 	default:
 		allThemes := image.ListThemes()
 		sort.Strings(allThemes)

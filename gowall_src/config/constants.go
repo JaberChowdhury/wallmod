@@ -11,7 +11,7 @@ const (
 	configFile         = "config.yml"
 	OCRSchemaFile      = "schema.yml"
 	WallOfTheDayUrl    = "https://old.reddit.com/r/wallpaper/top/"
-	HexCodeVisualUrl   = "https://lawlesscreation.github.io/hex-color-visualiser/"
+	RepoUrl            = "https://github.com/Apepen/gowall"
 	UpscalerBinaryName = "realesrgan-ncnn-vulkan"
 	PngquantBinaryName = "pngquant"
 	EnvFilePath        = ".gowall/.env"
