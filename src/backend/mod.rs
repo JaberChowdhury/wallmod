@@ -9,6 +9,8 @@ pub mod gowall_cli;
 pub mod pixel_sort;
 pub mod runtime;
 pub mod seam_carve;
+pub mod shader_pipeline;
+pub mod shaders;
 
 use crate::app::state::RemapAlgorithm;
 use cache::CacheManager;

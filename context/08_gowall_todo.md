@@ -22,5 +22,5 @@
 ## Phase 4: Advanced Sidecar Integrations (AI & Utilities)
 - [x] Bind Background Removal (`gowall bg remove`) and hook up GPUI loading spinners.
 - [x] Bind AI Upscaling (`gowall upscale`) and handle long-running process timeouts.
-- [ ] Bind OCR (`gowall ocr`) and parse `stdout` into a GPUI selectable text area.
-- [ ] Bind Daily Wallpapers fetching and render them in a grid view.
+- [x] Bind OCR (`gowall ocr`) and parse `stdout` into a GPUI selectable text area.
+- [x] Bind Daily Wallpapers (`gowall daily`) fetching and render them in a grid view.

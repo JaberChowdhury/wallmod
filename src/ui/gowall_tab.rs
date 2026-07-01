@@ -68,7 +68,7 @@ pub fn render_gowall_tab(
                 .border_color(cx.theme().border)
                 .pr_4()
                 .child(div().text_xl().font_bold().child("Gowall Tools"))
-                
+
                 // Sidebar Buttons
                 .child(sidebar_tool_button(view, cx, "Recolor Theme", GowallTool::Recolor))
                 .child(sidebar_tool_button(view, cx, "Basic Effects", GowallTool::Effects))

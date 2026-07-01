@@ -96,6 +96,8 @@ pub struct WallmodApp {
     pub preset_name_input: String,
     pub extraction_algo: usize,
     pub gowall_state: crate::app::gowall_state::GowallState,
+    pub show_progress_panel: bool,
+    pub processing_status: Option<String>,
 }
 
 impl Default for WallmodApp {
@@ -180,9 +182,11 @@ impl WallmodApp {
             float_show_cpu: true,
             auto_apply_nodes: false,
             saved_colors: Vec::new(),
-            preset_name_input: "My Fav Preset 1".to_string(),
+            preset_name_input: String::new(),
             extraction_algo: 0,
             gowall_state: crate::app::gowall_state::GowallState::new(),
+            show_progress_panel: false,
+            processing_status: None,
         }
     }
 
@@ -256,6 +260,7 @@ impl WallmodApp {
         algorithm: RemapAlgorithm,
         preserve_luma: bool,
         hald_level: u8,
+        on_progress: Option<Box<dyn Fn(String) + Send>>,
     ) -> Result<ProcessImageResult, String> {
         let Some(dyn_img) = base_image_dyn else {
             return Ok(None);
@@ -333,6 +338,9 @@ impl WallmodApp {
             for node in &theme_chain {
                 if !node.enabled {
                     continue;
+                }
+                if let Some(cb) = &on_progress {
+                    cb(format!("Processing {}", node.op.display_name()));
                 }
                 match &node.op {
                     crate::app::state::PipelineOp::Theme(theme, opacity) => {
@@ -482,6 +490,22 @@ impl WallmodApp {
                             }
                         }
                     },
+                    crate::app::state::PipelineOp::Shader(name, params) => {
+                        if let Some(shader_source) = crate::backend::shaders::get_shader(&name) {
+                            let rgba = current_dyn.to_rgba8();
+                            let processed = pollster::block_on(async {
+                                crate::backend::shader_pipeline::run_compute_shader(
+                                    &rgba,
+                                    shader_source,
+                                    *params,
+                                )
+                                .await
+                            });
+                            if let Some(new_rgba) = processed {
+                                current_dyn = image::DynamicImage::ImageRgba8(new_rgba);
+                            }
+                        }
+                    },
                 }
                 if node.bit_depth != crate::app::state::BitDepthStyle::Bit32 {
                     let mut buf = current_dyn.to_rgba8();
@@ -582,6 +606,7 @@ impl WallmodApp {
             self.algorithm,
             self.preserve_luma,
             self.hald_level,
+            None,
         )?;
         if let Some((processed_dyn, temp_path, histogram, wcag_contrast)) = result {
             self.update_preview(processed_dyn, temp_path, histogram, wcag_contrast);

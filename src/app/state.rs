@@ -235,6 +235,7 @@ pub enum PipelineOp {
     Dither,
     PixelSort,
     Gowall(crate::app::gowall_state::GowallTool, String),
+    Shader(String, [f32; 4]),
 }
 
 impl PipelineOp {
@@ -251,6 +252,10 @@ impl PipelineOp {
             Self::Dither => "Floyd-Steinberg Dither".to_string(),
             Self::PixelSort => "Luminance Pixel Sort".to_string(),
             Self::Gowall(tool, param) => format!("Gowall {:?} ({})", tool, param),
+            Self::Shader(name, p) => format!(
+                "WGSL Shader: {} (Params: {:.2}, {:.2}, {:.2}, {:.2})",
+                name, p[0], p[1], p[2], p[3]
+            ),
         }
     }
 
@@ -270,6 +275,7 @@ impl PipelineOp {
             Self::Dither => "dither".to_string(),
             Self::PixelSort => "pixelsort".to_string(),
             Self::Gowall(tool, param) => format!("gowall:{:?}:{}", tool, param),
+            Self::Shader(name, p) => format!("shader:{}:{}:{}:{}:{}", name, p[0], p[1], p[2], p[3]),
         }
     }
 
@@ -331,6 +337,27 @@ impl PipelineOp {
                         _ => crate::app::gowall_state::GowallTool::Effects,
                     };
                     Some(Self::Gowall(tool, p[2].to_string()))
+                } else {
+                    None
+                }
+            },
+            "shader" => {
+                let p: Vec<&str> = code.split(':').collect();
+                if p.len() >= 2 {
+                    let mut params = [1.0, 1.0, 1.0, 1.0];
+                    if p.len() >= 3 {
+                        params[0] = p[2].parse().unwrap_or(1.0);
+                    }
+                    if p.len() >= 4 {
+                        params[1] = p[3].parse().unwrap_or(1.0);
+                    }
+                    if p.len() >= 5 {
+                        params[2] = p[4].parse().unwrap_or(1.0);
+                    }
+                    if p.len() >= 6 {
+                        params[3] = p[5].parse().unwrap_or(1.0);
+                    }
+                    Some(Self::Shader(p[1].to_string(), params))
                 } else {
                     None
                 }
