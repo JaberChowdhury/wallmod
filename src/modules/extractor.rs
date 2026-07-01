@@ -61,7 +61,11 @@ pub fn extract_dominant_colors(
         .as_raw()
         .par_chunks_exact(4)
         .map(|p| {
-            let srgb = Srgb::new(p[0] as f32 / 255.0, p[1] as f32 / 255.0, p[2] as f32 / 255.0);
+            let srgb = Srgb::new(
+                p[0] as f32 / 255.0,
+                p[1] as f32 / 255.0,
+                p[2] as f32 / 255.0,
+            );
             if algo == 1 {
                 // KMeans RGB (mapped to Lab struct to satisfy traits)
                 Lab::new(srgb.red * 100.0, srgb.green * 100.0, srgb.blue * 100.0)

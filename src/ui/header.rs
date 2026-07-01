@@ -41,7 +41,12 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                     h_flex()
                         .gap_2()
                         .items_center()
-                        .child(gpui::svg().path("logo.svg").size_5().text_color(cx.theme().primary))
+                        .child(
+                            gpui::svg()
+                                .path("logo.svg")
+                                .size_5()
+                                .text_color(cx.theme().primary),
+                        )
                         .child(div().font_bold().text_lg().child("wallmod"))
                         .child(
                             div()
@@ -222,7 +227,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::ColorGrading)
-                        .when(sidebar_tab == SidebarTab::ColorGrading, |this| this.primary())
+                        .when(sidebar_tab == SidebarTab::ColorGrading, |this| {
+                            this.primary()
+                        })
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::ColorGrading;
                             this.app.option_group_tab = 0;
@@ -243,7 +250,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::PhotoshopEffects)
-                        .when(sidebar_tab == SidebarTab::PhotoshopEffects, |this| this.primary())
+                        .when(sidebar_tab == SidebarTab::PhotoshopEffects, |this| {
+                            this.primary()
+                        })
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::PhotoshopEffects;
                             this.app.option_group_tab = 0;
@@ -288,7 +297,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::DesktopEngine)
-                        .when(sidebar_tab == SidebarTab::DesktopEngine, |this| this.primary())
+                        .when(sidebar_tab == SidebarTab::DesktopEngine, |this| {
+                            this.primary()
+                        })
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::DesktopEngine;
                             this.app.option_group_tab = 0;
@@ -372,7 +383,9 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         .small()
                         .cursor_pointer()
                         .selected(sidebar_tab == SidebarTab::FavoriteColors)
-                        .when(sidebar_tab == SidebarTab::FavoriteColors, |this| this.primary())
+                        .when(sidebar_tab == SidebarTab::FavoriteColors, |this| {
+                            this.primary()
+                        })
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.app.sidebar_tab = SidebarTab::FavoriteColors;
                             this.app.option_group_tab = 0;

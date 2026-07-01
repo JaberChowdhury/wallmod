@@ -1,16 +1,24 @@
 edition = "2021"
 max_width = 100
 
-# "Off" forces rustfmt to stop trying to squeeze code onto one line.
-# It drastically lowers the threshold for vertical splitting.
-use_small_heuristics = "Off"
-
-# Standard stable readability improvements
+# Better heuristics for wrapping
+use_small_heuristics = "Default"
 reorder_imports = true
 reorder_modules = true
 use_field_init_shorthand = true
 use_try_shorthand = true
-
-# Forces trailing commas in lists, which helps keep diffs clean and
-# encourages vertical lists in match arms/structs.
 match_block_trailing_comma = true
+
+# --- Nightly Layout Fixes for UI Frameworks ---
+
+# Formats GPUI builder patterns vertically instead of trailing off-screen
+chain_width = 60
+
+# Collapses trivial closures into single lines (great for GPUI event handlers)
+closure_block_single_line = true
+
+# Puts a trailing comma everywhere possible to keep lists vertical
+trailing_comma = "Vertical"
+
+# Prevents functions with many arguments from becoming unreadable walls of text
+fn_args_layout = "Tall"

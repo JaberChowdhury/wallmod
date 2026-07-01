@@ -8,8 +8,9 @@ pub fn apply_pixel_sort(img: &DynamicImage) -> DynamicImage {
     let (width, height) = rgba.dimensions();
 
     // Collect rows into a buffer for Rayon parallel processing
-    let mut rows: Vec<Vec<Rgba<u8>>> =
-        (0..height).map(|y| (0..width).map(|x| *rgba.get_pixel(x, y)).collect()).collect();
+    let mut rows: Vec<Vec<Rgba<u8>>> = (0..height)
+        .map(|y| (0..width).map(|x| *rgba.get_pixel(x, y)).collect())
+        .collect();
 
     rows.par_iter_mut().for_each(|row| {
         let len = row.len();

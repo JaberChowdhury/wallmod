@@ -13,7 +13,10 @@ pub const SHADER_PRESETS: &[(&str, &str)] = &[
 ];
 
 pub fn get_shader(name: &str) -> Option<&'static str> {
-    SHADER_PRESETS.iter().find(|(n, _)| *n == name).map(|(_, s)| *s)
+    SHADER_PRESETS
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, s)| *s)
 }
 
 pub fn get_shader_param_labels(name: &str) -> [&'static str; 4] {

@@ -803,14 +803,23 @@ pub fn get_preset_shades(name: &str) -> Vec<[u8; 3]> {
             [65, 72, 104],
             [224, 175, 104],
         ],
-        _ => vec![[137, 180, 250], [243, 139, 168], [166, 227, 161], [249, 226, 175]],
+        _ => vec![
+            [137, 180, 250],
+            [243, 139, 168],
+            [166, 227, 161],
+            [249, 226, 175],
+        ],
     };
     normalize_palette_to_16(raw)
 }
 
 /// Extracts representative RGB shades from custom .cube or .png LUT files.
 pub fn extract_lut_shades(path: &PathBuf) -> Vec<[u8; 3]> {
-    if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
+    if let Some(ext) = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+    {
         if ext == "png" {
             if let Ok(img) = open_image(path) {
                 let (w, h) = (img.width(), img.height());
@@ -848,9 +857,11 @@ pub fn extract_lut_shades(path: &PathBuf) -> Vec<[u8; 3]> {
             }
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 3 {
-                if let (Ok(r), Ok(g), Ok(b)) =
-                    (parts[0].parse::<f32>(), parts[1].parse::<f32>(), parts[2].parse::<f32>())
-                {
+                if let (Ok(r), Ok(g), Ok(b)) = (
+                    parts[0].parse::<f32>(),
+                    parts[1].parse::<f32>(),
+                    parts[2].parse::<f32>(),
+                ) {
                     let r8 = if r <= 1.0 {
                         (r * 255.0) as u8
                     } else {
@@ -875,7 +886,12 @@ pub fn extract_lut_shades(path: &PathBuf) -> Vec<[u8; 3]> {
             return colors.into_iter().step_by(step).take(6).collect();
         }
     }
-    vec![[120, 130, 150], [150, 160, 180], [180, 190, 210], [210, 220, 240]]
+    vec![
+        [120, 130, 150],
+        [150, 160, 180],
+        [180, 190, 210],
+        [210, 220, 240],
+    ]
 }
 
 /// Reverse ricing: extracts dominant color clusters using sub-sampled quantization.
@@ -910,7 +926,12 @@ pub fn extract_dominant_colors(img: &image::DynamicImage) -> Vec<[u8; 3]> {
         }
     }
     if result.len() < 4 {
-        return vec![[137, 180, 250], [243, 139, 168], [166, 227, 161], [249, 226, 175]];
+        return vec![
+            [137, 180, 250],
+            [243, 139, 168],
+            [166, 227, 161],
+            [249, 226, 175],
+        ];
     }
     result
 }
@@ -932,10 +953,6 @@ pub fn compute_wcag_contrast(img: &image::DynamicImage) -> f32 {
             count += 1.0;
         }
     }
-    let avg_lum = if count > 0.0 {
-        total_lum / count
-    } else {
-        0.5
-    };
+    let avg_lum = if count > 0.0 { total_lum / count } else { 0.5 };
     (1.0 + 0.05) / (avg_lum + 0.05)
 }

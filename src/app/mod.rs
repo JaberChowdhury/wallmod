@@ -106,8 +106,12 @@ impl Default for WallmodApp {
     }
 }
 
-pub type ProcessImageResult =
-    Option<(image::DynamicImage, PathBuf, Option<crate::modules::histogram::HistogramData>, f32)>;
+pub type ProcessImageResult = Option<(
+    image::DynamicImage,
+    PathBuf,
+    Option<crate::modules::histogram::HistogramData>,
+    f32,
+)>;
 
 impl WallmodApp {
     pub fn new() -> Self {
@@ -229,7 +233,11 @@ impl WallmodApp {
     }
 
     pub fn on_image_selected(&mut self, path: PathBuf, dyn_img: image::DynamicImage) {
-        self.image_filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        self.image_filename = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         self.image_width = dyn_img.width();
         self.image_height = dyn_img.height();
         self.base_image_path = Some(path.clone());
@@ -269,7 +277,11 @@ impl WallmodApp {
         let shades = current_theme.get_shades();
 
         if let ThemeSource::Custom(path) = &current_theme {
-            if let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()) {
+            if let Some(ext) = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_lowercase())
+            {
                 if ext == "png" {
                     if let Ok(lut_img) = crate::app::helpers::open_image(path) {
                         let (lw, lh) = (lut_img.width(), lut_img.height());
@@ -684,7 +696,12 @@ impl WallmodApp {
         let mut search_paths = Vec::new();
         if let Ok(home) = std::env::var("HOME") {
             let home_path = PathBuf::from(&home);
-            for sub in ["Pictures", "Downloads", "Wallpapers", ".local/share/backgrounds"] {
+            for sub in [
+                "Pictures",
+                "Downloads",
+                "Wallpapers",
+                ".local/share/backgrounds",
+            ] {
                 let p = home_path.join(sub);
                 if p.exists() {
                     search_paths.push(p);
@@ -696,7 +713,9 @@ impl WallmodApp {
             search_paths.push(usr_bg);
         }
 
-        let exts = ["png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif"];
+        let exts = [
+            "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif",
+        ];
         let mut dirs_to_scan = Vec::new();
 
         fn collect_dirs(dir: &Path, dirs: &mut Vec<PathBuf>, depth: u32) {
@@ -734,8 +753,10 @@ impl WallmodApp {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_file() {
-                        if let Some(ext) =
-                            path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
+                        if let Some(ext) = path
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .map(|e| e.to_lowercase())
                         {
                             if exts.contains(&ext.as_str()) {
                                 img_files.push(path);
@@ -747,8 +768,11 @@ impl WallmodApp {
                     None
                 } else {
                     img_files.sort();
-                    let folder_name =
-                        dir.file_name().unwrap_or_default().to_string_lossy().to_string();
+                    let folder_name = dir
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
                     Some(Album {
                         folder_name: if folder_name.is_empty() {
                             dir.to_string_lossy().to_string()
@@ -765,14 +789,18 @@ impl WallmodApp {
     }
 
     pub fn scan_album_images(album_path: &Path) -> Vec<PathBuf> {
-        let exts = ["png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif"];
+        let exts = [
+            "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tga", "gif", "avif",
+        ];
         let mut imgs = Vec::new();
         if let Ok(entries) = std::fs::read_dir(album_path) {
             for entry in entries.flatten() {
                 let p = entry.path();
                 if p.is_file() {
-                    if let Some(ext) =
-                        p.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase())
+                    if let Some(ext) = p
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map(|e| e.to_lowercase())
                     {
                         if exts.contains(&ext.as_str()) {
                             imgs.push(p);
@@ -788,11 +816,15 @@ impl WallmodApp {
     pub fn export_terminal_scheme(&self, dir: &Path) -> Result<(), String> {
         let shades = self.current_theme.get_shades();
         let mut alacritty = String::from("[colors.primary]\nbackground = \"#09090b\"\nforeground = \"#fafafa\"\n\n[colors.normal]\n");
-        let names = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+        let names = [
+            "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+        ];
         for (i, name) in names.iter().enumerate() {
             let rgb = shades.get(i % shades.len()).unwrap_or(&[128, 128, 128]);
-            alacritty
-                .push_str(&format!("{} = \"#{:02x}{:02x}{:02x}\"\n", name, rgb[0], rgb[1], rgb[2]));
+            alacritty.push_str(&format!(
+                "{} = \"#{:02x}{:02x}{:02x}\"\n",
+                name, rgb[0], rgb[1], rgb[2]
+            ));
         }
         std::fs::write(dir.join("alacritty_theme.toml"), &alacritty)
             .map_err(|e| format!("Write error: {}", e))?;
@@ -805,7 +837,10 @@ impl WallmodApp {
         let mut kitty = String::from("background #09090b\nforeground #fafafa\n");
         for (i, _name) in names.iter().enumerate() {
             let rgb = shades.get(i % shades.len()).unwrap_or(&[128, 128, 128]);
-            kitty.push_str(&format!("color{} #{:02x}{:02x}{:02x}\n", i, rgb[0], rgb[1], rgb[2]));
+            kitty.push_str(&format!(
+                "color{} #{:02x}{:02x}{:02x}\n",
+                i, rgb[0], rgb[1], rgb[2]
+            ));
         }
         std::fs::write(dir.join("kitty_theme.conf"), &kitty)
             .map_err(|e| format!("Write error: {}", e))?;
@@ -913,26 +948,10 @@ impl WallmodApp {
                         let nice = parts[1];
                         let system = parts[2];
                         let idle = parts[3];
-                        let iowait = if parts.len() > 4 {
-                            parts[4]
-                        } else {
-                            0
-                        };
-                        let irq = if parts.len() > 5 {
-                            parts[5]
-                        } else {
-                            0
-                        };
-                        let softirq = if parts.len() > 6 {
-                            parts[6]
-                        } else {
-                            0
-                        };
-                        let steal = if parts.len() > 7 {
-                            parts[7]
-                        } else {
-                            0
-                        };
+                        let iowait = if parts.len() > 4 { parts[4] } else { 0 };
+                        let irq = if parts.len() > 5 { parts[5] } else { 0 };
+                        let softirq = if parts.len() > 6 { parts[6] } else { 0 };
+                        let steal = if parts.len() > 7 { parts[7] } else { 0 };
                         let total = user + nice + system + idle + iowait + irq + softirq + steal;
                         let idle_total = idle + iowait;
                         let idx = new_ticks.len();

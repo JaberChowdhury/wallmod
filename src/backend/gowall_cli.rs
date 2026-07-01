@@ -13,7 +13,10 @@ pub async fn run_gowall_command(args: Vec<String>) -> Result<PathBuf, String> {
         let gowall_bin = exe_path.join("gowall");
 
         if !gowall_bin.exists() {
-            return Err(format!("Gowall sidecar binary not found at {:?}", gowall_bin));
+            return Err(format!(
+                "Gowall sidecar binary not found at {:?}",
+                gowall_bin
+            ));
         }
 
         let output = std::process::Command::new(&gowall_bin)

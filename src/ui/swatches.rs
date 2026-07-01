@@ -130,7 +130,12 @@ pub fn render_swatches(
         )
         .child(
             Button::new("btn_edit_palette")
-                .child(gpui::svg().path("wand.svg").size_4().text_color(cx.theme().primary))
+                .child(
+                    gpui::svg()
+                        .path("wand.svg")
+                        .size_4()
+                        .text_color(cx.theme().primary),
+                )
                 .child("Edit Palette...")
                 .w_full()
                 .small()
@@ -187,10 +192,5 @@ fn rgb_to_hsla(r: u8, g: u8, b: u8) -> Hsla {
         h += 1.0;
     }
 
-    Hsla {
-        h,
-        s,
-        l,
-        a: 1.0,
-    }
+    Hsla { h, s, l, a: 1.0 }
 }

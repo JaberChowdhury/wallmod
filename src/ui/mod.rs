@@ -31,16 +31,41 @@ pub struct WallmodView {
 
 impl WallmodView {
     pub fn new(window: &mut gpui::Window, cx: &mut Context<Self>) -> Self {
-        let blur_slider =
-            cx.new(|_| SliderState::new().min(0.0).max(50.0).step(0.5).default_value(0.0));
-        let brightness_slider =
-            cx.new(|_| SliderState::new().min(-100.0).max(100.0).step(1.0).default_value(0.0));
-        let contrast_slider =
-            cx.new(|_| SliderState::new().min(-100.0).max(100.0).step(1.0).default_value(0.0));
-        let saturation_slider =
-            cx.new(|_| SliderState::new().min(-1.0).max(1.0).step(0.05).default_value(0.0));
-        let hue_slider =
-            cx.new(|_| SliderState::new().min(0.0).max(360.0).step(1.0).default_value(0.0));
+        let blur_slider = cx.new(|_| {
+            SliderState::new()
+                .min(0.0)
+                .max(50.0)
+                .step(0.5)
+                .default_value(0.0)
+        });
+        let brightness_slider = cx.new(|_| {
+            SliderState::new()
+                .min(-100.0)
+                .max(100.0)
+                .step(1.0)
+                .default_value(0.0)
+        });
+        let contrast_slider = cx.new(|_| {
+            SliderState::new()
+                .min(-100.0)
+                .max(100.0)
+                .step(1.0)
+                .default_value(0.0)
+        });
+        let saturation_slider = cx.new(|_| {
+            SliderState::new()
+                .min(-1.0)
+                .max(1.0)
+                .step(0.05)
+                .default_value(0.0)
+        });
+        let hue_slider = cx.new(|_| {
+            SliderState::new()
+                .min(0.0)
+                .max(360.0)
+                .step(1.0)
+                .default_value(0.0)
+        });
 
         let mut subscriptions = Vec::new();
 
@@ -58,44 +83,53 @@ impl WallmodView {
             },
         ));
 
-        subscriptions.push(cx.subscribe(&brightness_slider, |this, _, event: &SliderEvent, cx| {
-            match event {
-                SliderEvent::Change(val) => {
-                    this.app.photoshop_params.brightness = val.start() as i32;
-                    cx.notify();
+        subscriptions.push(
+            cx.subscribe(
+                &brightness_slider,
+                |this, _, event: &SliderEvent, cx| match event {
+                    SliderEvent::Change(val) => {
+                        this.app.photoshop_params.brightness = val.start() as i32;
+                        cx.notify();
+                    },
+                    SliderEvent::Release(val) => {
+                        this.app.photoshop_params.brightness = val.start() as i32;
+                        this.trigger_async_processing(cx, "Adjusting brightness...");
+                    },
                 },
-                SliderEvent::Release(val) => {
-                    this.app.photoshop_params.brightness = val.start() as i32;
-                    this.trigger_async_processing(cx, "Adjusting brightness...");
-                },
-            }
-        }));
+            ),
+        );
 
-        subscriptions.push(cx.subscribe(&contrast_slider, |this, _, event: &SliderEvent, cx| {
-            match event {
-                SliderEvent::Change(val) => {
-                    this.app.photoshop_params.contrast = val.start();
-                    cx.notify();
+        subscriptions.push(
+            cx.subscribe(
+                &contrast_slider,
+                |this, _, event: &SliderEvent, cx| match event {
+                    SliderEvent::Change(val) => {
+                        this.app.photoshop_params.contrast = val.start();
+                        cx.notify();
+                    },
+                    SliderEvent::Release(val) => {
+                        this.app.photoshop_params.contrast = val.start();
+                        this.trigger_async_processing(cx, "Adjusting contrast...");
+                    },
                 },
-                SliderEvent::Release(val) => {
-                    this.app.photoshop_params.contrast = val.start();
-                    this.trigger_async_processing(cx, "Adjusting contrast...");
-                },
-            }
-        }));
+            ),
+        );
 
-        subscriptions.push(cx.subscribe(&saturation_slider, |this, _, event: &SliderEvent, cx| {
-            match event {
-                SliderEvent::Change(val) => {
-                    this.app.photoshop_params.saturation = val.start();
-                    cx.notify();
+        subscriptions.push(
+            cx.subscribe(
+                &saturation_slider,
+                |this, _, event: &SliderEvent, cx| match event {
+                    SliderEvent::Change(val) => {
+                        this.app.photoshop_params.saturation = val.start();
+                        cx.notify();
+                    },
+                    SliderEvent::Release(val) => {
+                        this.app.photoshop_params.saturation = val.start();
+                        this.trigger_async_processing(cx, "Adjusting saturation...");
+                    },
                 },
-                SliderEvent::Release(val) => {
-                    this.app.photoshop_params.saturation = val.start();
-                    this.trigger_async_processing(cx, "Adjusting saturation...");
-                },
-            }
-        }));
+            ),
+        );
 
         subscriptions.push(cx.subscribe(
             &hue_slider,
@@ -111,61 +145,84 @@ impl WallmodView {
             },
         ));
 
-        let palette_r_slider =
-            cx.new(|_| SliderState::new().min(0.0).max(255.0).step(1.0).default_value(128.0));
-        let palette_g_slider =
-            cx.new(|_| SliderState::new().min(0.0).max(255.0).step(1.0).default_value(128.0));
-        let palette_b_slider =
-            cx.new(|_| SliderState::new().min(0.0).max(255.0).step(1.0).default_value(128.0));
+        let palette_r_slider = cx.new(|_| {
+            SliderState::new()
+                .min(0.0)
+                .max(255.0)
+                .step(1.0)
+                .default_value(128.0)
+        });
+        let palette_g_slider = cx.new(|_| {
+            SliderState::new()
+                .min(0.0)
+                .max(255.0)
+                .step(1.0)
+                .default_value(128.0)
+        });
+        let palette_b_slider = cx.new(|_| {
+            SliderState::new()
+                .min(0.0)
+                .max(255.0)
+                .step(1.0)
+                .default_value(128.0)
+        });
 
-        subscriptions.push(cx.subscribe(&palette_r_slider, |this, _, event: &SliderEvent, cx| {
-            if let SliderEvent::Change(val) = event {
-                if let Some(idx) = this.app.selected_color_idx {
-                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
-                        this.app.current_theme
-                    {
-                        if let Some(c) = colors.get_mut(idx) {
-                            c[0] = val.start() as u8;
+        subscriptions.push(
+            cx.subscribe(&palette_r_slider, |this, _, event: &SliderEvent, cx| {
+                if let SliderEvent::Change(val) = event {
+                    if let Some(idx) = this.app.selected_color_idx {
+                        if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
+                            this.app.current_theme
+                        {
+                            if let Some(c) = colors.get_mut(idx) {
+                                c[0] = val.start() as u8;
+                            }
                         }
                     }
+                    this.app.needs_hex_sync = true;
+                    cx.notify();
                 }
-                this.app.needs_hex_sync = true;
-                cx.notify();
-            }
-        }));
-        subscriptions.push(cx.subscribe(&palette_g_slider, |this, _, event: &SliderEvent, cx| {
-            if let SliderEvent::Change(val) = event {
-                if let Some(idx) = this.app.selected_color_idx {
-                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
-                        this.app.current_theme
-                    {
-                        if let Some(c) = colors.get_mut(idx) {
-                            c[1] = val.start() as u8;
+            }),
+        );
+        subscriptions.push(
+            cx.subscribe(&palette_g_slider, |this, _, event: &SliderEvent, cx| {
+                if let SliderEvent::Change(val) = event {
+                    if let Some(idx) = this.app.selected_color_idx {
+                        if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
+                            this.app.current_theme
+                        {
+                            if let Some(c) = colors.get_mut(idx) {
+                                c[1] = val.start() as u8;
+                            }
                         }
                     }
+                    this.app.needs_hex_sync = true;
+                    cx.notify();
                 }
-                this.app.needs_hex_sync = true;
-                cx.notify();
-            }
-        }));
-        subscriptions.push(cx.subscribe(&palette_b_slider, |this, _, event: &SliderEvent, cx| {
-            if let SliderEvent::Change(val) = event {
-                if let Some(idx) = this.app.selected_color_idx {
-                    if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
-                        this.app.current_theme
-                    {
-                        if let Some(c) = colors.get_mut(idx) {
-                            c[2] = val.start() as u8;
+            }),
+        );
+        subscriptions.push(
+            cx.subscribe(&palette_b_slider, |this, _, event: &SliderEvent, cx| {
+                if let SliderEvent::Change(val) = event {
+                    if let Some(idx) = this.app.selected_color_idx {
+                        if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
+                            this.app.current_theme
+                        {
+                            if let Some(c) = colors.get_mut(idx) {
+                                c[2] = val.start() as u8;
+                            }
                         }
                     }
+                    this.app.needs_hex_sync = true;
+                    cx.notify();
                 }
-                this.app.needs_hex_sync = true;
-                cx.notify();
-            }
-        }));
+            }),
+        );
 
         cx.spawn(async move |this, cx| loop {
-            cx.background_executor().timer(std::time::Duration::from_secs(60)).await;
+            cx.background_executor()
+                .timer(std::time::Duration::from_secs(60))
+                .await;
             let _ = this.update(cx, |view, cx| {
                 if view.app.daemon_enabled && view.app.check_daemon_tick() {
                     view.trigger_async_processing(cx, "Automated time-of-day theme shift...");
@@ -175,7 +232,9 @@ impl WallmodView {
         .detach();
 
         cx.spawn(async move |this, cx| loop {
-            cx.background_executor().timer(std::time::Duration::from_millis(500)).await;
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(500))
+                .await;
             let _ = this.update(cx, |view, cx| {
                 view.app.update_system_stats();
                 if view.app.sidebar_tab == crate::app::state::SidebarTab::Settings {
@@ -263,7 +322,11 @@ impl WallmodView {
         let formatted = match format {
             "json" => format!(
                 "[\n  {}\n]",
-                hex_shades.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(",\n  ")
+                hex_shades
+                    .iter()
+                    .map(|s| format!("\"{}\"", s))
+                    .collect::<Vec<_>>()
+                    .join(",\n  ")
             ),
             "object" => {
                 let entries: Vec<String> = hex_shades
@@ -318,7 +381,9 @@ impl WallmodView {
 
         cx.spawn(async move |this_view, mut cx| {
             while !is_done_ui.load(std::sync::atomic::Ordering::Relaxed) {
-                cx.background_executor().timer(std::time::Duration::from_millis(50)).await;
+                cx.background_executor()
+                    .timer(std::time::Duration::from_millis(50))
+                    .await;
                 if let Ok(lock) = status_tracker_ui.lock() {
                     if let Some(msg) = lock.clone() {
                         let _ = this_view.update(cx, |view: &mut WallmodView, cx| {
@@ -338,7 +403,9 @@ impl WallmodView {
         }) as Box<dyn Fn(String) + Send>;
 
         cx.spawn(async move |this, mut cx| {
-            cx.background_executor().timer(std::time::Duration::from_millis(100)).await;
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(100))
+                .await;
 
             let result = cx
                 .background_executor()
@@ -367,7 +434,8 @@ impl WallmodView {
             let _ = this.update(cx, |view, cx| {
                 match result {
                     Ok(Some((processed_dyn, temp_path, histogram, wcag_contrast))) => {
-                        view.app.update_preview(processed_dyn, temp_path, histogram, wcag_contrast);
+                        view.app
+                            .update_preview(processed_dyn, temp_path, histogram, wcag_contrast);
                         view.app.processing_status = None;
                     },
                     Ok(None) => {
@@ -398,7 +466,9 @@ impl WallmodView {
         let algorithm = self.app.algorithm;
 
         cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(std::time::Duration::from_millis(100)).await;
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(100))
+                .await;
 
             let result = cx
                 .background_executor()
@@ -508,7 +578,12 @@ fn render_floating_stats(
                 .justify_between()
                 .gap_4()
                 .items_center()
-                .child(div().text_xs().text_color(cx.theme().muted_foreground).child("FPS"))
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("FPS"),
+                )
                 .child(
                     div()
                         .text_xs()
@@ -525,7 +600,12 @@ fn render_floating_stats(
                 .justify_between()
                 .gap_4()
                 .items_center()
-                .child(div().text_xs().text_color(cx.theme().muted_foreground).child("RAM"))
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("RAM"),
+                )
                 .child(
                     div()
                         .text_xs()
@@ -542,7 +622,12 @@ fn render_floating_stats(
                 .justify_between()
                 .gap_4()
                 .items_center()
-                .child(div().text_xs().text_color(cx.theme().muted_foreground).child("CPU (Avg)"))
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("CPU (Avg)"),
+                )
                 .child(
                     div()
                         .text_xs()
@@ -591,7 +676,12 @@ fn render_floating_stats(
                         .text_color(cx.theme().foreground)
                         .child("SYSTEM STATS"),
                 )
-                .child(gpui::svg().path("monitor.svg").size_3().text_color(cx.theme().primary)),
+                .child(
+                    gpui::svg()
+                        .path("monitor.svg")
+                        .size_3()
+                        .text_color(cx.theme().primary),
+                ),
         )
         .children(items)
         .into_any_element()

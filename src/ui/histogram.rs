@@ -37,11 +37,7 @@ pub fn render_histogram(
         )
         .child(if let Some(hist) = data {
             let max = hist.max_count as f32;
-            let max_log = if max > 0.0 {
-                (max + 1.0).ln()
-            } else {
-                1.0
-            };
+            let max_log = if max > 0.0 { (max + 1.0).ln() } else { 1.0 };
 
             // Downsample 256 bins into 64 visual frequency bars
             let mut bars = [0.0f32; 64];
@@ -68,7 +64,9 @@ pub fn render_histogram(
                 .children(bars.iter().map(|&height_ratio| {
                     div()
                         .flex_1()
-                        .h(gpui::Length::Definite(gpui::DefiniteLength::Fraction(height_ratio)))
+                        .h(gpui::Length::Definite(gpui::DefiniteLength::Fraction(
+                            height_ratio,
+                        )))
                         .rounded_t_sm()
                         .bg(cx.theme().primary.opacity(0.85))
                 }))

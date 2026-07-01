@@ -124,24 +124,35 @@ fn sidebar_tool_button(
 }
 
 fn render_tool_header(view: &mut WallmodView, _cx: &mut Context<WallmodView>) -> impl IntoElement {
-    h_flex().w_full().justify_between().items_center().child(div().text_2xl().font_bold().child(
-        match view.app.gowall_state.current_tool {
-            GowallTool::Recolor => "Theme Recolor",
-            GowallTool::Effects => "Basic Effects",
-            GowallTool::Compress => "Compress & Format",
-            GowallTool::Ocr => "Extract Text (OCR)",
-            GowallTool::Upscale => "AI Upscaler",
-            GowallTool::PixelArt => "Pixel Art Generator",
-            GowallTool::ReplaceColor => "Background Removal",
-            GowallTool::Extract => "Extract Color Palette",
-            GowallTool::Resize => "Resize Image",
-            GowallTool::Daily => "Daily Wallpaper",
-        },
-    ))
+    h_flex()
+        .w_full()
+        .justify_between()
+        .items_center()
+        .child(
+            div()
+                .text_2xl()
+                .font_bold()
+                .child(match view.app.gowall_state.current_tool {
+                    GowallTool::Recolor => "Theme Recolor",
+                    GowallTool::Effects => "Basic Effects",
+                    GowallTool::Compress => "Compress & Format",
+                    GowallTool::Ocr => "Extract Text (OCR)",
+                    GowallTool::Upscale => "AI Upscaler",
+                    GowallTool::PixelArt => "Pixel Art Generator",
+                    GowallTool::ReplaceColor => "Background Removal",
+                    GowallTool::Extract => "Extract Color Palette",
+                    GowallTool::Resize => "Resize Image",
+                    GowallTool::Daily => "Daily Wallpaper",
+                }),
+        )
 }
 
 fn render_image_preview(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> impl IntoElement {
-    let display_path = view.app.preview_path.as_ref().or(view.app.base_image_path.as_ref());
+    let display_path = view
+        .app
+        .preview_path
+        .as_ref()
+        .or(view.app.base_image_path.as_ref());
 
     let content = if view.app.gowall_state.is_processing {
         div()
@@ -159,7 +170,11 @@ fn render_image_preview(view: &mut WallmodView, cx: &mut Context<WallmodView>) -
             .size_full()
             .p_4()
             .overflow_hidden()
-            .child(img(path.clone()).size_full().object_fit(gpui::ObjectFit::Contain))
+            .child(
+                img(path.clone())
+                    .size_full()
+                    .object_fit(gpui::ObjectFit::Contain),
+            )
             .into_any_element()
     } else {
         div()
@@ -201,7 +216,9 @@ fn render_tool_panel(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
     {
         return panel
             .child(
-                div().text_color(cx.theme().muted_foreground).child("Please load an image first."),
+                div()
+                    .text_color(cx.theme().muted_foreground)
+                    .child("Please load an image first."),
             )
             .into_any_element();
     }
@@ -269,9 +286,18 @@ fn render_recolor_panel(
     };
 
     let dropdown = Button::new("btn_gowall_theme_dropdown")
-        .child(h_flex().justify_between().w_full().child(display_name).child(
-            gpui::svg().path("chevron_down.svg").size_4().text_color(cx.theme().muted_foreground),
-        ))
+        .child(
+            h_flex()
+                .justify_between()
+                .w_full()
+                .child(display_name)
+                .child(
+                    gpui::svg()
+                        .path("chevron_down.svg")
+                        .size_4()
+                        .text_color(cx.theme().muted_foreground),
+                ),
+        )
         .w_full()
         .outline()
         .dropdown_menu({
@@ -292,27 +318,32 @@ fn render_recolor_panel(
             }
         });
 
-    panel.child(div().font_bold().child("Select Theme Preset:")).child(dropdown).child(
-        Button::new("btn_execute_recolor").child("Apply Theme").primary().w_full().on_click(
-            cx.listener(|this, _, _, cx| {
-                if let Some(in_path) = this.app.base_image_path.clone() {
-                    let preset = this.app.gowall_state.selected_theme.clone();
-                    let gowall_theme = map_preset_to_gowall_theme(&preset);
-                    let out_path = std::env::temp_dir().join("gowall_recolor_out.png");
+    panel
+        .child(div().font_bold().child("Select Theme Preset:"))
+        .child(dropdown)
+        .child(
+            Button::new("btn_execute_recolor")
+                .child("Apply Theme")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    if let Some(in_path) = this.app.base_image_path.clone() {
+                        let preset = this.app.gowall_state.selected_theme.clone();
+                        let gowall_theme = map_preset_to_gowall_theme(&preset);
+                        let out_path = std::env::temp_dir().join("gowall_recolor_out.png");
 
-                    let args = vec![
-                        "convert".to_string(),
-                        in_path.to_string_lossy().to_string(),
-                        "-t".to_string(),
-                        gowall_theme.to_string(),
-                        "--output".to_string(),
-                        out_path.to_string_lossy().to_string(),
-                    ];
-                    execute_gowall_cmd(this, cx, args, out_path, false);
-                }
-            }),
-        ),
-    )
+                        let args = vec![
+                            "convert".to_string(),
+                            in_path.to_string_lossy().to_string(),
+                            "-t".to_string(),
+                            gowall_theme.to_string(),
+                            "--output".to_string(),
+                            out_path.to_string_lossy().to_string(),
+                        ];
+                        execute_gowall_cmd(this, cx, args, out_path, false);
+                    }
+                })),
+        )
 }
 
 fn render_effects_panel(
@@ -358,26 +389,28 @@ fn render_compress_panel(
     cx: &mut Context<WallmodView>,
     panel: gpui::Div,
 ) -> impl IntoElement {
-    panel.child(div().font_bold().child("Compress & Format:")).child(
-        Button::new("btn_compress_pngquant")
-            .child("Compress (pngquant)")
-            .primary()
-            .w_full()
-            .on_click(cx.listener(|this, _, _, cx| {
-                if let Some(in_path) = this.app.base_image_path.clone() {
-                    let out_path = std::env::temp_dir().join("gowall_compress_out.png");
-                    let args = vec![
-                        "compress".to_string(),
-                        in_path.to_string_lossy().to_string(),
-                        "-m".to_string(),
-                        "losslesspng".to_string(),
-                        "--output".to_string(),
-                        out_path.to_string_lossy().to_string(),
-                    ];
-                    execute_gowall_cmd(this, cx, args, out_path, false);
-                }
-            })),
-    )
+    panel
+        .child(div().font_bold().child("Compress & Format:"))
+        .child(
+            Button::new("btn_compress_pngquant")
+                .child("Compress (pngquant)")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    if let Some(in_path) = this.app.base_image_path.clone() {
+                        let out_path = std::env::temp_dir().join("gowall_compress_out.png");
+                        let args = vec![
+                            "compress".to_string(),
+                            in_path.to_string_lossy().to_string(),
+                            "-m".to_string(),
+                            "losslesspng".to_string(),
+                            "--output".to_string(),
+                            out_path.to_string_lossy().to_string(),
+                        ];
+                        execute_gowall_cmd(this, cx, args, out_path, false);
+                    }
+                })),
+        )
 }
 
 fn render_ocr_panel(
@@ -387,23 +420,27 @@ fn render_ocr_panel(
 ) -> impl IntoElement {
     panel
         .child(div().font_bold().child("Extract Text (OCR):"))
-        .child(Button::new("btn_execute_ocr").child("Run OCR").primary().w_full().on_click(
-            cx.listener(|this, _, _, cx| {
-                if let Some(in_path) = this.app.base_image_path.clone() {
-                    // OCR doesn't need output image path, we just parse stdout
-                    let out_path = std::path::PathBuf::new(); // Dummy
-                    let args = vec![
-                        "ocr".to_string(),
-                        in_path.to_string_lossy().to_string(),
-                        "-p".to_string(),
-                        "tesseract".to_string(),
-                        "-m".to_string(),
-                        "eng".to_string(),
-                    ];
-                    execute_gowall_cmd(this, cx, args, out_path, true);
-                }
-            }),
-        ))
+        .child(
+            Button::new("btn_execute_ocr")
+                .child("Run OCR")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    if let Some(in_path) = this.app.base_image_path.clone() {
+                        // OCR doesn't need output image path, we just parse stdout
+                        let out_path = std::path::PathBuf::new(); // Dummy
+                        let args = vec![
+                            "ocr".to_string(),
+                            in_path.to_string_lossy().to_string(),
+                            "-p".to_string(),
+                            "tesseract".to_string(),
+                            "-m".to_string(),
+                            "eng".to_string(),
+                        ];
+                        execute_gowall_cmd(this, cx, args, out_path, true);
+                    }
+                })),
+        )
         .child(
             v_flex()
                 .gap_2()
@@ -435,24 +472,28 @@ fn render_upscale_panel(
     cx: &mut Context<WallmodView>,
     panel: gpui::Div,
 ) -> impl IntoElement {
-    panel.child(div().font_bold().child("AI Upscale (Requires Vulkan):")).child(
-        Button::new("btn_execute_upscale").child("Upscale 2x").primary().w_full().on_click(
-            cx.listener(|this, _, _, cx| {
-                if let Some(in_path) = this.app.base_image_path.clone() {
-                    let out_path = std::env::temp_dir().join("gowall_upscale_out.png");
-                    let args = vec![
-                        "upscale".to_string(),
-                        in_path.to_string_lossy().to_string(),
-                        "-s".to_string(),
-                        "2".to_string(),
-                        "--output".to_string(),
-                        out_path.to_string_lossy().to_string(),
-                    ];
-                    execute_gowall_cmd(this, cx, args, out_path, false);
-                }
-            }),
-        ),
-    )
+    panel
+        .child(div().font_bold().child("AI Upscale (Requires Vulkan):"))
+        .child(
+            Button::new("btn_execute_upscale")
+                .child("Upscale 2x")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    if let Some(in_path) = this.app.base_image_path.clone() {
+                        let out_path = std::env::temp_dir().join("gowall_upscale_out.png");
+                        let args = vec![
+                            "upscale".to_string(),
+                            in_path.to_string_lossy().to_string(),
+                            "-s".to_string(),
+                            "2".to_string(),
+                            "--output".to_string(),
+                            out_path.to_string_lossy().to_string(),
+                        ];
+                        execute_gowall_cmd(this, cx, args, out_path, false);
+                    }
+                })),
+        )
 }
 
 fn render_pixelart_panel(
@@ -460,26 +501,28 @@ fn render_pixelart_panel(
     cx: &mut Context<WallmodView>,
     panel: gpui::Div,
 ) -> impl IntoElement {
-    panel.child(div().font_bold().child("Pixel Art Generator:")).child(
-        Button::new("btn_execute_pixelate")
-            .child("Pixelate (Scale 15)")
-            .primary()
-            .w_full()
-            .on_click(cx.listener(|this, _, _, cx| {
-                if let Some(in_path) = this.app.base_image_path.clone() {
-                    let out_path = std::env::temp_dir().join("gowall_pixelate_out.png");
-                    let args = vec![
-                        "pixelate".to_string(),
-                        in_path.to_string_lossy().to_string(),
-                        "-s".to_string(),
-                        "15".to_string(),
-                        "--output".to_string(),
-                        out_path.to_string_lossy().to_string(),
-                    ];
-                    execute_gowall_cmd(this, cx, args, out_path, false);
-                }
-            })),
-    )
+    panel
+        .child(div().font_bold().child("Pixel Art Generator:"))
+        .child(
+            Button::new("btn_execute_pixelate")
+                .child("Pixelate (Scale 15)")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    if let Some(in_path) = this.app.base_image_path.clone() {
+                        let out_path = std::env::temp_dir().join("gowall_pixelate_out.png");
+                        let args = vec![
+                            "pixelate".to_string(),
+                            in_path.to_string_lossy().to_string(),
+                            "-s".to_string(),
+                            "15".to_string(),
+                            "--output".to_string(),
+                            out_path.to_string_lossy().to_string(),
+                        ];
+                        execute_gowall_cmd(this, cx, args, out_path, false);
+                    }
+                })),
+        )
 }
 
 fn render_bg_remove_panel(
@@ -487,22 +530,26 @@ fn render_bg_remove_panel(
     cx: &mut Context<WallmodView>,
     panel: gpui::Div,
 ) -> impl IntoElement {
-    panel.child(div().font_bold().child("Background Removal:")).child(
-        Button::new("btn_execute_bg_remove").child("Remove BG").primary().w_full().on_click(
-            cx.listener(|this, _, _, cx| {
-                if let Some(in_path) = this.app.base_image_path.clone() {
-                    let out_path = std::env::temp_dir().join("gowall_bg_remove_out.png");
-                    let args = vec![
-                        "bg".to_string(),
-                        in_path.to_string_lossy().to_string(),
-                        "--output".to_string(),
-                        out_path.to_string_lossy().to_string(),
-                    ];
-                    execute_gowall_cmd(this, cx, args, out_path, false);
-                }
-            }),
-        ),
-    )
+    panel
+        .child(div().font_bold().child("Background Removal:"))
+        .child(
+            Button::new("btn_execute_bg_remove")
+                .child("Remove BG")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    if let Some(in_path) = this.app.base_image_path.clone() {
+                        let out_path = std::env::temp_dir().join("gowall_bg_remove_out.png");
+                        let args = vec![
+                            "bg".to_string(),
+                            in_path.to_string_lossy().to_string(),
+                            "--output".to_string(),
+                            out_path.to_string_lossy().to_string(),
+                        ];
+                        execute_gowall_cmd(this, cx, args, out_path, false);
+                    }
+                })),
+        )
 }
 
 fn render_extract_panel(
@@ -513,8 +560,11 @@ fn render_extract_panel(
     panel
         .child(div().font_bold().child("Extract Color Palette:"))
         .child(
-            Button::new("btn_execute_extract").child("Extract Colors").primary().w_full().on_click(
-                cx.listener(|this, _, _, cx| {
+            Button::new("btn_execute_extract")
+                .child("Extract Colors")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
                     if let Some(in_path) = this.app.base_image_path.clone() {
                         let out_path = std::path::PathBuf::new();
                         let args =
@@ -522,8 +572,7 @@ fn render_extract_panel(
                         // Treat as OCR to capture stdout text
                         execute_gowall_cmd(this, cx, args, out_path, true);
                     }
-                }),
-            ),
+                })),
         )
         .child(
             v_flex()
@@ -591,51 +640,54 @@ fn render_daily_panel(
     cx: &mut Context<WallmodView>,
     panel: gpui::Div,
 ) -> impl IntoElement {
-    panel.child(div().font_bold().child("Daily Wallpaper:")).child(
-        Button::new("btn_fetch_daily")
-            .child("Fetch Wallpaper of the Day")
-            .primary()
-            .w_full()
-            .on_click(cx.listener(|this, _, _, cx| {
-                this.app.gowall_state.is_processing = true;
-                cx.notify();
-                cx.spawn(async move |this, cx| {
-                    let url_res = crate::backend::gowall_cli::run_gowall_command(vec![
-                        "daily-url".to_string()
-                    ])
-                    .await;
+    panel
+        .child(div().font_bold().child("Daily Wallpaper:"))
+        .child(
+            Button::new("btn_fetch_daily")
+                .child("Fetch Wallpaper of the Day")
+                .primary()
+                .w_full()
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.app.gowall_state.is_processing = true;
+                    cx.notify();
+                    cx.spawn(async move |this, cx| {
+                        let url_res = crate::backend::gowall_cli::run_gowall_command(vec![
+                            "daily-url".to_string(),
+                        ])
+                        .await;
 
-                    if let Ok(url_path) = url_res {
-                        let url_str = url_path.to_string_lossy().to_string();
-                        if !url_str.is_empty() {
-                            let out_path = std::env::temp_dir().join("wallmod_daily.jpg");
-                            let out_path_clone = out_path.clone();
-                            let download_res = crate::backend::runtime::spawn_blocking(move || {
-                                std::process::Command::new("curl")
-                                    .arg("-sL")
-                                    .arg("-o")
-                                    .arg(&out_path_clone)
-                                    .arg(&url_str)
-                                    .status()
-                            })
-                            .await;
+                        if let Ok(url_path) = url_res {
+                            let url_str = url_path.to_string_lossy().to_string();
+                            if !url_str.is_empty() {
+                                let out_path = std::env::temp_dir().join("wallmod_daily.jpg");
+                                let out_path_clone = out_path.clone();
+                                let download_res =
+                                    crate::backend::runtime::spawn_blocking(move || {
+                                        std::process::Command::new("curl")
+                                            .arg("-sL")
+                                            .arg("-o")
+                                            .arg(&out_path_clone)
+                                            .arg(&url_str)
+                                            .status()
+                                    })
+                                    .await;
 
-                            if let Ok(Ok(status)) = download_res {
-                                if status.success() {
-                                    let _ = this.update(cx, |view, cx| {
-                                        view.open_image_from_path(out_path.clone(), cx);
-                                    });
+                                if let Ok(Ok(status)) = download_res {
+                                    if status.success() {
+                                        let _ = this.update(cx, |view, cx| {
+                                            view.open_image_from_path(out_path.clone(), cx);
+                                        });
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    let _ = this.update(cx, |view, cx| {
-                        view.app.gowall_state.is_processing = false;
-                        cx.notify();
-                    });
-                })
-                .detach();
-            })),
-    )
+                        let _ = this.update(cx, |view, cx| {
+                            view.app.gowall_state.is_processing = false;
+                            cx.notify();
+                        });
+                    })
+                    .detach();
+                })),
+        )
 }

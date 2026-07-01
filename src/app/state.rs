@@ -55,8 +55,11 @@ pub enum RemapAlgorithm {
 }
 
 impl RemapAlgorithm {
-    pub const ALL: &[RemapAlgorithm] =
-        &[RemapAlgorithm::Gaussian, RemapAlgorithm::Shepard, RemapAlgorithm::NearestNeighbor];
+    pub const ALL: &[RemapAlgorithm] = &[
+        RemapAlgorithm::Gaussian,
+        RemapAlgorithm::Shepard,
+        RemapAlgorithm::NearestNeighbor,
+    ];
 }
 
 impl std::fmt::Display for RemapAlgorithm {
@@ -78,8 +81,12 @@ pub enum AppTab {
 }
 
 impl AppTab {
-    pub const ALL: &[AppTab] =
-        &[AppTab::Themer, AppTab::Upscaler, AppTab::Ocr, AppTab::Compression];
+    pub const ALL: &[AppTab] = &[
+        AppTab::Themer,
+        AppTab::Upscaler,
+        AppTab::Ocr,
+        AppTab::Compression,
+    ];
 }
 
 impl std::fmt::Display for AppTab {
@@ -153,9 +160,11 @@ impl ThemeSource {
     pub fn display_name(&self) -> String {
         match self {
             ThemeSource::Preset(name) => name.clone(),
-            ThemeSource::Custom(path) => {
-                path.file_name().unwrap_or_default().to_string_lossy().to_string()
-            },
+            ThemeSource::Custom(path) => path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
             ThemeSource::CustomPalette(name, _) => format!("Custom: {}", name),
         }
     }
@@ -202,8 +211,11 @@ pub enum BitDepthStyle {
 }
 
 impl BitDepthStyle {
-    pub const ALL: &[BitDepthStyle] =
-        &[BitDepthStyle::Bit32, BitDepthStyle::Bit16, BitDepthStyle::Bit8];
+    pub const ALL: &[BitDepthStyle] = &[
+        BitDepthStyle::Bit32,
+        BitDepthStyle::Bit16,
+        BitDepthStyle::Bit8,
+    ];
     pub fn display_name(&self) -> &'static str {
         match self {
             BitDepthStyle::Bit32 => "32-bit (True Color)",
@@ -242,7 +254,11 @@ impl PipelineOp {
     pub fn display_name(&self) -> String {
         match self {
             Self::Theme(t, op) => {
-                format!("Theme Grade: {} (Opacity: {:.0}%)", t.display_name(), op * 100.0)
+                format!(
+                    "Theme Grade: {} (Opacity: {:.0}%)",
+                    t.display_name(),
+                    op * 100.0
+                )
             },
             Self::Blur(s) => format!("Blur Effect (σ={:.1})", s),
             Self::Photoshop(p) => format!(
@@ -270,7 +286,10 @@ impl PipelineOp {
             },
             Self::Blur(sigma) => format!("blur:{}", sigma),
             Self::Photoshop(p) => {
-                format!("photoshop:{}:{}:{}:{}", p.brightness, p.contrast, p.saturation, p.hue)
+                format!(
+                    "photoshop:{}:{}:{}:{}",
+                    p.brightness, p.contrast, p.saturation, p.hue
+                )
             },
             Self::Dither => "dither".to_string(),
             Self::PixelSort => "pixelsort".to_string(),
@@ -308,12 +327,14 @@ impl PipelineOp {
             "photoshop" => {
                 let p: Vec<&str> = code.split(':').collect();
                 if p.len() >= 5 {
-                    Some(Self::Photoshop(crate::modules::photoshop::PhotoshopParams {
-                        brightness: p[1].parse().unwrap_or(0),
-                        contrast: p[2].parse().unwrap_or(0.0),
-                        saturation: p[3].parse().unwrap_or(0.0),
-                        hue: p[4].parse().unwrap_or(0),
-                    }))
+                    Some(Self::Photoshop(
+                        crate::modules::photoshop::PhotoshopParams {
+                            brightness: p[1].parse().unwrap_or(0),
+                            contrast: p[2].parse().unwrap_or(0.0),
+                            saturation: p[3].parse().unwrap_or(0.0),
+                            hue: p[4].parse().unwrap_or(0),
+                        },
+                    ))
                 } else {
                     None
                 }
@@ -380,11 +401,7 @@ pub fn export_pipeline_to_string(chain: &[ThemeChainNode]) -> String {
     let mut lines = Vec::new();
     lines.push("[\n".to_string());
     for (i, node) in chain.iter().enumerate() {
-        let comma = if i + 1 < chain.len() {
-            ","
-        } else {
-            ""
-        };
+        let comma = if i + 1 < chain.len() { "," } else { "" };
         lines.push(format!("  {{\n    \"id\": {},\n    \"op\": \"{}\",\n    \"enabled\": {},\n    \"bit_depth\": \"{}\"\n  }}{}\n",
             node.id, node.op.to_code().replace('"', "\\\""), node.enabled, node.bit_depth.to_code(), comma));
     }
@@ -407,7 +424,11 @@ pub fn import_pipeline_from_string(content: &str) -> Vec<ThemeChainNode> {
             }
         } else if trimmed.starts_with("\"op\":") {
             if let Some(val) = trimmed.split(':').nth(1) {
-                let code = val.trim().trim_matches(',').trim_matches('"').replace("\\\"", "\"");
+                let code = val
+                    .trim()
+                    .trim_matches(',')
+                    .trim_matches('"')
+                    .replace("\\\"", "\"");
                 current_op = PipelineOp::from_code(&code);
             }
         } else if trimmed.starts_with("\"enabled\":") {

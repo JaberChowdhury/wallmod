@@ -18,7 +18,10 @@ fn main() {
     let gowall_binary = target_dir.join("gowall");
 
     // We print a warning just so it shows up in cargo's output for debugging
-    println!("cargo:warning=Building Go sidecar binary: {:?}", gowall_binary);
+    println!(
+        "cargo:warning=Building Go sidecar binary: {:?}",
+        gowall_binary
+    );
 
     // Execute `go build` inside the gowall_src directory, placing the binary in target_dir
     let status = Command::new("go")

@@ -23,8 +23,10 @@ pub async fn run_compute_shader(
         })
         .await?;
 
-    let (device, queue) =
-        adapter.request_device(&wgpu::DeviceDescriptor::default(), None).await.ok()?;
+    let (device, queue) = adapter
+        .request_device(&wgpu::DeviceDescriptor::default(), None)
+        .await
+        .ok()?;
 
     let (width, height) = input_image.dimensions();
     let size = (width * height * 4) as wgpu::BufferAddress;
@@ -75,9 +77,7 @@ pub async fn run_compute_shader(
                 binding: 0,
                 visibility: wgpu::ShaderStages::COMPUTE,
                 ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage {
-                        read_only: false,
-                    },
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
                     has_dynamic_offset: false,
                     min_binding_size: None,
                 },
@@ -139,9 +139,8 @@ pub async fn run_compute_shader(
     });
 
     // Encode commands
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: None,
-    });
+    let mut encoder =
+        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
     {
         let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: None,
