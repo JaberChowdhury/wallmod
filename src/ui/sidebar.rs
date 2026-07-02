@@ -62,7 +62,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
             match sidebar_tab {
                 SidebarTab::CodeRender => {
                     let langs = ["rust", "python", "go", "cpp", "c", "javascript", "typescript", "html", "css", "json", "bash"];
-                    let themes = ["Dracula", "GitHub", "Monokai Extended", "Solarized (dark)", "Solarized (light)", "1337", "Coldark-Dark"];
+                    let themes = ["Dracula", "GitHub", "Monokai Extended", "Solarized (dark)", "Solarized (light)", "1337", "Coldark-Dark", "Custom Preset"];
+                    let fonts = ["Hack", "Fira Code", "JetBrains Mono", "Cascadia Code", "Roboto Mono"];
+                    let view_entity = cx.entity().clone();
                     
                     v_flex().gap_4().w_full().p_4()
                         .child(div().text_sm().font_bold().child("Silicon Code Render"))
@@ -73,34 +75,27 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 .child(div().text_xs().font_bold().child("Theme"))
                                 .child(
                                     Button::new("btn_theme_dropdown")
-                                        .child(h_flex().w_full().justify_between().child(view.app.code_render_theme.clone()).child(gpui::svg().path("chevron-down.svg").size_4().text_color(cx.theme().primary)))
+                                        .label(format!("{}", view.app.code_render_theme))
+                                        .child(gpui::svg().path("chevron-down.svg").size_4().text_color(cx.theme().primary))
                                         .secondary()
                                         .w_full()
-                                        .on_click(cx.listener(|this, _, _, cx| {
-                                            this.app.show_theme_dropdown = !this.app.show_theme_dropdown;
-                                            this.app.show_language_dropdown = false;
-                                            cx.notify();
-                                        }))
+                                        .dropdown_menu({
+                                            let ve = view_entity.clone();
+                                            move |mut menu, window, _| {
+                                                for &name in themes.iter() {
+                                                    let n = name.to_string();
+                                                    let ve = ve.clone();
+                                                    menu = menu.item(
+                                                        PopupMenuItem::new(name).on_click(window.listener_for(&ve, move |this, _, _, cx| {
+                                                            this.app.code_render_theme = n.clone();
+                                                            cx.notify();
+                                                        }))
+                                                    );
+                                                }
+                                                menu
+                                            }
+                                        })
                                 )
-                                .when(view.app.show_theme_dropdown, |e| {
-                                    e.child(
-                                        div().absolute().top_12().left_0().w_full()
-                                            .bg({ let mut b = cx.theme().background; b.a = 1.0; b }).border_1().border_color(cx.theme().border).rounded_md().shadow_lg()
-                                            .child(
-                                                v_flex().w_full().max_h(px(150.0)).overflow_y_hidden()
-                                                    .children(themes.into_iter().map(|t| {
-                                                        Button::new(format!("theme_{}", t))
-                                                            .child(t)
-                                                            .w_full().justify_start().ghost()
-                                                            .on_click(cx.listener(move |this, _, _, cx| {
-                                                                this.app.code_render_theme = t.to_string();
-                                                                this.app.show_theme_dropdown = false;
-                                                                cx.notify();
-                                                            }))
-                                                    }))
-                                            )
-                                    )
-                                })
                         )
 
                         // Language Dropdown
@@ -109,34 +104,110 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                 .child(div().text_xs().font_bold().child("Language"))
                                 .child(
                                     Button::new("btn_lang_dropdown")
-                                        .child(h_flex().w_full().justify_between().child(view.app.code_render_language.clone()).child(gpui::svg().path("chevron-down.svg").size_4().text_color(cx.theme().primary)))
+                                        .label(format!("{}", view.app.code_render_language))
+                                        .child(gpui::svg().path("chevron-down.svg").size_4().text_color(cx.theme().primary))
                                         .secondary()
                                         .w_full()
-                                        .on_click(cx.listener(|this, _, _, cx| {
-                                            this.app.show_language_dropdown = !this.app.show_language_dropdown;
-                                            this.app.show_theme_dropdown = false;
-                                            cx.notify();
+                                        .dropdown_menu({
+                                            let ve = view_entity.clone();
+                                            move |mut menu, window, _| {
+                                                for &name in langs.iter() {
+                                                    let n = name.to_string();
+                                                    let ve = ve.clone();
+                                                    menu = menu.item(
+                                                        PopupMenuItem::new(name).on_click(window.listener_for(&ve, move |this, _, _, cx| {
+                                                            this.app.code_render_language = n.clone();
+                                                            cx.notify();
+                                                        }))
+                                                    );
+                                                }
+                                                menu
+                                            }
+                                        })
+                                )
+                        )
+                        
+                        // Font Dropdown
+                        .child(
+                            v_flex().gap_1().relative()
+                                .child(div().text_xs().font_bold().child("Font"))
+                                .child(
+                                    Button::new("btn_font_dropdown")
+                                        .label(format!("{}", view.app.code_render_font))
+                                        .child(gpui::svg().path("chevron-down.svg").size_4().text_color(cx.theme().primary))
+                                        .secondary()
+                                        .w_full()
+                                        .dropdown_menu({
+                                            let ve = view_entity.clone();
+                                            move |mut menu, window, _| {
+                                                for &name in fonts.iter() {
+                                                    let n = name.to_string();
+                                                    let ve = ve.clone();
+                                                    menu = menu.item(
+                                                        PopupMenuItem::new(name).on_click(window.listener_for(&ve, move |this, _, _, cx| {
+                                                            this.app.code_render_font = n.clone();
+                                                            cx.notify();
+                                                        }))
+                                                    );
+                                                }
+                                                menu
+                                            }
+                                        })
+                                )
+                        )
+                        
+                        // Formatting Controls
+                        .child(
+                            v_flex().gap_2().w_full()
+                                .child(div().text_xs().font_bold().child("Background Color"))
+                                .child(
+                                    h_flex().gap_2().w_full().flex_wrap()
+                                        .children(vec![
+                                            ("#abb8c3", gpui::rgb(0xabb8c3)),
+                                            ("#ff5f56", gpui::rgb(0xff5f56)),
+                                            ("#27c93f", gpui::rgb(0x27c93f)),
+                                            ("#1e1e1e", gpui::rgb(0x1e1e1e)),
+                                            ("#ffffff", gpui::rgb(0xffffff)),
+                                            ("gradient:#ff0000,#0000ff", gpui::rgb(0x880088)),
+                                            ("gradient:#00c6ff,#0072ff", gpui::rgb(0x0099ff)),
+                                        ].into_iter().map(|(id, display_color)| {
+                                            let bg = id.to_string();
+                                            let is_sel = view.app.code_render_bg_color == bg;
+                                            Button::new(format!("bg_{}", id))
+                                                .child(div().w(px(16.0)).h(px(16.0)).rounded_full().bg(display_color))
+                                                .when(is_sel, |b| b.outline())
+                                                .when(!is_sel, |b| b.ghost())
+                                                .on_click(cx.listener(move |this, _, _, cx| {
+                                                    this.app.code_render_bg_color = bg.clone();
+                                                    cx.notify();
+                                                }))
                                         }))
                                 )
-                                .when(view.app.show_language_dropdown, |e| {
-                                    e.child(
-                                        div().absolute().top_12().left_0().w_full()
-                                            .bg({ let mut b = cx.theme().background; b.a = 1.0; b }).border_1().border_color(cx.theme().border).rounded_md().shadow_lg()
-                                            .child(
-                                                v_flex().w_full().max_h(px(150.0)).overflow_y_hidden()
-                                                    .children(langs.into_iter().map(|l| {
-                                                        Button::new(format!("lang_{}", l))
-                                                            .child(l)
-                                                            .w_full().justify_start().ghost()
-                                                            .on_click(cx.listener(move |this, _, _, cx| {
-                                                                this.app.code_render_language = l.to_string();
-                                                                this.app.show_language_dropdown = false;
-                                                                cx.notify();
-                                                            }))
-                                                    }))
-                                            )
-                                    )
-                                })
+                                .child(div().text_xs().font_bold().mt_2().child("Padding & Corner"))
+                                .child(
+                                    h_flex().gap_2().w_full().justify_between()
+                                        .child(
+                                            h_flex().gap_1()
+                                                .child(div().text_xs().child("Pad X:"))
+                                                .child(Button::new("pad_x_dec").child("-").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_pad_horiz = this.app.code_render_pad_horiz.saturating_sub(10); cx.notify(); })))
+                                                .child(div().text_xs().w(px(24.0)).flex().justify_center().child(format!("{}", view.app.code_render_pad_horiz)))
+                                                .child(Button::new("pad_x_inc").child("+").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_pad_horiz += 10; cx.notify(); })))
+                                        )
+                                        .child(
+                                            h_flex().gap_1()
+                                                .child(div().text_xs().child("Pad Y:"))
+                                                .child(Button::new("pad_y_dec").child("-").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_pad_vert = this.app.code_render_pad_vert.saturating_sub(10); cx.notify(); })))
+                                                .child(div().text_xs().w(px(24.0)).flex().justify_center().child(format!("{}", view.app.code_render_pad_vert)))
+                                                .child(Button::new("pad_y_inc").child("+").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_pad_vert += 10; cx.notify(); })))
+                                        )
+                                )
+                                .child(
+                                    h_flex().gap_1().mt_1()
+                                        .child(div().text_xs().child("Radius:"))
+                                        .child(Button::new("rad_dec").child("-").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_corner_radius = this.app.code_render_corner_radius.saturating_sub(5); cx.notify(); })))
+                                        .child(div().text_xs().w(px(24.0)).flex().justify_center().child(format!("{}", view.app.code_render_corner_radius)))
+                                        .child(Button::new("rad_inc").child("+").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_corner_radius += 5; cx.notify(); })))
+                                )
                         )
                         
                         .child(div().h_px().w_full().bg(cx.theme().border))
@@ -157,12 +228,21 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
 
                                     let lang = this.app.code_render_language.clone();
                                     let theme = this.app.code_render_theme.clone();
+                                    let bg_color = this.app.code_render_bg_color.clone();
+                                    let pad_horiz = this.app.code_render_pad_horiz;
+                                    let pad_vert = this.app.code_render_pad_vert;
+                                    let radius = this.app.code_render_corner_radius;
+                                    let font = this.app.code_render_font.clone();
+                                    let favorites = this.app.favorite_colors.clone();
+                                    
                                     this.app.state = crate::app::AppState::Loading(0.0, "Rendering Code...".to_string());
                                     cx.notify();
 
                                     let (tx, rx) = std::sync::mpsc::channel::<Result<std::path::PathBuf, String>>();
                                     std::thread::spawn(move || {
-                                        let res = crate::render::render_code_to_image(&code_text, &lang, &theme);
+                                        let res = crate::render::render_code_to_image(
+                                            &code_text, &lang, &theme, &bg_color, pad_horiz, pad_vert, radius, &font, &favorites
+                                        );
                                         let _ = tx.send(res);
                                     });
 
