@@ -14,6 +14,15 @@ pub fn render_code_to_image(
     corner_radius: u32,
     font_name: &str,
     favorites: &Vec<String>,
+    line_number: bool,
+    line_offset: u32,
+    line_pad: u32,
+    window_controls: bool,
+    tab_width: u8,
+    shadow_color: &str,
+    blur_radius: f32,
+    shadow_offset_x: i32,
+    shadow_offset_y: i32,
 ) -> Result<std::path::PathBuf, String> {
     let ha = HighlightingAssets::new();
     let ps = &ha.syntax_set;
@@ -142,12 +151,26 @@ pub fn render_code_to_image(
         font_vec.push((font_name.to_string(), 26.0));
     }
 
+    let shadow_color_rgba = shadow_color
+        .to_rgba()
+        .unwrap_or_else(|_| "#55000000".to_rgba().unwrap());
+
     let shadow = ShadowAdder::default()
         .background(background)
+        .shadow_color(shadow_color_rgba)
+        .blur_radius(blur_radius)
+        .offset_x(shadow_offset_x)
+        .offset_y(shadow_offset_y)
         .pad_horiz(pad_horiz)
         .pad_vert(pad_vert);
 
-    let mut builder = ImageFormatterBuilder::<String>::new().shadow_adder(shadow);
+    let mut builder = ImageFormatterBuilder::<String>::new()
+        .shadow_adder(shadow)
+        .line_number(line_number)
+        .line_offset(line_offset)
+        .line_pad(line_pad)
+        .window_controls(window_controls)
+        .tab_width(tab_width);
 
     if corner_radius == 0 {
         builder = builder.round_corner(false);

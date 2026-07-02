@@ -208,6 +208,43 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                         .child(div().text_xs().w(px(24.0)).flex().justify_center().child(format!("{}", view.app.code_render_corner_radius)))
                                         .child(Button::new("rad_inc").child("+").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_corner_radius += 5; cx.notify(); })))
                                 )
+                                .child(div().text_xs().font_bold().mt_2().child("Advanced Settings"))
+                                .child(
+                                    h_flex().gap_2().w_full().justify_between()
+                                        .child(
+                                            Button::new("btn_line_num")
+                                                .child(if view.app.code_render_line_number { "Line Nums: ON" } else { "Line Nums: OFF" })
+                                                .small()
+                                                .when(view.app.code_render_line_number, |b| b.outline())
+                                                .when(!view.app.code_render_line_number, |b| b.ghost())
+                                                .on_click(cx.listener(|this, _, _, cx| { this.app.code_render_line_number = !this.app.code_render_line_number; cx.notify(); }))
+                                        )
+                                        .child(
+                                            Button::new("btn_win_ctrls")
+                                                .child(if view.app.code_render_window_controls { "macOS Win: ON" } else { "macOS Win: OFF" })
+                                                .small()
+                                                .when(view.app.code_render_window_controls, |b| b.outline())
+                                                .when(!view.app.code_render_window_controls, |b| b.ghost())
+                                                .on_click(cx.listener(|this, _, _, cx| { this.app.code_render_window_controls = !this.app.code_render_window_controls; cx.notify(); }))
+                                        )
+                                )
+                                .child(
+                                    h_flex().gap_2().w_full().justify_between()
+                                        .child(
+                                            h_flex().gap_1()
+                                                .child(div().text_xs().child("LinePad:"))
+                                                .child(Button::new("lpad_dec").child("-").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_line_pad = this.app.code_render_line_pad.saturating_sub(1); cx.notify(); })))
+                                                .child(div().text_xs().w(px(24.0)).flex().justify_center().child(format!("{}", view.app.code_render_line_pad)))
+                                                .child(Button::new("lpad_inc").child("+").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_line_pad += 1; cx.notify(); })))
+                                        )
+                                        .child(
+                                            h_flex().gap_1()
+                                                .child(div().text_xs().child("Blur:"))
+                                                .child(Button::new("blur_dec").child("-").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_blur_radius -= 2.0; if this.app.code_render_blur_radius < 0.0 { this.app.code_render_blur_radius = 0.0; } cx.notify(); })))
+                                                .child(div().text_xs().w(px(24.0)).flex().justify_center().child(format!("{:.1}", view.app.code_render_blur_radius)))
+                                                .child(Button::new("blur_inc").child("+").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_blur_radius += 2.0; cx.notify(); })))
+                                        )
+                                )
                         )
 
                         .child(div().h_px().w_full().bg(cx.theme().border))
@@ -234,6 +271,15 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     let radius = this.app.code_render_corner_radius;
                                     let font = this.app.code_render_font.clone();
                                     let favorites = this.app.favorite_colors.clone();
+                                    let line_number = this.app.code_render_line_number;
+                                    let line_offset = this.app.code_render_line_offset;
+                                    let line_pad = this.app.code_render_line_pad;
+                                    let window_controls = this.app.code_render_window_controls;
+                                    let tab_width = this.app.code_render_tab_width;
+                                    let shadow_color = this.app.code_render_shadow_color.clone();
+                                    let blur_radius = this.app.code_render_blur_radius;
+                                    let shadow_offset_x = this.app.code_render_shadow_offset_x;
+                                    let shadow_offset_y = this.app.code_render_shadow_offset_y;
 
                                     this.app.state = crate::app::AppState::Loading(0.0, "Rendering Code...".to_string());
                                     cx.notify();
@@ -241,7 +287,8 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     let (tx, rx) = std::sync::mpsc::channel::<Result<std::path::PathBuf, String>>();
                                     std::thread::spawn(move || {
                                         let res = crate::render::render_code_to_image(
-                                            &code_text, &lang, &theme, &bg_color, pad_horiz, pad_vert, radius, &font, &favorites
+                                            &code_text, &lang, &theme, &bg_color, pad_horiz, pad_vert, radius, &font, &favorites,
+                                            line_number, line_offset, line_pad, window_controls, tab_width, &shadow_color, blur_radius, shadow_offset_x, shadow_offset_y
                                         );
                                         let _ = tx.send(res);
                                     });
