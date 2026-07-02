@@ -4,6 +4,10 @@ use silicon::utils::ShadowAdder;
 use syntect::easy::HighlightLines;
 use syntect::util::LinesWithEndings;
 
+use std::sync::OnceLock;
+
+static ASSETS: OnceLock<HighlightingAssets> = OnceLock::new();
+
 pub fn render_code_to_image(
     code: &str,
     lang: &str,
@@ -24,7 +28,7 @@ pub fn render_code_to_image(
     shadow_offset_x: i32,
     shadow_offset_y: i32,
 ) -> Result<std::path::PathBuf, String> {
-    let ha = HighlightingAssets::new();
+    let ha = ASSETS.get_or_init(|| HighlightingAssets::new());
     let ps = &ha.syntax_set;
 
     let syntax = ps
