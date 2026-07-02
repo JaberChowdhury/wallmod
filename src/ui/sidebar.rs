@@ -161,27 +161,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                             v_flex().gap_2().w_full()
                                 .child(div().text_xs().font_bold().child("Background Color"))
                                 .child(
-                                    h_flex().gap_2().w_full().flex_wrap()
-                                        .children(vec![
-                                            ("#abb8c3", gpui::rgb(0xabb8c3)),
-                                            ("#ff5f56", gpui::rgb(0xff5f56)),
-                                            ("#27c93f", gpui::rgb(0x27c93f)),
-                                            ("#1e1e1e", gpui::rgb(0x1e1e1e)),
-                                            ("#ffffff", gpui::rgb(0xffffff)),
-                                            ("gradient:#ff0000,#0000ff", gpui::rgb(0x880088)),
-                                            ("gradient:#00c6ff,#0072ff", gpui::rgb(0x0099ff)),
-                                        ].into_iter().map(|(id, display_color)| {
-                                            let bg = id.to_string();
-                                            let is_sel = view.app.code_render_bg_color == bg;
-                                            Button::new(format!("bg_{}", id))
-                                                .child(div().w(px(16.0)).h(px(16.0)).rounded_full().bg(display_color))
-                                                .when(is_sel, |b| b.outline())
-                                                .when(!is_sel, |b| b.ghost())
-                                                .on_click(cx.listener(move |this, _, _, cx| {
-                                                    this.app.code_render_bg_color = bg.clone();
-                                                    cx.notify();
-                                                }))
-                                        }))
+                                    gpui_component::color_picker::ColorPicker::new(&view.bg_color_picker)
                                 )
                                 .child(div().text_xs().font_bold().mt_2().child("Padding & Corner"))
                                 .child(

@@ -499,9 +499,14 @@ pub fn render_workspace(
                                                             view.app.needs_hex_sync = false;
                                                         }
                                                         if view.app.needs_slider_sync {
-                                                            view.palette_r_slider.update(cx, |s, cx| s.set_value(rgb[0] as f32, window, cx));
-                                                            view.palette_g_slider.update(cx, |s, cx| s.set_value(rgb[1] as f32, window, cx));
-                                                            view.palette_b_slider.update(cx, |s, cx| s.set_value(rgb[2] as f32, window, cx));
+                                                            view.custom_palette_color_picker.update(cx, |s, cx| {
+                                                                s.set_value(gpui::Rgba {
+                                                                    r: rgb[0] as f32 / 255.0,
+                                                                    g: rgb[1] as f32 / 255.0,
+                                                                    b: rgb[2] as f32 / 255.0,
+                                                                    a: 1.0
+                                                                }, window, cx);
+                                                            });
                                                             view.app.needs_slider_sync = false;
                                                         }
                                                         v_flex().w(px(250.0)).gap_4().p_4().border_1().border_color(cx.theme().border).rounded_xl().bg(cx.theme().secondary)
@@ -528,25 +533,7 @@ pub fn render_workspace(
                                                                     )
                                                             )
                                                             .child(
-                                                                h_flex().gap_3().items_center()
-                                                                    .child(div().w(px(40.0)).h(px(40.0)).rounded_md().bg(gpui::Rgba { r: rgb[0] as f32/255.0, g: rgb[1] as f32/255.0, b: rgb[2] as f32/255.0, a: 1.0 }).border_1().border_color(cx.theme().border))
-                                                                    .child(gpui_component::input::Input::new(&view.palette_hex_input))
-                                                            )
-                                                            .child(div().h_px().w_full().bg(cx.theme().border))
-                                                            .child(
-                                                                v_flex().gap_1()
-                                                                    .child(h_flex().justify_between().child(div().text_sm().font_bold().text_color(gpui::rgb(0xff5555)).child("Red")).child(div().text_sm().child(format!("{}", rgb[0]))))
-                                                                    .child(gpui_component::slider::Slider::new(&view.palette_r_slider))
-                                                            )
-                                                            .child(
-                                                                v_flex().gap_1()
-                                                                    .child(h_flex().justify_between().child(div().text_sm().font_bold().text_color(gpui::rgb(0x55ff55)).child("Green")).child(div().text_sm().child(format!("{}", rgb[1]))))
-                                                                    .child(gpui_component::slider::Slider::new(&view.palette_g_slider))
-                                                            )
-                                                            .child(
-                                                                v_flex().gap_1()
-                                                                    .child(h_flex().justify_between().child(div().text_sm().font_bold().text_color(gpui::rgb(0x5555ff)).child("Blue")).child(div().text_sm().child(format!("{}", rgb[2]))))
-                                                                    .child(gpui_component::slider::Slider::new(&view.palette_b_slider))
+                                                                gpui_component::color_picker::ColorPicker::new(&view.custom_palette_color_picker)
                                                             )
                                                             .into_any_element()
                                                     } else {

@@ -25,6 +25,8 @@ pub struct WallmodView {
     pub palette_b_slider: Entity<SliderState>,
     pub palette_hex_input: Entity<gpui_component::input::InputState>,
     pub code_render_input: Entity<gpui_component::input::InputState>,
+    pub bg_color_picker: Entity<gpui_component::color_picker::ColorPickerState>,
+    pub custom_palette_color_picker: Entity<gpui_component::color_picker::ColorPickerState>,
     pub shader_inputs:
         std::collections::HashMap<usize, [Entity<gpui_component::input::InputState>; 4]>,
     pub subscriptions: Vec<Subscription>,
@@ -286,6 +288,50 @@ impl WallmodView {
                 .placeholder("Enter code here or select a file...")
         });
 
+        let bg_color_picker = cx.new(|cx| gpui_component::color_picker::ColorPickerState::new(window, cx));
+        subscriptions.push(
+            cx.subscribe(&bg_color_picker, |this, _, ev, cx| {
+                if let gpui_component::color_picker::ColorPickerEvent::Change(hsla) = ev {
+                    if let Some(color) = hsla {
+                        let rgba = gpui::Rgba::from(*color);
+                        let r = (rgba.r * 255.0) as u8;
+                        let g = (rgba.g * 255.0) as u8;
+                        let b = (rgba.b * 255.0) as u8;
+                        let a = (rgba.a * 255.0) as u8;
+                        if a == 255 {
+                            this.app.code_render_bg_color = format!("#{r:02x}{g:02x}{b:02x}");
+                        } else {
+                            this.app.code_render_bg_color = format!("#{r:02x}{g:02x}{b:02x}{a:02x}");
+                        }
+                        cx.notify();
+                    }
+                }
+            })
+        );
+
+        let custom_palette_color_picker = cx.new(|cx| gpui_component::color_picker::ColorPickerState::new(window, cx));
+        subscriptions.push(
+            cx.subscribe(&custom_palette_color_picker, |this, _, ev, cx| {
+                if let gpui_component::color_picker::ColorPickerEvent::Change(hsla) = ev {
+                    if let Some(color) = hsla {
+                        let rgba = gpui::Rgba::from(*color);
+                        if let Some(idx) = this.app.selected_color_idx {
+                            if let crate::app::state::ThemeSource::CustomPalette(_, ref mut colors) =
+                                this.app.current_theme
+                            {
+                                if let Some(c) = colors.get_mut(idx) {
+                                    c[0] = (rgba.r * 255.0) as u8;
+                                    c[1] = (rgba.g * 255.0) as u8;
+                                    c[2] = (rgba.b * 255.0) as u8;
+                                }
+                            }
+                        }
+                        cx.notify();
+                    }
+                }
+            })
+        );
+
         Self {
             app: WallmodApp::new(),
             blur_slider,
@@ -298,6 +344,8 @@ impl WallmodView {
             palette_b_slider,
             palette_hex_input,
             code_render_input,
+            bg_color_picker,
+            custom_palette_color_picker,
             shader_inputs: std::collections::HashMap::new(),
             subscriptions,
         }
