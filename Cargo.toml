@@ -1,6 +1,6 @@
 [package]
 name = "wallmod"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["JaberChowdhury <jaberhc2002@gmail.com>"]
 description = "Wallpaper Theme Changer - A production-ready desktop Linux image customization application built with GPUI and gpui-component."
