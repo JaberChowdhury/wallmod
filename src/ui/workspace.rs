@@ -252,10 +252,15 @@ pub fn render_workspace(
                                                                     .child({
                                                                         let hex_clone = hex.clone();
                                                                         let is_fav = view.app.favorite_colors.contains(&hex_clone);
-                                                                        Button::new(format!("fav_{}", hex_clone.clone()))
-                                                                            .child(gpui::svg().path("heart.svg").size_4().text_color(if is_fav { cx.theme().primary } else { cx.theme().muted_foreground }))
-                                                                            .ghost()
-                                                                            .small()
+                                                                        let mut b = Button::new(format!("fav_{}", hex_clone.clone()))
+                                                                            .child(gpui::svg().path(if is_fav { "heart-filled.svg" } else { "heart.svg" }).size_4().text_color(if is_fav { cx.theme().background } else { cx.theme().muted_foreground }));
+                                                                        if is_fav {
+                                                                            b = b.child(div().text_xs().child("Saved")).primary();
+                                                                        } else {
+                                                                            b = b.ghost();
+                                                                        }
+
+                                                                        b.small()
                                                                             .cursor_pointer()
                                                                             .on_click(cx.listener(move |this, _, _, cx| {
                                                                                 if this.app.favorite_colors.contains(&hex_clone) {

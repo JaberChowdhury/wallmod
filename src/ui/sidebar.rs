@@ -65,10 +65,10 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                     let themes = ["Dracula", "GitHub", "Monokai Extended", "Solarized (dark)", "Solarized (light)", "1337", "Coldark-Dark", "Custom Preset"];
                     let fonts = ["Hack", "Fira Code", "JetBrains Mono", "Cascadia Code", "Roboto Mono"];
                     let view_entity = cx.entity().clone();
-                    
+
                     v_flex().gap_4().w_full().p_4()
                         .child(div().text_sm().font_bold().child("Silicon Code Render"))
-                        
+
                         // Theme Dropdown
                         .child(
                             v_flex().gap_1().relative()
@@ -126,7 +126,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                         })
                                 )
                         )
-                        
+
                         // Font Dropdown
                         .child(
                             v_flex().gap_1().relative()
@@ -155,7 +155,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                         })
                                 )
                         )
-                        
+
                         // Formatting Controls
                         .child(
                             v_flex().gap_2().w_full()
@@ -209,9 +209,9 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                         .child(Button::new("rad_inc").child("+").small().ghost().on_click(cx.listener(|this, _, _, cx| { this.app.code_render_corner_radius += 5; cx.notify(); })))
                                 )
                         )
-                        
+
                         .child(div().h_px().w_full().bg(cx.theme().border))
-                        
+
                         .child(
                             Button::new("btn_silicon_render")
                                 .child(gpui::svg().path("image.svg").size_4().text_color(cx.theme().primary))
@@ -234,7 +234,7 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                     let radius = this.app.code_render_corner_radius;
                                     let font = this.app.code_render_font.clone();
                                     let favorites = this.app.favorite_colors.clone();
-                                    
+
                                     this.app.state = crate::app::AppState::Loading(0.0, "Rendering Code...".to_string());
                                     cx.notify();
 
@@ -311,11 +311,11 @@ pub fn render_sidebar(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> 
                                             "js" => "javascript", "ts" => "typescript", "html" => "html", "css" => "css", "json" => "json", "sh" => "bash",
                                             _ => "rust"
                                         }.to_string();
-                                        
+
                                         this.code_render_input.update(cx, |input, cx| {
                                             input.set_value(content, window, cx);
                                         });
-                                        
+
                                         this.app.code_render_language = lang;
                                         cx.notify();
                                     }

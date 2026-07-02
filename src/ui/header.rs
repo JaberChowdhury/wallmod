@@ -4,6 +4,7 @@ use crate::app::SidebarTab;
 use crate::ui::WallmodView;
 use gpui::prelude::FluentBuilder;
 use gpui::*;
+use gpui_component::menu::{DropdownMenu as _, PopupMenuItem};
 use gpui_component::{
     button::*, h_flex, spinner::Spinner, v_flex, ActiveTheme, Disableable, Selectable, Sizable,
     StyledExt,
@@ -371,164 +372,68 @@ pub fn render_header(view: &mut WallmodView, cx: &mut Context<WallmodView>) -> i
                         })),
                 )
                 .child(
-                    div()
-                        .relative()
-                        .child(
-                            Button::new("btn_more_dropdown")
-                                .child(
-                                    gpui::svg()
-                                        .path("menu.svg")
-                                        .size_4()
-                                        .text_color(cx.theme().primary),
-                                )
-                                .child("More Tools")
-                                .small()
-                                .cursor_pointer()
-                                .selected(view.app.show_header_dropdown)
-                                .when(view.app.show_header_dropdown, |this| this.primary())
-                                .on_click(cx.listener(|this, _, _, cx| {
-                                    this.app.show_header_dropdown = !this.app.show_header_dropdown;
-                                    cx.notify();
-                                })),
-                        )
-                        .when(view.app.show_header_dropdown, |this| {
-                            this.child(
-                                v_flex()
-                                    .absolute()
-                                    .top(px(32.0))
-                                    .right(px(0.0))
-                                    .w(px(200.0))
-                                    .bg({
-                                        let mut b = cx.theme().background;
-                                        b.a = 1.0;
-                                        b
-                                    })
-                                    .border_1()
-                                    .border_color(cx.theme().border)
-                                    .rounded_md()
-                                    .shadow_sm()
-                                    .p_1()
-                                    .gap_1()
-                                    .child(
-                                        Button::new("btn_toggle_float_stats")
-                                            .child(
-                                                gpui::svg().path("duck.svg").size_4().text_color(
-                                                    if view.app.show_floating_stats {
-                                                        cx.theme().secondary
-                                                    } else {
-                                                        cx.theme().primary
-                                                    },
-                                                ),
-                                            )
-                                            .child("Floating Stats")
-                                            .w_full()
-                                            .justify_start()
-                                            .small()
-                                            .selected(view.app.show_floating_stats)
-                                            .when(view.app.show_floating_stats, |b| b.primary())
-                                            .cursor_pointer()
-                                            .on_click(cx.listener(|this, _, _, cx| {
+                    div().relative().child(
+                        Button::new("btn_more_dropdown")
+                            .child(
+                                gpui::svg()
+                                    .path("menu.svg")
+                                    .size_4()
+                                    .text_color(cx.theme().primary),
+                            )
+                            .child("More Tools")
+                            .small()
+                            .cursor_pointer()
+                            .dropdown_menu({
+                                let ve = cx.entity().clone();
+                                move |mut menu, window, _| {
+                                    let ve1 = ve.clone();
+                                    menu =
+                                        menu.item(PopupMenuItem::new("Floating Stats").on_click(
+                                            window.listener_for(&ve1, |this, _, _, cx| {
                                                 this.app.show_floating_stats =
                                                     !this.app.show_floating_stats;
-                                                this.app.show_header_dropdown = false;
                                                 cx.notify();
-                                            })),
-                                    )
-                                    .child(
-                                        Button::new("cat_exp")
-                                            .child(
-                                                gpui::svg()
-                                                    .path("replace.svg")
-                                                    .size_4()
-                                                    .text_color(
-                                                        if sidebar_tab == SidebarTab::ExportSync {
-                                                            cx.theme().secondary
-                                                        } else {
-                                                            cx.theme().primary
-                                                        },
-                                                    ),
-                                            )
-                                            .child("Export & Sync")
-                                            .w_full()
-                                            .justify_start()
-                                            .small()
-                                            .cursor_pointer()
-                                            .selected(sidebar_tab == SidebarTab::ExportSync)
-                                            .when(sidebar_tab == SidebarTab::ExportSync, |b| {
-                                                b.primary()
-                                            })
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.app.sidebar_tab = SidebarTab::ExportSync;
-                                                this.app.option_group_tab = 0;
-                                                this.app.workspace_view =
-                                                    crate::app::state::WorkspaceView::Standard;
-                                                this.app.show_header_dropdown = false;
-                                                cx.notify();
-                                            })),
-                                    )
-                                    .child(
-                                        Button::new("cat_ai")
-                                            .child(
-                                                gpui::svg().path("search.svg").size_4().text_color(
-                                                    if sidebar_tab == SidebarTab::ToolsExt {
-                                                        cx.theme().secondary
-                                                    } else {
-                                                        cx.theme().primary
-                                                    },
-                                                ),
-                                            )
-                                            .child("AI & Tools")
-                                            .w_full()
-                                            .justify_start()
-                                            .small()
-                                            .cursor_pointer()
-                                            .selected(sidebar_tab == SidebarTab::ToolsExt)
-                                            .when(sidebar_tab == SidebarTab::ToolsExt, |b| {
-                                                b.primary()
-                                            })
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.app.sidebar_tab = SidebarTab::ToolsExt;
-                                                this.app.option_group_tab = 0;
-                                                this.app.workspace_view =
-                                                    crate::app::state::WorkspaceView::Standard;
-                                                this.app.show_header_dropdown = false;
-                                                cx.notify();
-                                            })),
-                                    )
-                                    .child(
-                                        Button::new("cat_settings")
-                                            .child(
-                                                gpui::svg()
-                                                    .path("settings.svg")
-                                                    .size_4()
-                                                    .text_color(
-                                                        if sidebar_tab == SidebarTab::Settings {
-                                                            cx.theme().secondary
-                                                        } else {
-                                                            cx.theme().primary
-                                                        },
-                                                    ),
-                                            )
-                                            .child("Settings")
-                                            .w_full()
-                                            .justify_start()
-                                            .small()
-                                            .cursor_pointer()
-                                            .selected(sidebar_tab == SidebarTab::Settings)
-                                            .when(sidebar_tab == SidebarTab::Settings, |b| {
-                                                b.primary()
-                                            })
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.app.sidebar_tab = SidebarTab::Settings;
-                                                this.app.option_group_tab = 0;
-                                                this.app.workspace_view =
-                                                    crate::app::state::WorkspaceView::Standard;
-                                                this.app.show_header_dropdown = false;
-                                                cx.notify();
-                                            })),
-                                    ),
-                            )
-                        }),
+                                            }),
+                                        ));
+
+                                    let ve2 = ve.clone();
+                                    menu = menu.item(PopupMenuItem::new("Export & Sync").on_click(
+                                        window.listener_for(&ve2, |this, _, _, cx| {
+                                            this.app.sidebar_tab =
+                                                crate::app::SidebarTab::ExportSync;
+                                            this.app.option_group_tab = 0;
+                                            this.app.workspace_view =
+                                                crate::app::WorkspaceView::Standard;
+                                            cx.notify();
+                                        }),
+                                    ));
+
+                                    let ve3 = ve.clone();
+                                    menu = menu.item(PopupMenuItem::new("AI & Tools").on_click(
+                                        window.listener_for(&ve3, |this, _, _, cx| {
+                                            this.app.sidebar_tab = crate::app::SidebarTab::ToolsExt;
+                                            this.app.option_group_tab = 0;
+                                            this.app.workspace_view =
+                                                crate::app::WorkspaceView::Standard;
+                                            cx.notify();
+                                        }),
+                                    ));
+
+                                    let ve4 = ve.clone();
+                                    menu = menu.item(PopupMenuItem::new("Settings").on_click(
+                                        window.listener_for(&ve4, |this, _, _, cx| {
+                                            this.app.sidebar_tab = crate::app::SidebarTab::Settings;
+                                            this.app.option_group_tab = 0;
+                                            this.app.workspace_view =
+                                                crate::app::WorkspaceView::Standard;
+                                            cx.notify();
+                                        }),
+                                    ));
+
+                                    menu
+                                }
+                            }),
+                    ),
                 ),
         )
 }
